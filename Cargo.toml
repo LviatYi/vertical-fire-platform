@@ -3,6 +3,7 @@ name = "vertical-fire-platform"
 version = "1.2.7"
 edition = "2021"
 authors = ["LviatYi"]
+build = "build.rs"
 description = "⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟ |  ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄\n⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄ |  ⠄⠄⠄⠄⠄⠄⠛⢿⣿⣿⠛⠛⠛⣿⣿⣦⠄⠄⠄⠄⠄⠄⠄⠄\n⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄ |  ⠄⠄⠄⠄⠄⠄⠄⢸⣿⣿⣤⣤⣤⣿⣿⠃⠄⡀⠄⠄⠄⠄⠄⠄\n⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄ |  ⠄⠄⠄⠄⠄⠄⣤⣼⣿⣿⣤⡀⠉⣿⣿⣦⣤⣿⠄⠄⠄⠄⠄⠄\n⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄ |  ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄\n\nDestroy all obstacles in the way of development!\nPowered by LviatYi & RUST\n"
 
 [dependencies]
@@ -26,3 +27,6 @@ path = "src/main.rs"
 
 [dev-dependencies]
 tempfile = "3.14.0"
+
+[build-dependencies]
+regex = "1.11.1"
