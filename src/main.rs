@@ -503,8 +503,7 @@ fn main() {
 
                 let package_file_name =
                     package_file_stem.unwrap_or(DEFAULT_PACKAGE_FILE_STEM.to_string());
-                let exe_file_name =
-                    exe_file_name.unwrap_or(DEFAULT_CHECK_EXE_FILE_NAME.to_string());
+                let exe_file_name = exe_file_name.unwrap_or(DEFAULT_EXE_FILE_NAME.to_string());
                 let check_exe_file_name =
                     check_exe_file_name.unwrap_or(DEFAULT_CHECK_EXE_FILE_NAME.to_string());
 
@@ -643,59 +642,9 @@ fn run_instance_with_log(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-    use std::fs::create_dir_all;
-    use std::io::Write;
-    use tempfile::tempdir;
-    use zip::write::SimpleFileOptions;
 
     #[test]
     fn lab() -> std::io::Result<()> {
-        // let mut stdout = stdout();
-        //
-        // println!("start");
-        // stdout.flush();
-        //
-        // let mut info1 = ExtractOperationInfo {
-        //     clean_state: OperationStatus::Pending,
-        //     extract_state: OperationStatus::Pending,
-        //     mend_state: OperationStatus::Pending,
-        // };
-        // let mut info2 = ExtractOperationInfo {
-        //     clean_state: OperationStatus::Pending,
-        //     extract_state: OperationStatus::Pending,
-        //     mend_state: OperationStatus::Pending,
-        // };
-        // let mut info3 = ExtractOperationInfo {
-        //     clean_state: OperationStatus::Pending,
-        //     extract_state: OperationStatus::Pending,
-        //     mend_state: OperationStatus::Pending,
-        // };
-        //
-        // pretty_log_operation_start(&mut stdout, 3);
-        //
-        // pretty_log_operation_status(&mut stdout, 0, 3, &info1)?;
-        // pretty_log_operation_status(&mut stdout, 1, 3, &info2)?;
-        // pretty_log_operation_status(&mut stdout, 2, 3, &info3)?;
-        //
-        // info1.clean_state = OperationStatus::Done(100);
-        // info2.clean_state = OperationStatus::Done(100);
-        // info2.extract_state = OperationStatus::Done(3000);
-        // info3.clean_state = OperationStatus::Done(100);
-        // info3.extract_state = OperationStatus::Done(3000);
-        // info3.mend_state = OperationStatus::Done(10);
-        //
-        // pretty_log_operation_status(&mut stdout, 0, 3, &info1)?;
-        // pretty_log_operation_status(&mut stdout, 1, 3, &info2)?;
-        // pretty_log_operation_status(&mut stdout, 2, 3, &info3)?;
-        //
-        // info1.extract_state = OperationStatus::Done(3000);
-        // info1.mend_state = OperationStatus::Done(10);
-        // info2.mend_state = OperationStatus::Done(10);
-        //
-        // pretty_log_operation_status(&mut stdout, 0, 3, &info1)?;
-        // pretty_log_operation_status(&mut stdout, 1, 3, &info2)?;
-        // pretty_log_operation_status(&mut stdout, 2, 3, &info3)?;
         Ok(())
     }
 
