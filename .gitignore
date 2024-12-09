@@ -88,6 +88,12 @@ atlassian-ide-plugin.xml
 # SonarLint plugin
 .idea/sonarlint/
 
+# Markdown configuration
+.idea/markdown.xml
+
+# Git Toolbox
+.idea/git_toolbox_blame.xml
+
 # Crashlytics plugin (for Android Studio and IntelliJ)
 com_crashlytics_export_strings.xml
 crashlytics.properties
