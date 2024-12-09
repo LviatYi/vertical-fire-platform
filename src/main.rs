@@ -46,7 +46,7 @@ enum Commands {
         #[arg(short, long)]
         branch: Option<String>,
 
-        /// source root path.
+        /// locator identity.
         #[arg(short = '#', long)]
         ci: Option<u32>,
 
@@ -84,7 +84,7 @@ enum Commands {
         #[arg(short, long)]
         count_or_index: Option<u32>,
 
-        /// origin zip file name.
+        /// package name.
         #[arg(short = 'p', long = "package-name")]
         package_file_stem: Option<String>,
 
@@ -97,7 +97,6 @@ enum Commands {
         check_exe_file_name: Option<String>,
 
         /// run an instance by index.
-        /// default: 1
         #[arg(short, long)]
         single: bool,
 
