@@ -1,0 +1,28 @@
+[package]
+name = "vertical-fire-platform"
+version = "1.2.7"
+edition = "2021"
+authors = ["LviatYi"]
+description = "⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟ |  ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄\n⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄ |  ⠄⠄⠄⠄⠄⠄⠛⢿⣿⣿⠛⠛⠛⣿⣿⣦⠄⠄⠄⠄⠄⠄⠄⠄\n⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄ |  ⠄⠄⠄⠄⠄⠄⠄⢸⣿⣿⣤⣤⣤⣿⣿⠃⠄⡀⠄⠄⠄⠄⠄⠄\n⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄ |  ⠄⠄⠄⠄⠄⠄⣤⣼⣿⣿⣤⡀⠉⣿⣿⣦⣤⣿⠄⠄⠄⠄⠄⠄\n⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄ |  ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄\n\nDestroy all obstacles in the way of development!\nPowered by LviatYi & RUST\n"
+
+[dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
+configparser = "3.1.0"
+crossterm = "0.28.1"
+dirs = "5.0.1"
+formatx = "0.2.2"
+inquire = "0.7.5"
+rand = "0.9.0-alpha.2"
+regex = "1.11.1"
+serde = { version = "1.0.215", features = ["derive"] }
+strum = "0.26.3"
+strum_macros = "0.26.4"
+toml = "0.8.19"
+zip = "2.2.1"
+
+[[bin]]
+name = "fp"
+path = "src/main.rs"
+
+[dev-dependencies]
+tempfile = "3.14.0"
