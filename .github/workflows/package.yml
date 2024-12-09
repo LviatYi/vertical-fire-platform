@@ -50,13 +50,13 @@ jobs:
         run: git archive -o ${{env.SRC_FILENAME}} HEAD
 
       - name: Upload release binary as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: windows-release
           path: ./target/x86_64-pc-windows-msvc/release/${{ steps.get_cargo_package_name.outputs.value }}.exe
 
       - name: Upload source code as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: source-code
           path: ${{env.SRC_FILENAME}}
