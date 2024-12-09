@@ -1,0 +1,93 @@
+name: Rust Build and Package
+
+on:
+  push:
+    branches:
+      - release/**
+    tags:
+      - v*
+
+jobs:
+  build_and_release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: SebRollen/toml-action@v1.2.0
+        id: get_cargo_package_name
+        with:
+          file: 'Cargo.toml'
+          field: 'package.name'
+
+      - uses: SebRollen/toml-action@v1.2.0
+        id: get_cargo_package_version
+        with:
+          file: 'Cargo.toml'
+          field: 'package.version'
+
+      - name: Set filenames as Env variable
+        run: |
+          echo "SRC_FILENAME=${{ steps.get_cargo_package_name.outputs.value }}-${{ github.ref_name }}-source.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "RLS_FILENAME=fp.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Print Env variable
+        run: |
+          echo "SRC_FILENAME: ${{env.SRC_FILENAME}}"
+          echo "RLS_FILENAME: ${{env.RLS_FILENAME}}"
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-pc-windows-msvc
+          default: true
+
+      - name: Build
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Archive source code
+        run: git archive -o ${{env.SRC_FILENAME}} HEAD
+
+      - name: Upload release binary as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-release
+          path: ./target/x86_64-pc-windows-msvc/release/${{ steps.get_cargo_package_name.outputs.value }}.exe
+
+      - name: Upload source code as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: source-code
+          path: ${{env.SRC_FILENAME}}
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ steps.get_cargo_package_name.outputs.value }} ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./target/x86_64-pc-windows-msvc/release/${{ steps.get_cargo_package_name.outputs.value }}.exe
+          asset_name: ${{ env.RLS_FILENAME }}
+          asset_content_type: application/zip
+
+      - name: Upload Source Code
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{env.SRC_FILENAME}}
+          asset_name: ${{env.SRC_FILENAME}}
+          asset_content_type: application/zip
