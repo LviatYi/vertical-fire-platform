@@ -13,7 +13,6 @@ use crate::extract::extract_operation_info::{
 };
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::extract::repo_decoration::RepoDecoration;
-use crate::pretty_log::{pretty_log_operation_start, pretty_log_operation_status};
 use crate::resource_loader::ResourceLoader;
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
@@ -312,7 +311,7 @@ fn main() {
                 if let Some(path) = repo_decoration.get_full_path_by_ci(ci_temp) {
                     if let Some(file_name) = path.file_stem().and_then(|v| v.to_str()) {
                         let count = db.c.unwrap();
-                        pretty_log_operation_start(&mut stdout, count);
+                        let pty_logger = pretty_log::VfpPrettyLogger::apply_for(&mut stdout, count);
 
                         let mut working_status: Vec<ExtractOperationInfo> = (0..count)
                             .map(|_| ExtractOperationInfo::default())
@@ -396,7 +395,12 @@ fn main() {
                             handles.push(handle);
 
                             if let Some(item) = working_status.get((i - 1) as usize) {
-                                let _ = pretty_log_operation_status(&mut stdout, i, count, item);
+                                let _ = pty_logger.pretty_log_operation_status(
+                                    &mut stdout,
+                                    i,
+                                    count,
+                                    item,
+                                );
                             };
                         }
 
@@ -416,7 +420,7 @@ fn main() {
                                     }
                                 }
 
-                                let _ = pretty_log_operation_status(
+                                let _ = pty_logger.pretty_log_operation_status(
                                     &mut stdout,
                                     index - 1,
                                     count,
