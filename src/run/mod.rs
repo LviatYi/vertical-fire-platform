@@ -1,5 +1,4 @@
 use crate::constant::log::*;
-use crate::default_config::MENDING_FILE_PATH;
 use configparser::ini::Ini;
 use formatx::formatx;
 use std::path::Path;
@@ -108,6 +107,7 @@ pub fn set_server(
     home_path: &Path,
     package_name: &str,
     index: u32,
+    mending_file_path: &str,
     server_str: &str,
 ) -> Result<(), String> {
     if server_str.is_empty() {
@@ -115,7 +115,7 @@ pub fn set_server(
     }
 
     let work_path = home_path.join(format!("{}{}", package_name, index));
-    let user_ini_path = work_path.join(MENDING_FILE_PATH);
+    let user_ini_path = work_path.join(mending_file_path);
 
     let mut config = Ini::new_cs();
     if config.load(&user_ini_path).is_ok() {

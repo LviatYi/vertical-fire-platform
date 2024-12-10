@@ -1,5 +1,4 @@
 use crate::constant;
-use crate::default_config::*;
 use formatx::formatx;
 use regex::Regex;
 use std::fs;
@@ -147,9 +146,9 @@ pub fn extract_zip_file(from: &Path, dest: &Path) -> Result<u128, String> {
     }
 }
 
-pub fn mending_user_ini(dest: &Path, index: u32) -> Result<u128, Error> {
+pub fn mending_user_ini(dest: &Path, index: u32, mend_file_path: &str) -> Result<u128, Error> {
     let start_time = std::time::Instant::now();
-    let user_ini_path = dest.join(MENDING_FILE_PATH);
+    let user_ini_path = dest.join(mend_file_path);
     if user_ini_path.is_file() {
         fs::OpenOptions::new()
             .append(true)

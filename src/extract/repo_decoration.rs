@@ -143,9 +143,7 @@ impl RepoDecoration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::default_config::{
-        DEFAULT_LOCATOR_PATTERN, DEFAULT_LOCATOR_TEMPLATE, DEFAULT_REPO_TEMPLATE,
-    };
+    use crate::default_config::{LOCATOR_PATTERN, LOCATOR_TEMPLATE, REPO_TEMPLATE};
     use rand::Rng;
     use std::collections::HashSet;
     use std::fs::File;
@@ -157,15 +155,15 @@ mod tests {
     #[test]
     fn test_assemble_build_target_repo() {
         let r = RepoDecoration::new(
-            DEFAULT_REPO_TEMPLATE.to_string(),
-            DEFAULT_LOCATOR_PATTERN.to_string(),
-            DEFAULT_LOCATOR_TEMPLATE.to_string(),
+            REPO_TEMPLATE.to_string(),
+            LOCATOR_PATTERN.to_string(),
+            LOCATOR_TEMPLATE.to_string(),
             BranchTypes::Stage,
         );
 
         assert_eq!(
             r.assemble_build_target_repo(),
-            PathBuf::from(DEFAULT_REPO_TEMPLATE.replace("{B}", "Stage"))
+            PathBuf::from(REPO_TEMPLATE.replace("{B}", "Stage"))
         );
     }
 
@@ -183,7 +181,7 @@ mod tests {
                 .unwrap()
                 .to_string()
                 .replace("Stage", "{B}"),
-            DEFAULT_LOCATOR_PATTERN.to_string(),
+            LOCATOR_PATTERN.to_string(),
             "\\file.md".to_string(),
             BranchTypes::Stage,
         );
