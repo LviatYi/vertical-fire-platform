@@ -53,6 +53,7 @@ jobs:
 
           with open(file_path, 'w') as file:
             file.write(tomlkit.dumps(data))
+          "
 
       - uses: SebRollen/toml-action@v1.2.0
         id: get_cargo_package_name
