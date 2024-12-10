@@ -82,5 +82,5 @@ fp run
 - **-f, --force** 强制启动。若实例已存在则关闭它。
 - **-S, --server <SERVER>** 使用指定的服务器。
 
-
-
+[JetbrainsMonoNerdFont]: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.0.2/JetBrainsMono.zip@fallbackFont
+[SarasaMonoSC]: https://github.com/be5invis/Sarasa-Gothic/releases/download/v0.41.6/sarasa-gothic-ttf-0.41.6.7z
