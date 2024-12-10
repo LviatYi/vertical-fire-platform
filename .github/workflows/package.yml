@@ -14,6 +14,46 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install TOML Toolkit
+        run: python -m pip install tomlkit
+
+      - name: Build Sensitive Data
+        env:
+          REPO_TEMPLATE: ${{ secrets.REPO_TEMPLATE }}
+          LOCATOR_PATTERN: ${{ secrets.LOCATOR_PATTERN }}
+          LOCATOR_TEMPLATE: ${{ secrets.LOCATOR_TEMPLATE }}
+          MENDING_FILE_PATH: ${{ secrets.MENDING_FILE_PATH }}
+          PACKAGE_FILE_STEM: ${{ secrets.PACKAGE_FILE_STEM }}
+          EXE_FILE_NAME: ${{ secrets.EXE_FILE_NAME }}
+          CHECK_EXE_FILE_NAME: ${{ secrets.CHECK_EXE_FILE_NAME }}
+        run: |
+          python -c "
+          import os
+          import tomlkit
+          file_path = 'resource/variable.toml'
+          data = {}
+          try:
+            with open(file_path, 'r') as file:
+              data = tomlkit.loads(file.read())
+          except FileNotFoundError:
+            print('TOML file does not exist, creating new one.')
+
+          data['REPO_TEMPLATE'] = os.getenv('REPO_TEMPLATE')
+          data['LOCATOR_PATTERN'] = os.getenv('LOCATOR_PATTERN')
+          data['LOCATOR_TEMPLATE'] = os.getenv('LOCATOR_TEMPLATE')
+          data['MENDING_FILE_PATH'] = os.getenv('MENDING_FILE_PATH')
+          data['PACKAGE_FILE_STEM'] = os.getenv('PACKAGE_FILE_STEM')
+          data['EXE_FILE_NAME'] = os.getenv('EXE_FILE_NAME')
+          data['CHECK_EXE_FILE_NAME'] = os.getenv('CHECK_EXE_FILE_NAME')
+
+          with open(file_path, 'w') as file:
+            file.write(tomlkit.dumps(data))
+
       - uses: SebRollen/toml-action@v1.2.0
         id: get_cargo_package_name
         with:
