@@ -26,7 +26,7 @@ fn main() {
 
     if let Ok(file) = File::open(&readme_path) {
         println!("Updating README.md with version {}", version);
-        let version_regex = Regex::new(r"v\d+\.\d+\.\d+[ab]?\s*").unwrap();
+        let version_regex = Regex::new(r"^v\d+\.\d+\.\d+[ab]?\s*$").unwrap();
         let buf_reader = BufReader::new(file);
         let lines: Result<Vec<_>, _> = buf_reader.lines().collect();
         let mut new_content = String::new();
