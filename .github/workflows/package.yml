@@ -36,6 +36,7 @@ jobs:
           import os
           import tomlkit
           file_path = 'resource/variable.toml'
+          os.makedirs(os.path.dirname(file_path), exist_ok=True)
           data = {}
           try:
             with open(file_path, 'r') as file:
