@@ -2,7 +2,6 @@ mod constant;
 mod default_config;
 mod extract;
 mod pretty_log;
-mod resource_loader;
 mod run;
 
 use crate::constant::log::*;
@@ -13,7 +12,6 @@ use crate::extract::extract_operation_info::{
 };
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::extract::repo_decoration::RepoDecoration;
-use crate::resource_loader::ResourceLoader;
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
 use crossterm::execute;
@@ -119,7 +117,6 @@ fn main() {
     if let Some(command) = cli.command {
         let command_name = command.to_string();
         show_welcome(Some(command_name.as_str()));
-        let resource: ResourceLoader = ResourceLoader::load();
 
         let mut stdout = stdout();
         match command {
@@ -158,19 +155,19 @@ fn main() {
                 db.repo = Some(build_target_repo_template.unwrap_or_else(|| {
                     db.repo
                         .clone()
-                        .unwrap_or(resource.REPO_TEMPLATE.to_string())
+                        .unwrap_or(default_config::REPO_TEMPLATE.to_string())
                 }));
 
                 db.locator_pattern = Some(main_locator_pattern.unwrap_or_else(|| {
                     db.locator_pattern
                         .clone()
-                        .unwrap_or(resource.LOCATOR_PATTERN.to_string())
+                        .unwrap_or(default_config::LOCATOR_PATTERN.to_string())
                 }));
 
                 db.s_locator_template = Some(secondary_locator_template.unwrap_or_else(|| {
                     db.s_locator_template
                         .clone()
-                        .unwrap_or(resource.LOCATOR_TEMPLATE.to_string())
+                        .unwrap_or(default_config::LOCATOR_TEMPLATE.to_string())
                 }));
 
                 let repo_decoration = RepoDecoration::new(
@@ -328,7 +325,7 @@ fn main() {
                                     .as_path()
                                     .join(format!("{}{}", file_name, i));
                             let path_t = path.clone();
-                            let mend_file_path_t = resource.MENDING_FILE_PATH.clone();
+                            let mend_file_path_t = default_config::MENDING_FILE_PATH;
                             let handle = thread::spawn(move || {
                                 let clean_res = clean_dir(&dest_with_origin_name);
                                 match clean_res {
@@ -514,10 +511,11 @@ fn main() {
                 });
 
                 let package_file_name =
-                    package_file_stem.unwrap_or(resource.PACKAGE_FILE_STEM.to_string());
-                let exe_file_name = exe_file_name.unwrap_or(resource.EXE_FILE_NAME.to_string());
+                    package_file_stem.unwrap_or(default_config::PACKAGE_FILE_STEM.to_string());
+                let exe_file_name =
+                    exe_file_name.unwrap_or(default_config::EXE_FILE_NAME.to_string());
                 let check_exe_file_name =
-                    check_exe_file_name.unwrap_or(resource.CHECK_EXE_FILE_NAME.to_string());
+                    check_exe_file_name.unwrap_or(default_config::CHECK_EXE_FILE_NAME.to_string());
 
                 if single {
                     if let Some(server) = server {
@@ -525,7 +523,7 @@ fn main() {
                             &dest,
                             &package_file_name,
                             count_or_index,
-                            &resource.MENDING_FILE_PATH,
+                            &default_config::MENDING_FILE_PATH,
                             &server,
                         ) {
                             println!("{}", e);
@@ -547,7 +545,7 @@ fn main() {
                                 &dest,
                                 &package_file_name,
                                 i,
-                                &resource.MENDING_FILE_PATH,
+                                &default_config::MENDING_FILE_PATH,
                                 &server,
                             ) {
                                 println!("{}", e);

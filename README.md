@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.3.2  
+v1.3.3  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -17,7 +17,8 @@ by LviatYi
 
 Change Log:
 
-- v1.3.3*
+- v1.3.3
+    - 使用环境变量配置敏感数据。
     - 优化 pretty log 结构，使其更具表达性。
         - 添加了 VfpPrettyLogger 结构，使用其构造函数替换原本的 `pretty_log_operation_start` 函数。
         - 使 `pretty_log_operation_status` 被调用前必须调用 `pretty_log_operation_start` 成为一种可靠保证。
