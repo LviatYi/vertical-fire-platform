@@ -32,14 +32,14 @@ jobs:
           EXE_FILE_NAME: ${{ secrets.EXE_FILE_NAME }}
           CHECK_EXE_FILE_NAME: ${{ secrets.CHECK_EXE_FILE_NAME }}
         run: |
-          echo "REPO_TEMPLATE=${{ secrets.REPO_TEMPLATE }}" >> $GITHUB_ENV
-          echo "LOCATOR_PATTERN=${{ secrets.LOCATOR_PATTERN }}" >> $GITHUB_ENV
-          echo "LOCATOR_TEMPLATE=${{ secrets.LOCATOR_TEMPLATE }}" >> $GITHUB_ENV
-          echo "MENDING_FILE_PATH=${{ secrets.MENDING_FILE_PATH }}" >> $GITHUB_ENV
-          echo "PACKAGE_FILE_STEM=${{ secrets.PACKAGE_FILE_STEM }}" >> $GITHUB_ENV
-          echo "EXE_FILE_NAME=${{ secrets.EXE_FILE_NAME }}" >> $GITHUB_ENV
-          echo "CHECK_EXE_FILE_NAME=${{ secrets.CHECK_EXE_FILE_NAME }}" >> $GITHUB_ENV
-      
+          echo "REPO_TEMPLATE=${{ secrets.REPO_TEMPLATE }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "LOCATOR_PATTERN=${{ secrets.LOCATOR_PATTERN }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "LOCATOR_TEMPLATE=${{ secrets.LOCATOR_TEMPLATE }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "MENDING_FILE_PATH=${{ secrets.MENDING_FILE_PATH }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "PACKAGE_FILE_STEM=${{ secrets.PACKAGE_FILE_STEM }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "EXE_FILE_NAME=${{ secrets.EXE_FILE_NAME }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "CHECK_EXE_FILE_NAME=${{ secrets.CHECK_EXE_FILE_NAME }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - uses: SebRollen/toml-action@v1.2.0
         id: get_cargo_package_name
         with:

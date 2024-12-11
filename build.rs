@@ -5,6 +5,8 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 
 fn main() {
+    println!("cargo build with build.rs is running.");
+
     let out_dir = env::var("OUT_DIR").unwrap();
     println!("cargo:outdir={}", out_dir);
     let root = Path::new(&out_dir)
