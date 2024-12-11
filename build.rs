@@ -94,10 +94,10 @@ pub const CHECK_EXE_FILE_NAME: &str = \"{}\";
     if let Ok(mut file) = File::create(path) {
         if file.write_all(content.as_bytes()).is_ok() {
             println!("Injected sensitive data into src/default_config/mod.rs");
-            println!("content:\n{}", content);
-            println!("file path: {:?}", path.canonicalize());
-            println!("file exist: {:?}", path.exists());
-            println!("file content: {:?}", std::fs::read_to_string(path).unwrap());
+            // println!("content:\n{}", content);
+            // println!("file path: {:?}", path.canonicalize());
+            // println!("file exist: {:?}", path.exists());
+            // println!("file content: {:?}", std::fs::read_to_string(path).unwrap());
             Ok(())
         } else {
             println!("Failed to inject sensitive data into src/default_config/mod.rs");
