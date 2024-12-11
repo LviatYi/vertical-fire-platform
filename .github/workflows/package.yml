@@ -14,14 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
-
-      - name: Install TOML Toolkit
-        run: python -m pip install tomlkit
-
       - uses: SebRollen/toml-action@v1.2.0
         id: get_cargo_package_name
         with:
