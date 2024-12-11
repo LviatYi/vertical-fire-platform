@@ -22,24 +22,6 @@ jobs:
       - name: Install TOML Toolkit
         run: python -m pip install tomlkit
 
-      - name: Inject Sensitive Data
-        env:
-          REPO_TEMPLATE: ${{ secrets.REPO_TEMPLATE }}
-          LOCATOR_PATTERN: ${{ secrets.LOCATOR_PATTERN }}
-          LOCATOR_TEMPLATE: ${{ secrets.LOCATOR_TEMPLATE }}
-          MENDING_FILE_PATH: ${{ secrets.MENDING_FILE_PATH }}
-          PACKAGE_FILE_STEM: ${{ secrets.PACKAGE_FILE_STEM }}
-          EXE_FILE_NAME: ${{ secrets.EXE_FILE_NAME }}
-          CHECK_EXE_FILE_NAME: ${{ secrets.CHECK_EXE_FILE_NAME }}
-        run: |
-          echo "REPO_TEMPLATE=${{ secrets.REPO_TEMPLATE }}" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "LOCATOR_PATTERN=${{ secrets.LOCATOR_PATTERN }}" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "LOCATOR_TEMPLATE=${{ secrets.LOCATOR_TEMPLATE }}" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "MENDING_FILE_PATH=${{ secrets.MENDING_FILE_PATH }}" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "PACKAGE_FILE_STEM=${{ secrets.PACKAGE_FILE_STEM }}" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "EXE_FILE_NAME=${{ secrets.EXE_FILE_NAME }}" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "CHECK_EXE_FILE_NAME=${{ secrets.CHECK_EXE_FILE_NAME }}" | Out-File -FilePath $env:GITHUB_ENV -Append
-
       - uses: SebRollen/toml-action@v1.2.0
         id: get_cargo_package_name
         with:
@@ -70,6 +52,14 @@ jobs:
           default: true
 
       - name: Build
+        env:
+          REPO_TEMPLATE: ${{ secrets.REPO_TEMPLATE }}
+          LOCATOR_PATTERN: ${{ secrets.LOCATOR_PATTERN }}
+          LOCATOR_TEMPLATE: ${{ secrets.LOCATOR_TEMPLATE }}
+          MENDING_FILE_PATH: ${{ secrets.MENDING_FILE_PATH }}
+          PACKAGE_FILE_STEM: ${{ secrets.PACKAGE_FILE_STEM }}
+          EXE_FILE_NAME: ${{ secrets.EXE_FILE_NAME }}
+          CHECK_EXE_FILE_NAME: ${{ secrets.CHECK_EXE_FILE_NAME }}
         run: cargo build --release --target x86_64-pc-windows-msvc
 
       - name: Archive source code
