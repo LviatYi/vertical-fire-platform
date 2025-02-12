@@ -155,7 +155,7 @@ pub fn mending_user_ini(dest: &Path, index: u32, mend_file_path: &str) -> Result
             .open(&user_ini_path)
             .and_then(|mut file| {
                 file.write_all(
-                    formatx!(constant::log::CONFIG_APPEND_LINE, index + 1)
+                    formatx!(constant::log::CONFIG_APPEND_LINE, index)
                         .unwrap_or_default()
                         .as_bytes(),
                 )

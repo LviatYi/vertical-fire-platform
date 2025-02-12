@@ -110,17 +110,17 @@ pub fn set_server(
     mending_file_path: &str,
     server_str: &str,
 ) -> Result<(), String> {
-    if server_str.is_empty() {
-        return Err(ERR_SERVER_EMPTY.to_string());
-    }
-
     let work_path = home_path.join(format!("{}{}", package_name, index));
     let user_ini_path = work_path.join(mending_file_path);
 
     let mut config = Ini::new_cs();
     if config.load(&user_ini_path).is_ok() {
         config.set_default_section("NO_TREAT_default_AS_DEFAULT");
-        config.set("default", "hostName", Some(server_str.to_string()));
+        if server_str.is_empty() || server_str.eq("localhost") || server_str.eq("local") {
+            config.remove_key("default", "hostName");
+        } else {
+            config.set("default", "hostName", Some(server_str.to_string()));
+        }
 
         config
             .write(&user_ini_path)

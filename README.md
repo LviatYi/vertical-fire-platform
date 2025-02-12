@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.3.3  
+v1.3.4  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -17,6 +17,9 @@ by LviatYi
 
 Change Log:
 
+- v1.3.4
+    - 添加了重置 `fp run -S` 的方式。当用户未输入 `-S` 参数时，将采用 localhost 作为服务器。
+    - 修复了模拟 index 的偏移。该修复可能导致原有的账号信息反偏移。
 - v1.3.3
     - 使用环境变量配置敏感数据。
     - 优化 pretty log 结构，使其更具表达性。

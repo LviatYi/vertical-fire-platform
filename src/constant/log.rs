@@ -10,7 +10,6 @@ pub const ERR_ALREADY_RUNNING: &str = "Instance {} is running. Skip.";
 pub const ERR_RUN_PACKAGE_NOT_FOUND: &str =
     "Instance {} is not exist. Please extract to here first.";
 pub const ERR_WMIC_FAILED: &str = "Failed to execute wmic.";
-pub const ERR_SERVER_EMPTY: &str = "Server cannot be empty.";
 pub const ERR_WHEN_WRITE_USER_INI: &str = "When write user.ini, error occurred.";
 pub const ERR_FAILED_TO_KILL_PROCESS_WITH_PID: &str = "Failed to kill process with PID {}.";
 pub const ERR_FAILED_TO_KILL_PROCESS: &str = "Failed to kill process.";

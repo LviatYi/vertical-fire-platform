@@ -103,8 +103,15 @@ enum Commands {
         force: bool,
 
         /// run with spec server.
-        /// default: http://localhost:8080
-        #[arg(short = 'S', long)]
+        /// default: localhost
+        #[arg(
+            short = 'S',
+            long,
+            value_name = "URL",
+            num_args = 0..=1,
+            require_equals = false,
+            default_missing_value = "localhost"
+        )]
         server: Option<String>,
     },
     /// Clean cache.
@@ -523,7 +530,7 @@ fn main() {
                             &dest,
                             &package_file_name,
                             count_or_index,
-                            &default_config::MENDING_FILE_PATH,
+                            default_config::MENDING_FILE_PATH,
                             &server,
                         ) {
                             println!("{}", e);
