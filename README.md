@@ -53,10 +53,10 @@ Path 中的路径中查找这个文件。
 
 ```shell
 // 你可以输入这个命令 将程序所在的路径添加到 Path 环境变量中
-setx path "%path%;PATH_TO_FP_EXE"
+setx path "%path%;PATH_TO_FP_ROOT_DIR"
 ```
 
-当然，你需要自己替换 `PATH_TO_FP_EXE`。
+当然，你需要自己替换 `PATH_TO_FP_ROOT_DIR`。它应该是一个路径，下面包含 fp.exe.
 
 ### Extract
 
