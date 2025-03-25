@@ -9,6 +9,7 @@ labels: bug
 
 - [ ] Extract `fp extract`
 - [ ] Run `fp run`
+- [ ] Other:  
 
 ###### Description | 描述
 
