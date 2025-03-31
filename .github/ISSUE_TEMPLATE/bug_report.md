@@ -1,7 +1,7 @@
 ---
 name: BugReport
 about: Report a Bug to help us improve it. | 报告一个 Bug，帮助我们改进
-title: "[BUG]"
+title: "[BUG] "
 labels: bug
 ---
 

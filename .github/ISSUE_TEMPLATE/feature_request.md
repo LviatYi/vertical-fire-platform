@@ -1,7 +1,7 @@
 ---
 name: FeatureRequest
 about: Make a suggestion to help us improve. | 提出一个建议，帮助我们改进
-title: "[FEATURE]"
+title: "[FEATURE] "
 labels: enhancement
 ---
 
