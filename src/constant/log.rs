@@ -13,6 +13,8 @@ pub const ERR_WMIC_FAILED: &str = "Failed to execute wmic.";
 pub const ERR_WHEN_WRITE_USER_INI: &str = "When write user.ini, error occurred.";
 pub const ERR_FAILED_TO_KILL_PROCESS_WITH_PID: &str = "Failed to kill process with PID {}.";
 pub const ERR_FAILED_TO_KILL_PROCESS: &str = "Failed to kill process.";
+pub const ERR_UPGRADE_NOT_DEFINED: &str = "Upgrade not defined.";
+pub const ERR_DB_SAVE_FAILURE: &str = "Archive storage failure: {}";
 
 pub const HINT_BRANCH: &str = "use branch:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
