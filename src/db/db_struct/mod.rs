@@ -2,9 +2,7 @@ use crate::db::db_struct::fp_db_v1::FpDbV1;
 use crate::db::db_struct::fp_db_v2::{FpDbV2, VERSION_FP_DB_V2};
 use crate::db::db_struct::version_only::VersionOnly;
 use crate::db::db_struct::versioned_data::{UpgradeValue, VersionedData};
-use crate::db::get_default_db_file_path;
 use db_status::DBStatus::{Exist, NotExist};
-use formatx::formatx;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -13,6 +11,7 @@ pub mod fp_db_v1;
 pub mod versioned_data;
 
 mod db_status;
+mod define_versioned_data_type;
 mod fp_db_v2;
 mod version_field;
 mod version_only;
@@ -57,16 +56,10 @@ fn parse_content_by_version(
 }
 
 impl LatestVersionData {
-    pub fn get_from_path(path: Option<&Path>) -> Option<Self> {
-        let path = path
-            .map(|p| p.to_owned())
-            .unwrap_or(dirs::home_dir().unwrap_or_default());
-
-        let path = get_default_db_file_path(&path)?;
-
-        match VersionOnly::get_state_from_path(&path) {
+    pub fn get_from_path(path: &Path) -> Option<Self> {
+        match VersionOnly::get_state_from_path(path) {
             Exist(version) => {
-                let content = std::fs::read_to_string(&path).ok()?;
+                let content = std::fs::read_to_string(path).ok()?;
                 parse_content_with_upgrade(version, &content).ok()
             }
             NotExist => None,
@@ -74,21 +67,11 @@ impl LatestVersionData {
     }
 
     pub fn save(&self, path: &Path) -> Result<(), String> {
-        let save_path = get_default_db_file_path(path).ok_or_else(|| "Invalid path".to_string())?;
         let str = toml::to_string(self).map_err(|e| e.to_string())?;
-        File::create(save_path)
+        File::create(path)
             .map_err(|e| e.to_string())?
             .write_all(str.as_bytes())
             .map_err(|e| e.to_string())
-    }
-
-    pub fn save_with_error_log(&self, path: &Path) {
-        if let Err(e) = self.save(path) {
-            eprintln!(
-                "{}",
-                formatx!(crate::constant::log::ERR_DB_SAVE_FAILURE, e).unwrap_or_default()
-            );
-        }
     }
 }
 
@@ -110,7 +93,7 @@ d = 'C:\Users\LviatYi\Desktop\Temp'
         file.write_all(content.to_string().as_bytes()).unwrap();
         file.flush().unwrap();
 
-        let config = LatestVersionData::get_from_path(Option::from(file.path()));
+        let config = LatestVersionData::get_from_path(file.path());
 
         assert!(config.is_some());
 
@@ -129,7 +112,7 @@ d = 'C:\Users\LviatYi\Desktop\Temp'
 
     #[test]
     fn test_get_file_not_exist() {
-        let config = LatestVersionData::get_from_path(Option::from(Path::new("Z:\\NOT_EXIST")));
+        let config = LatestVersionData::get_from_path(Path::new("Z:\\NOT_EXIST"));
 
         assert!(config.is_none());
     }
@@ -148,7 +131,7 @@ blast_path = "C:\\Users\\LviatYi\\Desktop\\Temp"
         file.write_all(content.to_string().as_bytes()).unwrap();
         file.flush().unwrap();
 
-        let config = LatestVersionData::get_from_path(Option::from(file.path()));
+        let config = LatestVersionData::get_from_path(file.path());
 
         assert!(config.is_some());
 

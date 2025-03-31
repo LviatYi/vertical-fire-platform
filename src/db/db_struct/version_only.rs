@@ -1,5 +1,4 @@
 use crate::db::db_struct::db_status::DBStatus;
-use crate::db::get_default_db_file_path;
 use serde::{Deserialize, Serialize, Serializer};
 use std::path::Path;
 use toml::from_str;
@@ -17,8 +16,8 @@ impl VersionOnly {
         Self: Sized,
         for<'de> Self: serde::Deserialize<'de>,
     {
-        get_default_db_file_path(path)
-            .and_then(|file_path| std::fs::read_to_string(file_path).ok())
+        std::fs::read_to_string(path)
+            .ok()
             .and_then(|content| from_str(&content).ok())
     }
 

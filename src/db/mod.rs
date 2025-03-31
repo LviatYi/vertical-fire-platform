@@ -1,12 +1,15 @@
 use crate::db::db_struct::LatestVersionData;
 use dirs::home_dir;
+use formatx::formatx;
+use std::fs::create_dir_all;
+use std::ops::Not;
 use std::path::{Path, PathBuf};
 
 mod db_struct;
 
 pub const DB_FILE_NAME: &str = ".vf-extract-db.toml";
 
-pub fn get_default_db_file_path(path: &Path) -> Option<PathBuf> {
+fn get_default_db_file_path(path: &Path) -> Option<PathBuf> {
     if path.is_file() {
         Some(path.to_path_buf())
     } else if path.is_dir() {
@@ -16,15 +19,59 @@ pub fn get_default_db_file_path(path: &Path) -> Option<PathBuf> {
     }
 }
 
-pub fn get_db(path: Option<&Path>) -> LatestVersionData {
-    LatestVersionData::get_from_path(path).unwrap_or_default()
+fn touch_default_db_file_path(path: &Path) -> PathBuf {
+    if path.is_file() {
+        return path.to_path_buf();
+    } else if path.is_dir() {
+        return path.join(DB_FILE_NAME);
+    }
+
+    let mut path = path.to_path_buf();
+    if path.is_relative() {
+        path = home_dir().unwrap().join(path)
+    }
+
+    if !path
+        .file_name()
+        .and_then(|item| item.to_str())
+        .is_some_and(|n| n.ends_with(".toml"))
+    {
+        path = path.join(DB_FILE_NAME);
+    }
+
+    if let Some(p) = path.parent() {
+        p.exists().not().then(|| create_dir_all(p).ok());
+    }
+
+    path
 }
 
-pub fn delete_db_file() {
-    let db_path = home_dir().unwrap_or_default();
-    let _ = db_path
-        .is_dir()
-        .then(|| std::fs::remove_file(db_path.join(DB_FILE_NAME)));
+pub fn get_db(path: Option<&Path>) -> LatestVersionData {
+    get_default_db_file_path(&get_path_or_home_path(path))
+        .and_then(|item| LatestVersionData::get_from_path(&item))
+        .unwrap_or_default()
+}
+
+pub fn delete_db_file(path: Option<&Path>) {
+    get_default_db_file_path(&get_path_or_home_path(path)).inspect(|p| {
+        p.is_file().then(|| std::fs::remove_file(p));
+    });
+}
+
+pub fn save_with_error_log(db: &LatestVersionData, path: Option<&Path>) {
+    let path = touch_default_db_file_path(&get_path_or_home_path(path));
+
+    if let Err(e) = db.save(&path) {
+        eprintln!(
+            "{}",
+            formatx!(crate::constant::log::ERR_DB_SAVE_FAILURE, e).unwrap_or_default()
+        );
+    }
+}
+
+fn get_path_or_home_path(path: Option<&Path>) -> PathBuf {
+    path.unwrap_or(&home_dir().unwrap_or_default())
+        .to_path_buf()
 }
 
 #[cfg(test)]
@@ -81,8 +128,23 @@ blast_path = "test_blast_path"
 "#
         );
 
-        let loaded_db = LatestVersionData::get_from_path(Some(temp_file.path())).unwrap();
+        let loaded_db = get_db(Some(temp_file.path()));
 
         assert_eq!(loaded_db, db);
+    }
+
+    #[test]
+    fn test_delete() {
+        let temp_file = tempfile::NamedTempFile::new().unwrap();
+        let path = temp_file.path().to_path_buf();
+
+        let db = LatestVersionData::default();
+        db.save(&path).unwrap();
+
+        assert!(path.is_file());
+
+        delete_db_file(Some(&path));
+
+        assert!(!path.exists());
     }
 }

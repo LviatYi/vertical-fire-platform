@@ -181,7 +181,7 @@ mod tests {
                 .unwrap()
                 .to_string()
                 .replace("Stage", "{B}"),
-            LOCATOR_PATTERN.to_string(),
+            "{ID}-Hash.{*}".to_string(),
             "\\file.md".to_string(),
             BranchTypes::Stage,
         );
@@ -202,12 +202,12 @@ mod tests {
                 }
 
                 let ci_package_file_name = temp_root_dir_path
-                    .join(format!("{}-CL.{}{}", rand, rand, rand))
+                    .join(format!("{}-Hash.{}", rand, rand))
                     .join("file.md");
 
                 fs::create_dir_all(ci_package_file_name.parent().unwrap()).unwrap();
                 let mut file = File::create(ci_package_file_name).unwrap();
-                writeln!(file, "CONTENT of CL#{}", rand).unwrap();
+                writeln!(file, "CONTENT of Hash#{}", rand).unwrap();
 
                 max_ci = max_ci.max(rand);
             }
