@@ -1,12 +1,12 @@
 mod constant;
+mod db;
 mod default_config;
 mod extract;
 mod pretty_log;
 mod run;
 
 use crate::constant::log::*;
-use crate::extract::db;
-use crate::extract::db::ExtractDb;
+use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::extract::extract_operation_info::{
     ExtractOperationInfo, OperationStatus, OperationStepType,
 };
@@ -15,17 +15,14 @@ use crate::extract::repo_decoration::RepoDecoration;
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
 use crossterm::execute;
-use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
+use crossterm::style::Color;
 use dirs::home_dir;
 use formatx::formatx;
 use inquire::validator::ErrorMessage::Custom;
 use inquire::validator::Validation;
 use inquire::{Select, Text};
-use std::io::stdout;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
 use std::time::Duration;
-use std::{fs, thread};
 use strum_macros::Display;
 
 #[derive(Parser)]
@@ -67,10 +64,6 @@ enum Commands {
         #[arg(short, long)]
         /// target path to be extracted.
         dest: Option<PathBuf>,
-
-        #[arg(short, long)]
-        /// reset storage.
-        reset: bool,
     },
     /// Run game instance.
     Run {
@@ -125,7 +118,7 @@ fn main() {
         let command_name = command.to_string();
         show_welcome(Some(command_name.as_str()));
 
-        let mut stdout = stdout();
+        let mut stdout = std::io::stdout();
         match command {
             Commands::Extract {
                 branch,
@@ -135,17 +128,12 @@ fn main() {
                 main_locator_pattern,
                 secondary_locator_template,
                 dest,
-                reset,
             } => {
-                let db_path = home_dir().unwrap_or_default();
-                let mut db = reset
-                    .then_some(ExtractDb::default())
-                    .or(ExtractDb::from_path(&db_path))
-                    .unwrap_or_default();
+                let mut db = get_db(None);
 
-                db.b = branch.or_else(|| {
+                db.branch = branch.or_else(|| {
                     let mut options = vec!["Dev", "Stage", "Next"];
-                    if let Some(last_used) = db.b {
+                    if let Some(last_used) = db.branch {
                         if let Some(v) = options.iter_mut().position(|&mut v| v == last_used) {
                             options.swap(0, v);
                         }
@@ -159,29 +147,30 @@ fn main() {
                     }
                 });
 
-                db.repo = Some(build_target_repo_template.unwrap_or_else(|| {
-                    db.repo
+                db.extract_repo = Some(build_target_repo_template.unwrap_or_else(|| {
+                    db.extract_repo
                         .clone()
                         .unwrap_or(default_config::REPO_TEMPLATE.to_string())
                 }));
 
-                db.locator_pattern = Some(main_locator_pattern.unwrap_or_else(|| {
-                    db.locator_pattern
+                db.extract_locator_pattern = Some(main_locator_pattern.unwrap_or_else(|| {
+                    db.extract_locator_pattern
                         .clone()
                         .unwrap_or(default_config::LOCATOR_PATTERN.to_string())
                 }));
 
-                db.s_locator_template = Some(secondary_locator_template.unwrap_or_else(|| {
-                    db.s_locator_template
-                        .clone()
-                        .unwrap_or(default_config::LOCATOR_TEMPLATE.to_string())
-                }));
+                db.extract_s_locator_template =
+                    Some(secondary_locator_template.unwrap_or_else(|| {
+                        db.extract_s_locator_template
+                            .clone()
+                            .unwrap_or(default_config::LOCATOR_TEMPLATE.to_string())
+                    }));
 
                 let repo_decoration = RepoDecoration::new(
-                    db.repo.clone().unwrap(),
-                    db.locator_pattern.clone().unwrap(),
-                    db.s_locator_template.clone().unwrap(),
-                    db.b.clone().unwrap().parse().unwrap_or_default(),
+                    db.extract_repo.clone().unwrap(),
+                    db.extract_locator_pattern.clone().unwrap(),
+                    db.extract_s_locator_template.clone().unwrap(),
+                    db.branch.clone().unwrap().parse().unwrap_or_default(),
                 );
 
                 let ci_list = repo_decoration.get_sorted_ci_list();
@@ -202,7 +191,7 @@ fn main() {
 
                 let ci_temp = ci.unwrap_or_else(|| {
                     if let Some(latest) = ci_list.first().copied() {
-                        let last_used: Option<u32> = db.ci.and_then(|v| {
+                        let last_used: Option<u32> = db.last_inner_version.and_then(|v| {
                             if ci_list
                                 .binary_search_by(|probe| probe.cmp(&v).reverse())
                                 .is_ok()
@@ -269,11 +258,11 @@ fn main() {
                     println!("{}", ERR_EMPTY_REPO);
                     return;
                 }
-                db.ci = Some(ci_temp);
+                db.last_inner_version = Some(ci_temp);
 
-                db.c = Some(count.unwrap_or_else(|| {
+                db.last_player_count = Some(count.unwrap_or_else(|| {
                     let input = Text::from(HINT_PLAYER_COUNT)
-                        .with_default(db.c.unwrap_or(4).to_string().as_str())
+                        .with_default(db.last_player_count.unwrap_or(4).to_string().as_str())
                         .with_validator(|v: &str| {
                             if v.parse::<u32>().is_ok() {
                                 Ok(Validation::Valid)
@@ -289,7 +278,7 @@ fn main() {
                     }
                 }));
 
-                db.d = Some(dest.or(db.d.clone()).unwrap_or_else(|| {
+                db.blast_path = Some(dest.or(db.blast_path.clone()).unwrap_or_else(|| {
                     if let Some(home_path) = home_dir() {
                         home_path
                     } else {
@@ -310,11 +299,11 @@ fn main() {
                     }
                 }));
 
-                db.save_with_error_log(&db_path);
+                save_with_error_log(&db, None);
 
                 if let Some(path) = repo_decoration.get_full_path_by_ci(ci_temp) {
                     if let Some(file_name) = path.file_stem().and_then(|v| v.to_str()) {
-                        let count = db.c.unwrap();
+                        let count = db.last_player_count.unwrap();
                         let pty_logger = pretty_log::VfpPrettyLogger::apply_for(&mut stdout, count);
 
                         let mut working_status: Vec<ExtractOperationInfo> = (0..count)
@@ -322,18 +311,20 @@ fn main() {
                             .collect();
 
                         let mut handles = vec![];
-                        let (tx, rx) = mpsc::channel::<(u32, OperationStepType, OperationStatus)>();
+                        let (tx, rx) =
+                            std::sync::mpsc::channel::<(u32, OperationStepType, OperationStatus)>();
 
                         for i in 1..count + 1 {
                             let tx = tx.clone();
-                            let dest_with_origin_name =
-                                db.d.clone()
-                                    .unwrap()
-                                    .as_path()
-                                    .join(format!("{}{}", file_name, i));
+                            let dest_with_origin_name = db
+                                .blast_path
+                                .clone()
+                                .unwrap()
+                                .as_path()
+                                .join(format!("{}{}", file_name, i));
                             let path_t = path.clone();
                             let mend_file_path_t = default_config::MENDING_FILE_PATH;
-                            let handle = thread::spawn(move || {
+                            let handle = std::thread::spawn(move || {
                                 let clean_res = clean_dir(&dest_with_origin_name);
                                 match clean_res {
                                     Ok(cost_opt) => {
@@ -431,7 +422,7 @@ fn main() {
                                     item,
                                 );
                             }
-                            thread::sleep(Duration::from_millis(50));
+                            std::thread::sleep(Duration::from_millis(50));
                         }
 
                         for handle in handles {
@@ -440,8 +431,8 @@ fn main() {
                     } else {
                         let _ = execute!(
                             stdout,
-                            SetForegroundColor(Color::Red),
-                            Print(format!(
+                            crossterm::style::SetForegroundColor(Color::Red),
+                            crossterm::style::Print(format!(
                                 "{}\n",
                                 formatx!(ERR_INVALID_PATH).unwrap_or_default()
                             ))
@@ -450,14 +441,14 @@ fn main() {
                 } else {
                     let _ = execute!(
                         stdout,
-                        SetForegroundColor(Color::Red),
-                        Print(format!(
+                        crossterm::style::SetForegroundColor(Color::Red),
+                        crossterm::style::Print(format!(
                             "{}\n",
                             formatx!(ERR_NO_SPECIFIED_PACKAGE).unwrap_or_default()
                         ))
                     );
                 }
-                let _ = execute!(stdout, ResetColor);
+                let _ = execute!(stdout, crossterm::style::ResetColor);
             }
             Commands::Run {
                 dest,
@@ -469,31 +460,26 @@ fn main() {
                 force,
                 server,
             } => {
-                let db_path = home_dir().unwrap_or_default();
-                let dest = dest
-                    .or(ExtractDb::from_path(&db_path).and_then(|c| c.d))
-                    .unwrap_or_else(|| {
-                        if let Some(home_path) = home_dir() {
-                            home_path
-                        } else {
-                            let input = Text::from(HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH)
-                                .with_validator(|v: &str| {
-                                    if v.parse::<PathBuf>().is_ok() {
-                                        Ok(Validation::Valid)
-                                    } else {
-                                        Ok(Validation::Invalid(Custom(
-                                            ERR_INVALID_PATH.to_string(),
-                                        )))
-                                    }
-                                })
-                                .prompt();
+                let dest = dest.or(get_db(None).blast_path).unwrap_or_else(|| {
+                    if let Some(home_path) = home_dir() {
+                        home_path
+                    } else {
+                        let input = Text::from(HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH)
+                            .with_validator(|v: &str| {
+                                if v.parse::<PathBuf>().is_ok() {
+                                    Ok(Validation::Valid)
+                                } else {
+                                    Ok(Validation::Invalid(Custom(ERR_INVALID_PATH.to_string())))
+                                }
+                            })
+                            .prompt();
 
-                            match input {
-                                Ok(p) => p.parse::<PathBuf>().unwrap(),
-                                Err(_) => PathBuf::new(),
-                            }
+                        match input {
+                            Ok(p) => p.parse::<PathBuf>().unwrap(),
+                            Err(_) => PathBuf::new(),
                         }
-                    });
+                    }
+                });
 
                 let count_or_index = count_or_index.unwrap_or_else(|| {
                     let input = Text::from(if single {
@@ -571,10 +557,7 @@ fn main() {
                 }
             }
             Commands::Clean => {
-                let db_path = home_dir().unwrap_or_default();
-                let _ = db_path
-                    .is_dir()
-                    .then(|| fs::remove_file(db_path.join(db::DB_FILE_NAME)));
+                delete_db_file(None);
             }
         }
 

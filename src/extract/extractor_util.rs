@@ -178,8 +178,6 @@ mod tests {
     use rand::Rng;
     use std::collections::HashSet;
     use std::io::Write;
-    use std::panic;
-    use std::panic::AssertUnwindSafe;
     use tempfile::tempdir;
     use zip::write::SimpleFileOptions;
 
@@ -187,7 +185,7 @@ mod tests {
     fn test_extract_ci_by_main_locator() {
         assert_eq!(
             extract_ci_by_main_locator("{ID}-Hash.{*}", "312-Hash.321312"),
-            Some(360)
+            Some(312)
         );
         assert_eq!(
             extract_ci_by_main_locator("{ID}-Hash.{*}", "-312-Hash.321312"),
@@ -202,37 +200,32 @@ mod tests {
     #[test]
     fn test_get_sorted_ci_locators() {
         let temp_root_dir = tempdir().unwrap();
-        let temp_root_dir_path = temp_root_dir.path().to_path_buf();
 
-        let _ = panic::catch_unwind(AssertUnwindSafe(|| {
-            let mut max_ci = 0;
-            let mut unique_numbers = HashSet::new();
-            let max_create_count = 10;
-            for _ in 0..max_create_count {
-                let mut rand: u32;
-                loop {
-                    rand = rand::thread_rng().gen_range(1u32..=1000);
-                    if unique_numbers.contains(&rand) {
-                        continue;
-                    } else {
-                        unique_numbers.insert(rand);
-                        break;
-                    }
+        let mut max_ci = 0;
+        let mut unique_numbers = HashSet::new();
+        let max_create_count = 10;
+        for _ in 0..max_create_count {
+            let mut rand: u32;
+            loop {
+                rand = rand::thread_rng().gen_range(1u32..=1000);
+                if unique_numbers.contains(&rand) {
+                    continue;
+                } else {
+                    unique_numbers.insert(rand);
+                    break;
                 }
-
-                let ci_package_dir_name = temp_root_dir.path().join(format!("{}-CL.451065", rand));
-                max_ci = max_ci.max(rand);
-                fs::create_dir(&ci_package_dir_name).expect("create dir failed.");
             }
 
-            let sorted_ci_package_names =
-                get_sorted_main_locators(temp_root_dir.into_path(), "{ID}-Hash.{*}");
-            let ci = extract_ci_by_main_locator("{ID}-Hash.{*}", &sorted_ci_package_names[0]);
+            let ci_package_dir_name = temp_root_dir.path().join(format!("{}-Hash.451065", rand));
+            max_ci = max_ci.max(rand);
+            fs::create_dir(&ci_package_dir_name).expect("create dir failed.");
+        }
 
-            assert_eq!(ci.unwrap(), max_ci);
-        }));
+        let sorted_ci_package_names =
+            get_sorted_main_locators(temp_root_dir.into_path(), "{ID}-Hash.{*}");
+        let ci = extract_ci_by_main_locator("{ID}-Hash.{*}", &sorted_ci_package_names[0]);
 
-        fs::remove_dir_all(temp_root_dir_path).unwrap();
+        assert_eq!(ci.unwrap(), max_ci);
     }
 
     #[test]
@@ -241,21 +234,19 @@ mod tests {
         let temp_root_dir_path = temp_root_dir.path().to_path_buf();
 
         let zip_file_path = temp_root_dir_path.join("test.zip");
-        let file_path = temp_root_dir_path.join("test").join("file.txt");
+        let file_path = temp_root_dir_path.join("file.txt");
         let path_str = temp_root_dir_path.to_str().unwrap();
         println!("path_str: {}", path_str);
         let _ = std::io::stdout().flush();
 
-        let _ = panic::catch_unwind(AssertUnwindSafe(|| {
-            let mut zip = zip::ZipWriter::new(fs::File::create(&zip_file_path).unwrap());
-            zip.start_file("file.txt", SimpleFileOptions::default())
-                .unwrap();
-            zip.write_all(b"hello world").unwrap();
-            zip.finish().unwrap();
+        let mut zip = zip::ZipWriter::new(fs::File::create(&zip_file_path).unwrap());
+        zip.start_file("file.txt", SimpleFileOptions::default())
+            .unwrap();
+        zip.write_all(b"hello world").unwrap();
+        zip.finish().unwrap();
 
-            let _ = extract_zip_file(&zip_file_path, temp_root_dir_path.as_path());
+        let _ = extract_zip_file(&zip_file_path, temp_root_dir_path.as_path());
 
-            assert_eq!(fs::read_to_string(file_path).unwrap(), "hello world");
-        }));
+        assert_eq!(fs::read_to_string(file_path).unwrap(), "hello world");
     }
 }
