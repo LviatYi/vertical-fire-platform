@@ -4,6 +4,7 @@ mod default_config;
 mod extract;
 mod pretty_log;
 mod run;
+mod info;
 
 use crate::constant::log::*;
 use crate::db::{delete_db_file, get_db, save_with_error_log};
