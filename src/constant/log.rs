@@ -15,6 +15,11 @@ pub const ERR_FAILED_TO_KILL_PROCESS_WITH_PID: &str = "Failed to kill process wi
 pub const ERR_FAILED_TO_KILL_PROCESS: &str = "Failed to kill process.";
 pub const ERR_UPGRADE_NOT_DEFINED: &str = "Upgrade not defined.";
 pub const ERR_DB_SAVE_FAILURE: &str = "Archive storage failure: {}";
+pub const ERR_NEED_A_JENKINS_URL: &str = "Need a jenkins url.";
+pub const ERR_NEED_A_JENKINS_USERNAME: &str = "Need your jenkins username.";
+pub const ERR_NEED_A_JENKINS_API_TOKEN: &str = "Need your jenkins api token.";
+pub const ERR_JENKINS_CLIENT_INVALID: &str =
+    "Cannot connect to jenkins.\nUrl: {}.\nUsername: {}\nMay be you should check your api token.\nErr: {}";
 
 pub const HINT_BRANCH: &str = "use branch:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
@@ -27,6 +32,12 @@ pub const HINT_EXTRACT_TO: &str = "extract to: ";
 pub const HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH: &str = "game package home path: ";
 pub const HINT_RUN_INDEX: &str = "run instance index: ";
 pub const HINT_RUN_COUNT: &str = "run instance count: ";
+pub const HINT_INPUT_JENKINS_URL: &str = "input the jenkins url: ";
+pub const HINT_INPUT_JENKINS_USERNAME: &str = "input your jenkins username(somebody@email.com): ";
+pub const HINT_INPUT_JENKINS_API_TOKEN: &str =
+    "get your jenkins api token at https://{}/user/{}/configure\ncopy to here:";
+pub const HINT_JENKINS_API_TOKEN_DOC: &str =
+    "https://www.jenkins.io/doc/book/using/remote-access-api/";
 
 pub const OPERATION_TITLE: &str = "Work at index {}.";
 pub const OPERATION_FINISHED: &str = "Finished at index {}.";
@@ -41,5 +52,6 @@ pub const RESULT_MEND: &str = "Mend {}ms.";
 pub const OPERATION_RUN_CHECK: &str = "Checking {}";
 pub const RESULT_RUN: &str = "Instance {} is created.";
 pub const OPERATION_KILL_AND_RETRY: &str = "Killing and retrying...";
+pub const JENKINS_LOGIN_RESULT: &str = "Jenkins login success!";
 
 pub const CONFIG_APPEND_LINE: &str = "\neadpClientIndex={}\n";

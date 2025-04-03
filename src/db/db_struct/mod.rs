@@ -1,5 +1,6 @@
 use crate::db::db_struct::fp_db_v1::FpDbV1;
 use crate::db::db_struct::fp_db_v2::{FpDbV2, VERSION_FP_DB_V2};
+use crate::db::db_struct::fp_db_v3::{FpDbV3, VERSION_FP_DB_V3};
 use crate::db::db_struct::version_only::VersionOnly;
 use crate::db::db_struct::versioned_data::{UpgradeValue, VersionedData};
 use db_status::DBStatus::{Exist, NotExist};
@@ -7,16 +8,17 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-pub mod fp_db_v1;
+mod fp_db_v1;
+mod fp_db_v2;
+mod fp_db_v3;
 pub mod versioned_data;
 
 mod db_status;
 mod define_versioned_data_type;
-mod fp_db_v2;
 mod version_field;
 mod version_only;
 
-pub type LatestVersionData = FpDbV2;
+pub type LatestVersionData = FpDbV3;
 
 /// # parse content with upgrade
 ///
@@ -48,6 +50,9 @@ fn parse_content_by_version(
     content: &str,
 ) -> Result<Box<dyn VersionedData>, toml::de::Error> {
     match version {
+        VERSION_FP_DB_V3 => {
+            FpDbV3::parse_from_string(content).map(|v| Box::new(v) as Box<dyn VersionedData>)
+        }
         VERSION_FP_DB_V2 => {
             FpDbV2::parse_from_string(content).map(|v| Box::new(v) as Box<dyn VersionedData>)
         }

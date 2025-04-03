@@ -66,6 +66,7 @@ fn inject_sensitive_data() -> Result<(), ()> {
     let package_file_stem = env::var("PACKAGE_FILE_STEM").unwrap_or_default();
     let exe_file_name = env::var("EXE_FILE_NAME").unwrap_or_default();
     let check_exe_file_name = env::var("CHECK_EXE_FILE_NAME").unwrap_or_default();
+    let jenkins_url = env::var("JENKINS_URL").unwrap_or_default();
 
     if repo_template.is_empty() {
         println!("ENV VARIABLE NOT SET");
@@ -81,6 +82,8 @@ pub const MENDING_FILE_PATH: &str = \"{}\";
 pub const PACKAGE_FILE_STEM: &str = \"{}\";
 pub const EXE_FILE_NAME: &str = \"{}\";
 pub const CHECK_EXE_FILE_NAME: &str = \"{}\";
+
+pub const JENKINS_URL: &str = \"{}\";
 ",
         repo_template,
         locator_pattern,
@@ -88,7 +91,8 @@ pub const CHECK_EXE_FILE_NAME: &str = \"{}\";
         mending_file_path,
         package_file_stem,
         exe_file_name,
-        check_exe_file_name
+        check_exe_file_name,
+        jenkins_url
     );
 
     if let Ok(mut file) = File::create(path) {

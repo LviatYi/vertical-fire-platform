@@ -1,8 +1,15 @@
 use crate::info::jenkins_endpoint::job_info::JobInfo;
+use crate::info::jenkins_endpoint::ping::{Ping, PingResult};
 use crate::info::jenkins_endpoint::run_info::RunInfo;
 use crate::info::jenkins_model::workflow_builds::WorkflowBuilds;
 use crate::info::jenkins_model::workflow_run::WorkflowRun;
 use jenkins_sdk::{AsyncQuery, JenkinsAsyncClient, JenkinsError};
+
+pub async fn ping_jenkins(client: &JenkinsAsyncClient) -> Result<(), JenkinsError> {
+    AsyncQuery::<PingResult>::query(&Ping, client)
+        .await
+        .map(|_| ())
+}
 
 pub async fn query_builds_in_job(
     client: &JenkinsAsyncClient,
@@ -52,4 +59,12 @@ pub async fn query_user_latest_info(
     }
 
     Ok(user_latest_build_number)
+}
+
+pub fn create_async_jenkins_client(
+    url: &str,
+    username: &str,
+    api_token: &str,
+) -> JenkinsAsyncClient {
+    JenkinsAsyncClient::new(url, username, api_token)
 }

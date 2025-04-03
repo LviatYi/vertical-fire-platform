@@ -1,3 +1,3 @@
-pub mod query;
+pub mod jenkins_endpoint;
 mod jenkins_model;
-mod jenkins_endpoint;
+pub mod query;

@@ -7,3 +7,5 @@ pub const MENDING_FILE_PATH: &str = "";
 pub const PACKAGE_FILE_STEM: &str = "";
 pub const EXE_FILE_NAME: &str = "";
 pub const CHECK_EXE_FILE_NAME: &str = "";
+
+pub const JENKINS_URL: &str = "";

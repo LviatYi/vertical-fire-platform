@@ -2,9 +2,9 @@ mod constant;
 mod db;
 mod default_config;
 mod extract;
+mod info;
 mod pretty_log;
 mod run;
-mod info;
 
 use crate::constant::log::*;
 use crate::db::{delete_db_file, get_db, save_with_error_log};
@@ -13,6 +13,8 @@ use crate::extract::extract_operation_info::{
 };
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::extract::repo_decoration::RepoDecoration;
+use crate::info::query::{create_async_jenkins_client, ping_jenkins};
+use crate::pretty_log::colored_println;
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
 use crossterm::execute;
@@ -108,11 +110,28 @@ enum Commands {
         )]
         server: Option<String>,
     },
+    /// Login to Jenkins to get more information about build tasks.
+    Login {
+        /// Jenkins root URL.
+        #[arg(long)]
+        url: Option<String>,
+
+        /// Username like "somebody@email.com"
+        #[arg(short, long)]
+        username: Option<String>,
+
+        /// API token from Jenkins.
+        /// You can get it from Jenkins web page.
+        /// See also: https://www.jenkins.io/doc/book/using/remote-access-api/
+        #[arg(short, long)]
+        api_token: Option<String>,
+    },
     /// Clean cache.
     Clean,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli = Cli::parse();
 
     if let Some(command) = cli.command {
@@ -554,6 +573,141 @@ fn main() {
                             i,
                             force,
                         );
+                    }
+                }
+            }
+            Commands::Login {
+                url,
+                username,
+                api_token,
+            } => {
+                let mut db = get_db(None);
+
+                db.jenkins_url = url.or_else(|| {
+                    let mut input = Text::from(HINT_INPUT_JENKINS_URL).with_validator(|v: &str| {
+                        if !v.is_empty() {
+                            Ok(Validation::Valid)
+                        } else {
+                            Ok(Validation::Invalid(Custom(
+                                ERR_NEED_A_JENKINS_URL.to_string(),
+                            )))
+                        }
+                    });
+
+                    let existed =
+                        db.jenkins_url
+                            .clone()
+                            .or(if default_config::JENKINS_URL.is_empty() {
+                                None
+                            } else {
+                                Some(default_config::JENKINS_URL.to_string())
+                            });
+                    if existed.is_some() {
+                        input = input.with_default(existed.as_deref().unwrap());
+                    }
+
+                    let input = input.prompt();
+
+                    input.ok()
+                });
+
+                db.jenkins_username = username.or_else(|| {
+                    let mut input =
+                        Text::from(HINT_INPUT_JENKINS_USERNAME).with_validator(|v: &str| {
+                            if !v.is_empty() {
+                                Ok(Validation::Valid)
+                            } else {
+                                Ok(Validation::Invalid(Custom(
+                                    ERR_NEED_A_JENKINS_USERNAME.to_string(),
+                                )))
+                            }
+                        });
+
+                    let existed = db.jenkins_username.clone();
+                    if existed.is_some() {
+                        input = input.with_default(existed.as_deref().unwrap());
+                    }
+
+                    let input = input.prompt();
+
+                    input.ok()
+                });
+
+                db.jenkins_api_token = api_token.or_else(|| {
+                    let hint = formatx!(
+                        HINT_INPUT_JENKINS_API_TOKEN,
+                        db.jenkins_url.clone().unwrap(),
+                        db.jenkins_username.clone().unwrap()
+                    )
+                    .unwrap_or(HINT_JENKINS_API_TOKEN_DOC.to_string());
+
+                    let mut input = Text::from(hint.as_str()).with_validator(|v: &str| {
+                        if !v.is_empty() {
+                            Ok(Validation::Valid)
+                        } else {
+                            Ok(Validation::Invalid(Custom(
+                                ERR_NEED_A_JENKINS_API_TOKEN.to_string(),
+                            )))
+                        }
+                    });
+
+                    let existed = db.jenkins_api_token.clone();
+                    if existed.is_some() {
+                        input = input.with_default(existed.as_deref().unwrap());
+                    }
+
+                    let input = input.prompt().map(|v| {
+                        if v.ends_with("/") || v.ends_with("\\") {
+                            v[0..v.len() - 1].to_string()
+                        } else {
+                            v
+                        }
+                    });
+
+                    input.ok()
+                });
+
+                if db.jenkins_url.is_none() {
+                    println!("{}", formatx!(ERR_NEED_A_JENKINS_URL).unwrap());
+                    return;
+                }
+
+                if db.jenkins_username.is_none() {
+                    println!("{}", formatx!(ERR_NEED_A_JENKINS_USERNAME).unwrap());
+                    return;
+                }
+                if db.jenkins_api_token.is_none() {
+                    println!("{}", formatx!(ERR_NEED_A_JENKINS_API_TOKEN).unwrap());
+                    return;
+                }
+
+                let client = create_async_jenkins_client(
+                    db.jenkins_url.clone().unwrap().as_str(),
+                    db.jenkins_username.clone().unwrap().as_str(),
+                    db.jenkins_api_token.clone().unwrap().as_str(),
+                );
+
+                match ping_jenkins(&client).await {
+                    Ok(_) => {
+                        let _ = colored_println(
+                            &mut stdout,
+                            Color::Green,
+                            format!("{}", JENKINS_LOGIN_RESULT).as_str(),
+                        );
+
+                        save_with_error_log(&db, None);
+                    }
+                    Err(e) => {
+                        println!(
+                            "{}",
+                            formatx!(
+                                ERR_JENKINS_CLIENT_INVALID,
+                                db.jenkins_url.clone().unwrap(),
+                                db.jenkins_username.clone().unwrap(),
+                                e.to_string()
+                            )
+                            .unwrap_or_default()
+                        )
                     }
                 }
             }
