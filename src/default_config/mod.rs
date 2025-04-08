@@ -9,3 +9,4 @@ pub const EXE_FILE_NAME: &str = "";
 pub const CHECK_EXE_FILE_NAME: &str = "";
 
 pub const JENKINS_URL: &str = "";
+pub const JENKINS_JOB_NAME: &str = "";
