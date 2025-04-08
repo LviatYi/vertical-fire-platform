@@ -690,6 +690,39 @@ async fn main() {
 
                     input.ok()
                 });
+                
+                db.jenkins_username = username.or_else(|| {
+                    let mut input = Text::from(HINT_INPUT_JENKINS_USERNAME).with_validator(
+                        |v: &str| {
+                            if !v.is_empty() {
+                                Ok(Validation::Valid)
+                            } else {
+                                Ok(Validation::Invalid(Custom(
+                                    ERR_NEED_A_JENKINS_USERNAME.to_string(),
+                                )))
+                            }
+                        },
+                    );
+
+                    let existed = db.jenkins_username.clone();
+                    if existed.is_some() {
+                        input = input.with_default(existed.as_deref().unwrap());
+                    }
+
+                    let input = input.prompt();
+
+                    input.ok()
+                });
+
+                if db.jenkins_url.is_none() {
+                    println!("{}", formatx!(ERR_NEED_A_JENKINS_URL).unwrap());
+                    return;
+                }
+
+                if db.jenkins_username.is_none() {
+                    println!("{}", formatx!(ERR_NEED_A_JENKINS_USERNAME).unwrap());
+                    return;
+                }
 
                 let login_method = Select::new(
                     HINT_SELECT_LOGIN_METHOD,
@@ -702,29 +735,6 @@ async fn main() {
 
                 match login_method {
                     LoginMethod::ApiToken => {
-                        db.jenkins_username = username.or_else(|| {
-                            let mut input = Text::from(HINT_INPUT_JENKINS_USERNAME).with_validator(
-                                |v: &str| {
-                                    if !v.is_empty() {
-                                        Ok(Validation::Valid)
-                                    } else {
-                                        Ok(Validation::Invalid(Custom(
-                                            ERR_NEED_A_JENKINS_USERNAME.to_string(),
-                                        )))
-                                    }
-                                },
-                            );
-
-                            let existed = db.jenkins_username.clone();
-                            if existed.is_some() {
-                                input = input.with_default(existed.as_deref().unwrap());
-                            }
-
-                            let input = input.prompt();
-
-                            input.ok()
-                        });
-
                         db.jenkins_api_token = api_token.or_else(|| {
                             let hint = formatx!(
                                 HINT_INPUT_JENKINS_API_TOKEN,
@@ -758,16 +768,6 @@ async fn main() {
 
                             input.ok()
                         });
-
-                        if db.jenkins_url.is_none() {
-                            println!("{}", formatx!(ERR_NEED_A_JENKINS_URL).unwrap());
-                            return;
-                        }
-
-                        if db.jenkins_username.is_none() {
-                            println!("{}", formatx!(ERR_NEED_A_JENKINS_USERNAME).unwrap());
-                            return;
-                        }
 
                         if db.jenkins_api_token.is_none() {
                             println!("{}", formatx!(ERR_NEED_A_JENKINS_API_TOKEN).unwrap());
