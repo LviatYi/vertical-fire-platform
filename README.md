@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.3.5  
+v1.3.6  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -17,6 +17,9 @@ by LviatYi
 
 Change Log:
 
+- v1.3.6
+    - 添加了与 Jenkins 进行数据沟通的能力。使用 `fp login` 选择一种方式进行登录，随后使用 `fp extract` 时将快速得到专属于你的包。
+    - 推荐 Cookie 登录而非 ApiToken。ApiToken 非常的慢！
 - v1.3.5
     - 引入了全新的运行存储管理，使得对不同版本的数据具有更好的兼容性与开发可读性。
     - 修复了一些错误的单元测试配置。
@@ -34,7 +37,9 @@ Change Log:
 
 Road Map:
 
-- 目前没有额外计划。
+- 优化 main.rs 的代码，将所有的输入模块化。
+- 添加使用密码而非手动复制 Cookie 进行登录的方式。
+- 添加 Rebuild 功能。
 
 ## Functional ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
 
@@ -118,6 +123,34 @@ fp run
 - **-s, --single** 是否单个启动。否则多启动。单个启动意味着 -c 参数为索引。
 - **-f, --force** 强制启动。若实例已存在则关闭它。
 - **-S, --server <SERVER>** 使用指定的服务器。
+
+### Login
+
+登录 Jenkins 以获得实时信息支持。
+
+可以这样使用：
+
+```shell
+// usage
+fp login --url https://your.jenkins.url -u your_username -a your_api_token -j your_interested_job_name
+
+// or
+fp login --url https://your.jenkins.url -u your_username -c your_cookie -j your_interested_job_name
+```
+
+也可以这样使用：
+
+```shell
+// usage
+fp login
+```
+
+- **-u, --username <USERNAME>** 用户名 它可能是个邮箱账号，如 "somebody@email.com"
+- **-a, --api-token <API_TOKEN>** API token。你可以在此处获得更多信息：https://www.jenkins.io/doc/book/using/remote-access-api/
+- **-c, --cookie <COOKIE>** Cookie。它不是很安全，但它在我的用例中更快。如果你不知道哪里可以找到 Cookie，请不要使用。
+- **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
+
+---
 
 [JetbrainsMonoNerdFont]: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.0.2/JetBrainsMono.zip@fallbackFont
 [SarasaMonoSC]: https://github.com/be5invis/Sarasa-Gothic/releases/download/v0.41.6/sarasa-gothic-ttf-0.41.6.7z
