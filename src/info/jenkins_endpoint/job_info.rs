@@ -19,7 +19,7 @@ impl jenkins_sdk::Endpoint for JobInfo {
             None => "".to_string(),
         };
         format!(
-            "job/{}/api/json/?tree=builds[number,url]{}",
+            "job/{}/api/json/?tree=builds[number]{}",
             self.job_name, count_str
         )
     }

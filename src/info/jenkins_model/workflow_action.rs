@@ -19,5 +19,5 @@ pub enum WorkflowAction {
 #[serde(untagged)]
 pub enum MaybeWorkflowAction {
     WorkflowAction(WorkflowAction),
-    Unknown(serde_json::Value),
+    Unknown(#[allow(dead_code)]serde_json::Value),
 }

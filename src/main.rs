@@ -7,6 +7,7 @@ mod pretty_log;
 mod run;
 
 use crate::constant::log::*;
+use crate::constant::util::get_hidden_sensitive_string;
 use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::extract::extract_operation_info::{
     ExtractOperationInfo, OperationStatus, OperationStepType,
@@ -29,12 +30,10 @@ use inquire::validator::Validation;
 use inquire::{Select, Text};
 use jenkins_sdk::client::AsyncClient;
 use jenkins_sdk::JenkinsError;
-use std::future::Future;
 use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use strum_macros::Display;
-use crate::constant::util::get_hidden_sensitive_string;
 
 #[derive(Parser)]
 #[command(name="Vertical Fire Platform", author, version, about(env!("CARGO_PKG_DESCRIPTION")), long_about=None,arg_required_else_help=true
@@ -278,9 +277,9 @@ async fn main() {
                         let mut options: Vec<String> = Vec::new();
 
                         let mut latest_mine_opt_index: usize = usize::MAX;
-                        let mut latest_opt_index: usize = usize::MAX;
+                        let mut _latest_opt_index: usize = usize::MAX;
                         let mut last_used_index: usize = usize::MAX;
-                        let mut custom_index: usize = usize::MAX;
+                        let custom_index: usize;
 
                         if let Some(latest_mine_ci) = latest_mine_ci {
                             options.push(format!(
@@ -296,7 +295,7 @@ async fn main() {
                         }
 
                         options.push(format!("{}{}", latest, HINT_LATEST_CI_SUFFIX));
-                        latest_opt_index = options.len() - 1;
+                        _latest_opt_index = options.len() - 1;
 
                         if let Some(last_used) = last_used {
                             options.push(format!("{}{}", last_used, HINT_LAST_USED_CI_SUFFIX));
@@ -855,7 +854,9 @@ async fn main() {
                                     ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID,
                                     db.jenkins_url.clone().unwrap(),
                                     db.jenkins_username.clone().unwrap(),
-                                    get_hidden_sensitive_string(&db.jenkins_api_token.clone().unwrap()),
+                                    get_hidden_sensitive_string(
+                                        &db.jenkins_api_token.clone().unwrap()
+                                    ),
                                     e.to_string()
                                 )
                             }
@@ -863,7 +864,9 @@ async fn main() {
                                 formatx!(
                                     ERR_JENKINS_CLIENT_INVALID_MAY_BE_COOKIE_INVALID,
                                     db.jenkins_url.clone().unwrap(),
-                                    get_hidden_sensitive_string(&db.jenkins_cookie.clone().unwrap()),
+                                    get_hidden_sensitive_string(
+                                        &db.jenkins_cookie.clone().unwrap()
+                                    ),
                                     e.to_string()
                                 )
                             }

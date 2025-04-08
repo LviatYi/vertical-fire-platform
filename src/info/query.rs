@@ -8,7 +8,7 @@ use crate::info::jenkins_model::run_status::RunStatus;
 use crate::info::jenkins_model::workflow_builds::WorkflowBuilds;
 use crate::info::jenkins_model::workflow_run::WorkflowRun;
 use jenkins_sdk::client::AsyncClient;
-use jenkins_sdk::{AsyncQuery, AsyncRawQuery, JenkinsAsyncClient, JenkinsError};
+use jenkins_sdk::{AsyncQuery, JenkinsAsyncClient, JenkinsError};
 
 pub enum VfpJenkinsClient {
     ApiTokenClient(JenkinsAsyncClient),
