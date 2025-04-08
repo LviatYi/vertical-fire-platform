@@ -690,10 +690,10 @@ async fn main() {
 
                     input.ok()
                 });
-                
+
                 db.jenkins_username = username.or_else(|| {
-                    let mut input = Text::from(HINT_INPUT_JENKINS_USERNAME).with_validator(
-                        |v: &str| {
+                    let mut input =
+                        Text::from(HINT_INPUT_JENKINS_USERNAME).with_validator(|v: &str| {
                             if !v.is_empty() {
                                 Ok(Validation::Valid)
                             } else {
@@ -701,8 +701,7 @@ async fn main() {
                                     ERR_NEED_A_JENKINS_USERNAME.to_string(),
                                 )))
                             }
-                        },
-                    );
+                        });
 
                     let existed = db.jenkins_username.clone();
                     if existed.is_some() {
@@ -835,7 +834,13 @@ async fn main() {
                                 },
                             );
 
-                            let existed = db.jenkins_interested_job_name.clone();
+                            let existed = db.jenkins_interested_job_name.clone().or(
+                                if default_config::JENKINS_JOB_NAME.is_empty() {
+                                    None
+                                } else {
+                                    Some(default_config::JENKINS_JOB_NAME.to_string())
+                                },
+                            );
                             if existed.is_some() {
                                 input = input.with_default(existed.as_deref().unwrap());
                             }
