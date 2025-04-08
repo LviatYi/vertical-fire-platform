@@ -13,7 +13,10 @@ use crate::extract::extract_operation_info::{
 };
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::extract::repo_decoration::RepoDecoration;
-use crate::info::query::{create_async_jenkins_client, ping_jenkins};
+use crate::info::query::{
+    query_user_latest_success_info, try_get_jenkins_async_client,
+    try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_cookie,
+};
 use crate::pretty_log::colored_println;
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
@@ -24,9 +27,14 @@ use formatx::formatx;
 use inquire::validator::ErrorMessage::Custom;
 use inquire::validator::Validation;
 use inquire::{Select, Text};
+use jenkins_sdk::client::AsyncClient;
+use jenkins_sdk::JenkinsError;
+use std::future::Future;
+use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use strum_macros::Display;
+use crate::constant::util::get_hidden_sensitive_string;
 
 #[derive(Parser)]
 #[command(name="Vertical Fire Platform", author, version, about(env!("CARGO_PKG_DESCRIPTION")), long_about=None,arg_required_else_help=true
@@ -125,9 +133,24 @@ enum Commands {
         /// See also: https://www.jenkins.io/doc/book/using/remote-access-api/
         #[arg(short, long)]
         api_token: Option<String>,
+
+        /// Cookie from Jenkins.
+        /// [Unsafe] You can get it by F12 in any jenkins web page.
+        #[arg(short, long)]
+        cookie: Option<String>,
+
+        /// Jenkins interested job name.
+        #[arg(short, long)]
+        job_name: Option<String>,
     },
     /// Clean cache.
     Clean,
+}
+
+#[derive(Debug, Display)]
+enum LoginMethod {
+    ApiToken,
+    Cookie,
 }
 
 #[tokio::main]
@@ -209,6 +232,37 @@ async fn main() {
                     })
                     .filter(|v| *v != 0);
 
+                let mut latest_mine_ci: Option<u32> = None;
+
+                if let Some(job_name) = db.jenkins_interested_job_name.clone() {
+                    let client = try_get_jenkins_async_client(
+                        &db.jenkins_url,
+                        &db.jenkins_cookie,
+                        &db.jenkins_username,
+                        &db.jenkins_api_token,
+                    )
+                    .await;
+
+                    match client {
+                        Ok(client) => {
+                            let user_latest_info = query_user_latest_success_info(
+                                &client,
+                                &job_name,
+                                &(db.jenkins_username.clone().unwrap()),
+                                None,
+                            )
+                            .await;
+
+                            if let Ok(Some(info)) = user_latest_info {
+                                latest_mine_ci = Some(info.number);
+                            }
+                        }
+                        Err(_) => {
+                            println!("{}", ERR_JENKINS_CLIENT_INVALID);
+                        }
+                    }
+                }
+
                 let ci_temp = ci.unwrap_or_else(|| {
                     if let Some(latest) = ci_list.first().copied() {
                         let last_used: Option<u32> = db.last_inner_version.and_then(|v| {
@@ -223,12 +277,33 @@ async fn main() {
                         });
                         let mut options: Vec<String> = Vec::new();
 
+                        let mut latest_mine_opt_index: usize = usize::MAX;
+                        let mut latest_opt_index: usize = usize::MAX;
+                        let mut last_used_index: usize = usize::MAX;
+                        let mut custom_index: usize = usize::MAX;
+
+                        if let Some(latest_mine_ci) = latest_mine_ci {
+                            options.push(format!(
+                                "{}{}",
+                                latest_mine_ci,
+                                formatx!(
+                                    HINT_MY_LATEST_CI_SUFFIX,
+                                    db.jenkins_username.clone().unwrap_or_default()
+                                )
+                                .unwrap_or_default()
+                            ));
+                            latest_mine_opt_index = options.len() - 1;
+                        }
+
                         options.push(format!("{}{}", latest, HINT_LATEST_CI_SUFFIX));
+                        latest_opt_index = options.len() - 1;
+
                         if let Some(last_used) = last_used {
                             options.push(format!("{}{}", last_used, HINT_LAST_USED_CI_SUFFIX));
+                            last_used_index = options.len() - 1;
                         }
                         options.push(HINT_CUSTOM.to_string());
-                        let options_len = options.len();
+                        custom_index = options.len() - 1;
 
                         let selection = Select::new(HINT_SELECT_CI, options)
                             .without_filtering()
@@ -236,7 +311,7 @@ async fn main() {
 
                         match selection {
                             Ok(choice) => {
-                                if choice.index == options_len - 1 {
+                                if choice.index == custom_index {
                                     let input = Text::from(HINT_SET_CUSTOM_CI)
                                         .with_validator(move |v: &str| {
                                             if let Ok(ci) = v.parse::<u32>() {
@@ -261,7 +336,11 @@ async fn main() {
                                         .prompt();
 
                                     input.unwrap().to_string().parse::<u32>().unwrap()
-                                } else if choice.index == options_len - 2 && last_used.is_some() {
+                                } else if choice.index == latest_mine_opt_index
+                                    && latest_mine_ci.is_some()
+                                {
+                                    latest_mine_ci.unwrap()
+                                } else if choice.index == last_used_index && last_used.is_some() {
                                     last_used.unwrap()
                                 } else {
                                     latest
@@ -273,11 +352,11 @@ async fn main() {
                         0
                     }
                 });
-
                 if ci_temp == 0 {
                     println!("{}", ERR_EMPTY_REPO);
                     return;
                 }
+
                 db.last_inner_version = Some(ci_temp);
 
                 db.last_player_count = Some(count.unwrap_or_else(|| {
@@ -580,6 +659,8 @@ async fn main() {
                 url,
                 username,
                 api_token,
+                cookie,
+                job_name,
             } => {
                 let mut db = get_db(None);
 
@@ -611,83 +692,130 @@ async fn main() {
                     input.ok()
                 });
 
-                db.jenkins_username = username.or_else(|| {
-                    let mut input =
-                        Text::from(HINT_INPUT_JENKINS_USERNAME).with_validator(|v: &str| {
-                            if !v.is_empty() {
-                                Ok(Validation::Valid)
-                            } else {
-                                Ok(Validation::Invalid(Custom(
-                                    ERR_NEED_A_JENKINS_USERNAME.to_string(),
-                                )))
+                let login_method = Select::new(
+                    HINT_SELECT_LOGIN_METHOD,
+                    vec![LoginMethod::ApiToken, LoginMethod::Cookie],
+                )
+                .prompt()
+                .unwrap_or(LoginMethod::ApiToken);
+
+                let client: Result<Box<dyn AsyncClient>, JenkinsError>;
+
+                match login_method {
+                    LoginMethod::ApiToken => {
+                        db.jenkins_username = username.or_else(|| {
+                            let mut input = Text::from(HINT_INPUT_JENKINS_USERNAME).with_validator(
+                                |v: &str| {
+                                    if !v.is_empty() {
+                                        Ok(Validation::Valid)
+                                    } else {
+                                        Ok(Validation::Invalid(Custom(
+                                            ERR_NEED_A_JENKINS_USERNAME.to_string(),
+                                        )))
+                                    }
+                                },
+                            );
+
+                            let existed = db.jenkins_username.clone();
+                            if existed.is_some() {
+                                input = input.with_default(existed.as_deref().unwrap());
                             }
+
+                            let input = input.prompt();
+
+                            input.ok()
                         });
 
-                    let existed = db.jenkins_username.clone();
-                    if existed.is_some() {
-                        input = input.with_default(existed.as_deref().unwrap());
-                    }
+                        db.jenkins_api_token = api_token.or_else(|| {
+                            let hint = formatx!(
+                                HINT_INPUT_JENKINS_API_TOKEN,
+                                db.jenkins_url.clone().unwrap(),
+                                db.jenkins_username.clone().unwrap()
+                            )
+                            .unwrap_or(HINT_JENKINS_API_TOKEN_DOC.to_string());
 
-                    let input = input.prompt();
+                            let mut input = Text::from(hint.as_str()).with_validator(|v: &str| {
+                                if !v.is_empty() {
+                                    Ok(Validation::Valid)
+                                } else {
+                                    Ok(Validation::Invalid(Custom(
+                                        ERR_NEED_A_JENKINS_API_TOKEN.to_string(),
+                                    )))
+                                }
+                            });
 
-                    input.ok()
-                });
+                            let existed = db.jenkins_api_token.clone();
+                            if existed.is_some() {
+                                input = input.with_default(existed.as_deref().unwrap());
+                            }
 
-                db.jenkins_api_token = api_token.or_else(|| {
-                    let hint = formatx!(
-                        HINT_INPUT_JENKINS_API_TOKEN,
-                        db.jenkins_url.clone().unwrap(),
-                        db.jenkins_username.clone().unwrap()
-                    )
-                    .unwrap_or(HINT_JENKINS_API_TOKEN_DOC.to_string());
+                            let input = input.prompt().map(|v| {
+                                if v.ends_with("/") || v.ends_with("\\") {
+                                    v[0..v.len() - 1].to_string()
+                                } else {
+                                    v
+                                }
+                            });
 
-                    let mut input = Text::from(hint.as_str()).with_validator(|v: &str| {
-                        if !v.is_empty() {
-                            Ok(Validation::Valid)
-                        } else {
-                            Ok(Validation::Invalid(Custom(
-                                ERR_NEED_A_JENKINS_API_TOKEN.to_string(),
-                            )))
+                            input.ok()
+                        });
+
+                        if db.jenkins_url.is_none() {
+                            println!("{}", formatx!(ERR_NEED_A_JENKINS_URL).unwrap());
+                            return;
                         }
-                    });
 
-                    let existed = db.jenkins_api_token.clone();
-                    if existed.is_some() {
-                        input = input.with_default(existed.as_deref().unwrap());
-                    }
-
-                    let input = input.prompt().map(|v| {
-                        if v.ends_with("/") || v.ends_with("\\") {
-                            v[0..v.len() - 1].to_string()
-                        } else {
-                            v
+                        if db.jenkins_username.is_none() {
+                            println!("{}", formatx!(ERR_NEED_A_JENKINS_USERNAME).unwrap());
+                            return;
                         }
-                    });
 
-                    input.ok()
-                });
+                        if db.jenkins_api_token.is_none() {
+                            println!("{}", formatx!(ERR_NEED_A_JENKINS_API_TOKEN).unwrap());
+                            return;
+                        }
 
-                if db.jenkins_url.is_none() {
-                    println!("{}", formatx!(ERR_NEED_A_JENKINS_URL).unwrap());
-                    return;
+                        client = try_get_jenkins_async_client_by_api_token(
+                            &db.jenkins_url,
+                            &db.jenkins_username,
+                            &db.jenkins_api_token,
+                        )
+                        .await
+                        .map(|v| Box::new(v) as Box<dyn AsyncClient>);
+                    }
+                    LoginMethod::Cookie => {
+                        db.jenkins_cookie = cookie.or_else(|| {
+                            let mut input =
+                                Text::from(HINT_INPUT_JENKINS_COOKIE).with_validator(|v: &str| {
+                                    if !v.is_empty() {
+                                        Ok(Validation::Valid)
+                                    } else {
+                                        Ok(Validation::Invalid(Custom(
+                                            ERR_NEED_A_JENKINS_COOKIE.to_string(),
+                                        )))
+                                    }
+                                });
+
+                            let existed = db.jenkins_cookie.clone();
+                            if existed.is_some() {
+                                input = input.with_default(existed.as_deref().unwrap());
+                            }
+
+                            let input = input.prompt();
+
+                            input.ok()
+                        });
+
+                        client = try_get_jenkins_async_client_by_cookie(
+                            &db.jenkins_url,
+                            &db.jenkins_cookie,
+                        )
+                        .await
+                        .map(|v| Box::new(v) as Box<dyn AsyncClient>);
+                    }
                 }
 
-                if db.jenkins_username.is_none() {
-                    println!("{}", formatx!(ERR_NEED_A_JENKINS_USERNAME).unwrap());
-                    return;
-                }
-                if db.jenkins_api_token.is_none() {
-                    println!("{}", formatx!(ERR_NEED_A_JENKINS_API_TOKEN).unwrap());
-                    return;
-                }
-
-                let client = create_async_jenkins_client(
-                    db.jenkins_url.clone().unwrap().as_str(),
-                    db.jenkins_username.clone().unwrap().as_str(),
-                    db.jenkins_api_token.clone().unwrap().as_str(),
-                );
-
-                match ping_jenkins(&client).await {
+                match client {
                     Ok(_) => {
                         let _ = colored_println(
                             &mut stdout,
@@ -695,19 +823,55 @@ async fn main() {
                             format!("{}", JENKINS_LOGIN_RESULT).as_str(),
                         );
 
+                        db.jenkins_interested_job_name = job_name.or_else(|| {
+                            let mut input = Text::from(HINT_INPUT_JENKINS_JOB_NAME).with_validator(
+                                |v: &str| {
+                                    if !v.is_empty() {
+                                        Ok(Validation::Valid)
+                                    } else {
+                                        Ok(Validation::Invalid(Custom(
+                                            ERR_NEED_A_JENKINS_JOB_NAME.to_string(),
+                                        )))
+                                    }
+                                },
+                            );
+
+                            let existed = db.jenkins_interested_job_name.clone();
+                            if existed.is_some() {
+                                input = input.with_default(existed.as_deref().unwrap());
+                            }
+
+                            let input = input.prompt();
+
+                            input.ok()
+                        });
+
                         save_with_error_log(&db, None);
                     }
                     Err(e) => {
-                        println!(
-                            "{}",
-                            formatx!(
-                                ERR_JENKINS_CLIENT_INVALID,
-                                db.jenkins_url.clone().unwrap(),
-                                db.jenkins_username.clone().unwrap(),
-                                e.to_string()
-                            )
-                            .unwrap_or_default()
-                        )
+                        let err_msg = match login_method {
+                            LoginMethod::ApiToken => {
+                                formatx!(
+                                    ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID,
+                                    db.jenkins_url.clone().unwrap(),
+                                    db.jenkins_username.clone().unwrap(),
+                                    get_hidden_sensitive_string(&db.jenkins_api_token.clone().unwrap()),
+                                    e.to_string()
+                                )
+                            }
+                            LoginMethod::Cookie => {
+                                formatx!(
+                                    ERR_JENKINS_CLIENT_INVALID_MAY_BE_COOKIE_INVALID,
+                                    db.jenkins_url.clone().unwrap(),
+                                    get_hidden_sensitive_string(&db.jenkins_cookie.clone().unwrap()),
+                                    e.to_string()
+                                )
+                            }
+                        }
+                        .unwrap_or_default();
+
+                        let err_msg = ERR_JENKINS_CLIENT_INVALID_SIMPLE.to_string().add(&err_msg);
+                        println!("{}", err_msg)
                     }
                 }
             }

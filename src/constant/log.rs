@@ -18,12 +18,20 @@ pub const ERR_DB_SAVE_FAILURE: &str = "Archive storage failure: {}";
 pub const ERR_NEED_A_JENKINS_URL: &str = "Need a jenkins url.";
 pub const ERR_NEED_A_JENKINS_USERNAME: &str = "Need your jenkins username.";
 pub const ERR_NEED_A_JENKINS_API_TOKEN: &str = "Need your jenkins api token.";
+pub const ERR_NEED_A_JENKINS_COOKIE: &str = "Need your jenkins cookie.";
+pub const ERR_NEED_A_JENKINS_JOB_NAME: &str = "Need a jenkins job name.";
 pub const ERR_JENKINS_CLIENT_INVALID: &str =
-    "Cannot connect to jenkins.\nUrl: {}.\nUsername: {}\nMay be you should check your api token.\nErr: {}";
+    "Cannot connect to jenkins. Maybe you should check your api token or cookie.";
+pub const ERR_JENKINS_CLIENT_INVALID_SIMPLE: &str = "Cannot connect to jenkins.";
+pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID: &str =
+    "Url: {}.\nUsername: {}\nApi-Token: {}\nMaybe you should check your api token.\nErr: {}";
+pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_COOKIE_INVALID: &str =
+    "Url: {}.\nCookie: {}\nMaybe you should check your cookie.\nErr: {}";
 
 pub const HINT_BRANCH: &str = "use branch:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
-pub const HINT_LATEST_CI_SUFFIX: &str = "(latest)";
+pub const HINT_LATEST_CI_SUFFIX: &str = "(GLOBAL latest success)";
+pub const HINT_MY_LATEST_CI_SUFFIX: &str = "(USER latest success {})";
 pub const HINT_LAST_USED_CI_SUFFIX: &str = "(last used)";
 pub const HINT_CUSTOM: &str = "Custom";
 pub const HINT_SELECT_CI: &str = "use ci:";
@@ -33,9 +41,13 @@ pub const HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH: &str = "game package home pat
 pub const HINT_RUN_INDEX: &str = "run instance index: ";
 pub const HINT_RUN_COUNT: &str = "run instance count: ";
 pub const HINT_INPUT_JENKINS_URL: &str = "input the jenkins url: ";
+pub const HINT_SELECT_LOGIN_METHOD: &str = "choose your login method: ";
 pub const HINT_INPUT_JENKINS_USERNAME: &str = "input your jenkins username(somebody@email.com): ";
 pub const HINT_INPUT_JENKINS_API_TOKEN: &str =
-    "get your jenkins api token at https://{}/user/{}/configure\ncopy to here:";
+    "get your jenkins api token at {}/user/{}/configure\ncopy to here:";
+pub const HINT_INPUT_JENKINS_COOKIE: &str =
+    "input your jenkins cookie(get it in any Jenkins web page by F12): ";
+pub const HINT_INPUT_JENKINS_JOB_NAME: &str = "input the jenkins job name: ";
 pub const HINT_JENKINS_API_TOKEN_DOC: &str =
     "https://www.jenkins.io/doc/book/using/remote-access-api/";
 

@@ -16,6 +16,8 @@ define_versioned_data_type!(FpDbV3, VERSION_FP_DB_V3, {
     pub jenkins_url:Option<String>,
     pub jenkins_username:Option<String>,
     pub jenkins_api_token:Option<String>,
+    pub jenkins_cookie:Option<String>,
+    pub jenkins_interested_job_name:Option<String>,
     }
 );
 
