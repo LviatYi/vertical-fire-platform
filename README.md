@@ -17,6 +17,8 @@ by LviatYi
 
 Change Log:
 
+- Unreleased
+    - 优化 `main.rs` 中的代码。使用模块化的函数代替过程。
 - v1.3.6
     - 添加了与 Jenkins 进行数据沟通的能力。使用 `fp login` 选择一种方式进行登录，随后使用 `fp extract` 时将快速得到专属于你的包。
     - 推荐 Cookie 登录而非 ApiToken。ApiToken 非常的慢！
@@ -146,11 +148,13 @@ fp login
 ```
 
 - **-u, --username <USERNAME>** 用户名 它可能是个邮箱账号，如 "somebody@email.com"
-- **-a, --api-token <API_TOKEN>** API token。你可以在此处获得更多信息：https://www.jenkins.io/doc/book/using/remote-access-api/
+- **-a, --api-token <API_TOKEN>** API
+  token。你可以在此处获得更多信息：https://www.jenkins.io/doc/book/using/remote-access-api/
 - **-c, --cookie <COOKIE>** Cookie。它不是很安全，但它在我的用例中更快。如果你不知道哪里可以找到 Cookie，请不要使用。
 - **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
 
 ---
 
 [JetbrainsMonoNerdFont]: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.0.2/JetBrainsMono.zip@fallbackFont
+
 [SarasaMonoSC]: https://github.com/be5invis/Sarasa-Gothic/releases/download/v0.41.6/sarasa-gothic-ttf-0.41.6.7z
