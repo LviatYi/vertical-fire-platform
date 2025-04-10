@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.3.6  
+v1.3.7  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -17,8 +17,9 @@ by LviatYi
 
 Change Log:
 
-- Unreleased
+- v1.3.7
     - 优化 `main.rs` 中的代码。使用模块化的函数代替过程。
+    - 修复当 RunInfo 结果为 null 时引发的解析错误。该错误曾导致当有进行中的 Run Task 时，无法获得用户当前的最新已完成任务。
 - v1.3.6
     - 添加了与 Jenkins 进行数据沟通的能力。使用 `fp login` 选择一种方式进行登录，随后使用 `fp extract` 时将快速得到专属于你的包。
     - 推荐 Cookie 登录而非 ApiToken。ApiToken 非常的慢！
