@@ -9,7 +9,18 @@ pub struct WorkflowRun {
 
     pub actions: Vec<MaybeWorkflowAction>,
 
+    #[serde(deserialize_with = "deserialize_run_status")]
     pub result: RunStatus,
+}
+
+fn deserialize_run_status<'de, D>(deserializer: D) -> Result<RunStatus, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+
+    let opt = Option::<RunStatus>::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
 }
 
 impl WorkflowRun {

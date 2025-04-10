@@ -230,8 +230,17 @@ async fn main() {
                             )
                             .await;
 
-                            if let Ok(Some(info)) = user_latest_info {
-                                latest_mine_ci = Some(info.number);
+                            match user_latest_info {
+                                Ok(Some(info)) => {
+                                    latest_mine_ci = Some(info.number);
+                                }
+                                Ok(None) => {
+                                    latest_mine_ci = None;
+                                }
+                                Err(e) => {
+                                    //TODO_LviatYi:
+                                    println!("[LVIAT] NOTICE HERE!!!: error occurred: {}", e);
+                                }
                             }
                         }
                         Err(_) => {
@@ -523,7 +532,7 @@ async fn main() {
                 match login_method {
                     LoginMethod::ApiToken => {
                         db.jenkins_api_token = Some(input_api_token(&db, api_token));
-                        
+
                         client = try_get_jenkins_async_client_by_api_token(
                             &db.jenkins_url,
                             &db.jenkins_username,
@@ -533,7 +542,7 @@ async fn main() {
                         .map(|v| Box::new(v) as Box<dyn AsyncClient>);
                     }
                     LoginMethod::Cookie => {
-                        db.jenkins_cookie = Some(input_cookie(&db,cookie));
+                        db.jenkins_cookie = Some(input_cookie(&db, cookie));
 
                         client = try_get_jenkins_async_client_by_cookie(
                             &db.jenkins_url,
