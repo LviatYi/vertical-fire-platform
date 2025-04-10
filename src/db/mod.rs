@@ -5,7 +5,7 @@ use std::fs::create_dir_all;
 use std::ops::Not;
 use std::path::{Path, PathBuf};
 
-mod db_struct;
+pub mod db_struct;
 
 pub const DB_FILE_NAME: &str = ".vf-extract-db.toml";
 

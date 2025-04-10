@@ -3,6 +3,7 @@ mod db;
 mod default_config;
 mod extract;
 mod info;
+mod interact;
 mod pretty_log;
 mod run;
 
@@ -18,12 +19,12 @@ use crate::info::query::{
     query_user_latest_success_info, try_get_jenkins_async_client,
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_cookie,
 };
+use crate::interact::*;
 use crate::pretty_log::colored_println;
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
 use crossterm::execute;
 use crossterm::style::Color;
-use dirs::home_dir;
 use formatx::formatx;
 use inquire::validator::ErrorMessage::Custom;
 use inquire::validator::Validation;
@@ -173,40 +174,17 @@ async fn main() {
             } => {
                 let mut db = get_db(None);
 
-                db.branch = branch.or_else(|| {
-                    let mut options = vec!["Dev", "Stage", "Next"];
-                    if let Some(last_used) = db.branch {
-                        if let Some(v) = options.iter_mut().position(|&mut v| v == last_used) {
-                            options.swap(0, v);
-                        }
-                    }
+                db.branch = Some(input_branch(&db, branch));
 
-                    let selection = Select::new(HINT_BRANCH, options).prompt();
+                db.extract_repo = Some(parse_extract_repo(&db, build_target_repo_template));
 
-                    match selection {
-                        Ok(choice) => Some(choice.to_string()),
-                        Err(_) => Some("Dev".to_string()),
-                    }
-                });
+                db.extract_locator_pattern =
+                    Some(parse_extract_locator_pattern(&db, main_locator_pattern));
 
-                db.extract_repo = Some(build_target_repo_template.unwrap_or_else(|| {
-                    db.extract_repo
-                        .clone()
-                        .unwrap_or(default_config::REPO_TEMPLATE.to_string())
-                }));
-
-                db.extract_locator_pattern = Some(main_locator_pattern.unwrap_or_else(|| {
-                    db.extract_locator_pattern
-                        .clone()
-                        .unwrap_or(default_config::LOCATOR_PATTERN.to_string())
-                }));
-
-                db.extract_s_locator_template =
-                    Some(secondary_locator_template.unwrap_or_else(|| {
-                        db.extract_s_locator_template
-                            .clone()
-                            .unwrap_or(default_config::LOCATOR_TEMPLATE.to_string())
-                    }));
+                db.extract_s_locator_template = Some(parse_extract_s_locator_template(
+                    &db,
+                    secondary_locator_template,
+                ));
 
                 let repo_decoration = RepoDecoration::new(
                     db.extract_repo.clone().unwrap(),
@@ -262,140 +240,34 @@ async fn main() {
                     }
                 }
 
-                let ci_temp = ci.unwrap_or_else(|| {
-                    if let Some(latest) = ci_list.first().copied() {
-                        let last_used: Option<u32> = db.last_inner_version.and_then(|v| {
-                            if ci_list
-                                .binary_search_by(|probe| probe.cmp(&v).reverse())
-                                .is_ok()
-                            {
-                                Some(v)
-                            } else {
-                                None
-                            }
-                        });
-                        let mut options: Vec<String> = Vec::new();
-
-                        let mut latest_mine_opt_index: usize = usize::MAX;
-                        let mut _latest_opt_index: usize = usize::MAX;
-                        let mut last_used_index: usize = usize::MAX;
-                        let custom_index: usize;
-
-                        if let Some(latest_mine_ci) = latest_mine_ci {
-                            options.push(format!(
-                                "{}{}",
-                                latest_mine_ci,
-                                formatx!(
-                                    HINT_MY_LATEST_CI_SUFFIX,
-                                    db.jenkins_username.clone().unwrap_or_default()
-                                )
-                                .unwrap_or_default()
-                            ));
-                            latest_mine_opt_index = options.len() - 1;
+                let ci_temp = input_ci(
+                    &db,
+                    ci_list.first().copied(),
+                    latest_mine_ci,
+                    db.last_inner_version.and_then(|v| {
+                        if ci_list
+                            .binary_search_by(|probe| probe.cmp(&v).reverse())
+                            .is_ok()
+                        {
+                            Some(v)
+                        } else {
+                            None
                         }
+                    }),
+                    Some(&ci_list_clone_for_inquire),
+                );
 
-                        options.push(format!("{}{}", latest, HINT_LATEST_CI_SUFFIX));
-                        _latest_opt_index = options.len() - 1;
-
-                        if let Some(last_used) = last_used {
-                            options.push(format!("{}{}", last_used, HINT_LAST_USED_CI_SUFFIX));
-                            last_used_index = options.len() - 1;
-                        }
-                        options.push(HINT_CUSTOM.to_string());
-                        custom_index = options.len() - 1;
-
-                        let selection = Select::new(HINT_SELECT_CI, options)
-                            .without_filtering()
-                            .raw_prompt();
-
-                        match selection {
-                            Ok(choice) => {
-                                if choice.index == custom_index {
-                                    let input = Text::from(HINT_SET_CUSTOM_CI)
-                                        .with_validator(move |v: &str| {
-                                            if let Ok(ci) = v.parse::<u32>() {
-                                                if ci_list_clone_for_inquire
-                                                    .binary_search_by(|probe| {
-                                                        probe.cmp(&ci).reverse()
-                                                    })
-                                                    .is_ok()
-                                                {
-                                                    Ok(Validation::Valid)
-                                                } else {
-                                                    Ok(Validation::Invalid(Custom(
-                                                        ERR_NO_SPECIFIED_PACKAGE.to_string(),
-                                                    )))
-                                                }
-                                            } else {
-                                                Ok(Validation::Invalid(Custom(
-                                                    ERR_NEED_A_NUMBER.to_string(),
-                                                )))
-                                            }
-                                        })
-                                        .prompt();
-
-                                    input.unwrap().to_string().parse::<u32>().unwrap()
-                                } else if choice.index == latest_mine_opt_index
-                                    && latest_mine_ci.is_some()
-                                {
-                                    latest_mine_ci.unwrap()
-                                } else if choice.index == last_used_index && last_used.is_some() {
-                                    last_used.unwrap()
-                                } else {
-                                    latest
-                                }
-                            }
-                            Err(_) => 0,
-                        }
-                    } else {
-                        0
-                    }
-                });
-                if ci_temp == 0 {
+                if ci_temp.is_none() {
                     println!("{}", ERR_EMPTY_REPO);
                     return;
                 }
 
-                db.last_inner_version = Some(ci_temp);
+                db.last_inner_version = ci_temp;
+                let ci_temp = ci_temp.unwrap();
 
-                db.last_player_count = Some(count.unwrap_or_else(|| {
-                    let input = Text::from(HINT_PLAYER_COUNT)
-                        .with_default(db.last_player_count.unwrap_or(4).to_string().as_str())
-                        .with_validator(|v: &str| {
-                            if v.parse::<u32>().is_ok() {
-                                Ok(Validation::Valid)
-                            } else {
-                                Ok(Validation::Invalid(Custom(ERR_NEED_A_NUMBER.to_string())))
-                            }
-                        })
-                        .prompt();
+                db.last_player_count = Some(input_player_count(&db, count));
 
-                    match input {
-                        Ok(choice) => choice.parse::<u32>().unwrap(),
-                        Err(_) => 4,
-                    }
-                }));
-
-                db.blast_path = Some(dest.or(db.blast_path.clone()).unwrap_or_else(|| {
-                    if let Some(home_path) = home_dir() {
-                        home_path
-                    } else {
-                        let input = Text::from(HINT_EXTRACT_TO)
-                            .with_validator(|v: &str| {
-                                if v.parse::<PathBuf>().is_ok() {
-                                    Ok(Validation::Valid)
-                                } else {
-                                    Ok(Validation::Invalid(Custom(ERR_INVALID_PATH.to_string())))
-                                }
-                            })
-                            .prompt();
-
-                        match input {
-                            Ok(p) => p.parse::<PathBuf>().unwrap(),
-                            Err(_) => PathBuf::new(),
-                        }
-                    }
-                }));
+                db.blast_path = Some(input_blast_path(&db, dest, HINT_EXTRACT_TO));
 
                 save_with_error_log(&db, None);
 
@@ -558,48 +430,10 @@ async fn main() {
                 force,
                 server,
             } => {
-                let dest = dest.or(get_db(None).blast_path).unwrap_or_else(|| {
-                    if let Some(home_path) = home_dir() {
-                        home_path
-                    } else {
-                        let input = Text::from(HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH)
-                            .with_validator(|v: &str| {
-                                if v.parse::<PathBuf>().is_ok() {
-                                    Ok(Validation::Valid)
-                                } else {
-                                    Ok(Validation::Invalid(Custom(ERR_INVALID_PATH.to_string())))
-                                }
-                            })
-                            .prompt();
+                let dest =
+                    input_blast_path(&get_db(None), dest, HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH);
 
-                        match input {
-                            Ok(p) => p.parse::<PathBuf>().unwrap(),
-                            Err(_) => PathBuf::new(),
-                        }
-                    }
-                });
-
-                let count_or_index = count_or_index.unwrap_or_else(|| {
-                    let input = Text::from(if single {
-                        HINT_RUN_INDEX
-                    } else {
-                        HINT_RUN_COUNT
-                    })
-                    .with_default(1.to_string().as_str())
-                    .with_validator(|v: &str| {
-                        if v.parse::<u32>().is_ok() {
-                            Ok(Validation::Valid)
-                        } else {
-                            Ok(Validation::Invalid(Custom(ERR_NEED_A_NUMBER.to_string())))
-                        }
-                    })
-                    .prompt();
-
-                    match input {
-                        Ok(choice) => choice.parse::<u32>().unwrap(),
-                        Err(_) => 1,
-                    }
-                });
+                let count_or_index = input_count_or_index(count_or_index, single);
 
                 let package_file_name =
                     package_file_stem.unwrap_or(default_config::PACKAGE_FILE_STEM.to_string());
@@ -663,55 +497,9 @@ async fn main() {
             } => {
                 let mut db = get_db(None);
 
-                db.jenkins_url = url.or_else(|| {
-                    let mut input = Text::from(HINT_INPUT_JENKINS_URL).with_validator(|v: &str| {
-                        if !v.is_empty() {
-                            Ok(Validation::Valid)
-                        } else {
-                            Ok(Validation::Invalid(Custom(
-                                ERR_NEED_A_JENKINS_URL.to_string(),
-                            )))
-                        }
-                    });
+                db.jenkins_url = input_url(&db, url);
 
-                    let existed =
-                        db.jenkins_url
-                            .clone()
-                            .or(if default_config::JENKINS_URL.is_empty() {
-                                None
-                            } else {
-                                Some(default_config::JENKINS_URL.to_string())
-                            });
-                    if existed.is_some() {
-                        input = input.with_default(existed.as_deref().unwrap());
-                    }
-
-                    let input = input.prompt();
-
-                    input.ok()
-                });
-
-                db.jenkins_username = username.or_else(|| {
-                    let mut input =
-                        Text::from(HINT_INPUT_JENKINS_USERNAME).with_validator(|v: &str| {
-                            if !v.is_empty() {
-                                Ok(Validation::Valid)
-                            } else {
-                                Ok(Validation::Invalid(Custom(
-                                    ERR_NEED_A_JENKINS_USERNAME.to_string(),
-                                )))
-                            }
-                        });
-
-                    let existed = db.jenkins_username.clone();
-                    if existed.is_some() {
-                        input = input.with_default(existed.as_deref().unwrap());
-                    }
-
-                    let input = input.prompt();
-
-                    input.ok()
-                });
+                db.jenkins_username = input_user_name(&db, username);
 
                 if db.jenkins_url.is_none() {
                     println!("{}", formatx!(ERR_NEED_A_JENKINS_URL).unwrap());
@@ -734,45 +522,8 @@ async fn main() {
 
                 match login_method {
                     LoginMethod::ApiToken => {
-                        db.jenkins_api_token = api_token.or_else(|| {
-                            let hint = formatx!(
-                                HINT_INPUT_JENKINS_API_TOKEN,
-                                db.jenkins_url.clone().unwrap(),
-                                db.jenkins_username.clone().unwrap()
-                            )
-                            .unwrap_or(HINT_JENKINS_API_TOKEN_DOC.to_string());
-
-                            let mut input = Text::from(hint.as_str()).with_validator(|v: &str| {
-                                if !v.is_empty() {
-                                    Ok(Validation::Valid)
-                                } else {
-                                    Ok(Validation::Invalid(Custom(
-                                        ERR_NEED_A_JENKINS_API_TOKEN.to_string(),
-                                    )))
-                                }
-                            });
-
-                            let existed = db.jenkins_api_token.clone();
-                            if existed.is_some() {
-                                input = input.with_default(existed.as_deref().unwrap());
-                            }
-
-                            let input = input.prompt().map(|v| {
-                                if v.ends_with("/") || v.ends_with("\\") {
-                                    v[0..v.len() - 1].to_string()
-                                } else {
-                                    v
-                                }
-                            });
-
-                            input.ok()
-                        });
-
-                        if db.jenkins_api_token.is_none() {
-                            println!("{}", formatx!(ERR_NEED_A_JENKINS_API_TOKEN).unwrap());
-                            return;
-                        }
-
+                        db.jenkins_api_token = Some(input_api_token(&db, api_token));
+                        
                         client = try_get_jenkins_async_client_by_api_token(
                             &db.jenkins_url,
                             &db.jenkins_username,
@@ -782,27 +533,7 @@ async fn main() {
                         .map(|v| Box::new(v) as Box<dyn AsyncClient>);
                     }
                     LoginMethod::Cookie => {
-                        db.jenkins_cookie = cookie.or_else(|| {
-                            let mut input =
-                                Text::from(HINT_INPUT_JENKINS_COOKIE).with_validator(|v: &str| {
-                                    if !v.is_empty() {
-                                        Ok(Validation::Valid)
-                                    } else {
-                                        Ok(Validation::Invalid(Custom(
-                                            ERR_NEED_A_JENKINS_COOKIE.to_string(),
-                                        )))
-                                    }
-                                });
-
-                            let existed = db.jenkins_cookie.clone();
-                            if existed.is_some() {
-                                input = input.with_default(existed.as_deref().unwrap());
-                            }
-
-                            let input = input.prompt();
-
-                            input.ok()
-                        });
+                        db.jenkins_cookie = Some(input_cookie(&db,cookie));
 
                         client = try_get_jenkins_async_client_by_cookie(
                             &db.jenkins_url,
