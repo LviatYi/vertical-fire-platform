@@ -244,7 +244,7 @@ async fn main() {
                             }
                         }
                         Err(_) => {
-                            println!("{}", ERR_JENKINS_CLIENT_INVALID);
+                            let _ = colored_println(&mut stdout, Color::Red, ERR_JENKINS_CLIENT_INVALID);
                         }
                     }
                 }
