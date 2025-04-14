@@ -2,8 +2,8 @@ mod constant;
 mod db;
 mod default_config;
 mod extract;
-mod info;
 mod interact;
+mod jenkins;
 mod pretty_log;
 mod run;
 
@@ -15,11 +15,11 @@ use crate::extract::extract_operation_info::{
 };
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::extract::repo_decoration::RepoDecoration;
-use crate::info::query::{
+use crate::interact::*;
+use crate::jenkins::query::{
     query_user_latest_success_info, try_get_jenkins_async_client,
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_cookie,
 };
-use crate::interact::*;
 use crate::pretty_log::colored_println;
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
@@ -220,6 +220,7 @@ async fn main() {
                     )
                     .await;
 
+                    let mut jenkins_client_invalid = false;
                     match client {
                         Ok(client) => {
                             let user_latest_info = query_user_latest_success_info(
@@ -237,15 +238,19 @@ async fn main() {
                                 Ok(None) => {
                                     latest_mine_ci = None;
                                 }
-                                Err(e) => {
-                                    //TODO_LviatYi:
-                                    println!("[LVIAT] NOTICE HERE!!!: error occurred: {}", e);
+                                Err(_) => {
+                                    jenkins_client_invalid = true;
                                 }
                             }
                         }
                         Err(_) => {
-                            let _ = colored_println(&mut stdout, Color::Red, ERR_JENKINS_CLIENT_INVALID);
+                            jenkins_client_invalid = true;
                         }
+                    }
+
+                    if jenkins_client_invalid {
+                        let _ =
+                            colored_println(&mut stdout, Color::Red, ERR_JENKINS_CLIENT_INVALID);
                     }
                 }
 

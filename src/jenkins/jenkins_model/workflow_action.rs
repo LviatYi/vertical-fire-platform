@@ -1,5 +1,5 @@
-use crate::info::jenkins_model::cause::Cause;
-use crate::info::jenkins_model::parameters_action::ParametersAction;
+use crate::jenkins::jenkins_model::cause::Cause;
+use crate::jenkins::jenkins_model::parameters_action::ParametersAction;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
