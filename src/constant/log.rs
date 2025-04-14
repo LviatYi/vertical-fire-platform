@@ -28,7 +28,7 @@ pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID: &str =
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_COOKIE_INVALID: &str =
     "Url: {}.\nCookie: {}\nMaybe you should check your cookie.\nErr: {}";
 
-pub const HINT_BRANCH: &str = "use branch:";
+pub const HINT_JOB_NAME: &str = "use job:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
 pub const HINT_LATEST_CI_SUFFIX: &str = "(GLOBAL latest success)";
 pub const HINT_MY_LATEST_CI_SUFFIX: &str = "(USER latest success {})";

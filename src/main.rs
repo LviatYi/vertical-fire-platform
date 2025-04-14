@@ -48,9 +48,9 @@ struct Cli {
 enum Commands {
     /// Extract ci build package.
     Extract {
-        /// branch name.
+        /// job name.
         #[arg(short, long)]
-        branch: Option<String>,
+        job_name: Option<String>,
 
         /// locator identity.
         #[arg(short = '#', long)]
@@ -164,7 +164,7 @@ async fn main() {
         let mut stdout = std::io::stdout();
         match command {
             Commands::Extract {
-                branch,
+                job_name,
                 mut ci,
                 count,
                 build_target_repo_template,
@@ -174,7 +174,7 @@ async fn main() {
             } => {
                 let mut db = get_db(None);
 
-                db.branch = Some(input_branch(&db, branch));
+                db.interest_job_name = Some(input_job_name(&db, job_name));
 
                 db.extract_repo = Some(parse_extract_repo(&db, build_target_repo_template));
 
@@ -187,31 +187,35 @@ async fn main() {
                 ));
 
                 let repo_decoration = RepoDecoration::new(
-                    db.extract_repo.clone().unwrap(),
-                    db.extract_locator_pattern.clone().unwrap(),
-                    db.extract_s_locator_template.clone().unwrap(),
-                    db.branch.clone().unwrap().parse().unwrap_or_default(),
+                    &db.extract_repo.clone().unwrap(),
+                    &db.extract_locator_pattern.clone().unwrap(),
+                    &db.extract_s_locator_template.clone().unwrap(),
+                    &db.interest_job_name.clone().unwrap(),
                 );
 
                 let ci_list = repo_decoration.get_sorted_ci_list();
                 let ci_list_clone_for_inquire = ci_list.clone();
 
-                ci = ci
-                    .and_then(|v| {
-                        if ci_list
-                            .binary_search_by(|probe| probe.cmp(&v).reverse())
-                            .is_ok()
-                        {
-                            Some(v)
-                        } else {
-                            None
-                        }
-                    })
+                let fn_check_existing_ci = |v: u32| {
+                    if ci_list
+                        .binary_search_by(|probe| probe.cmp(&v).reverse())
+                        .is_ok()
+                    {
+                        Some(v)
+                    } else {
+                        None
+                    }
+                };
+
+                let last_used_ci = ci
+                    .and_then(fn_check_existing_ci)
+                    .or(db.last_inner_version)
+                    .and_then(fn_check_existing_ci)
                     .filter(|v| *v != 0);
 
                 let mut latest_mine_ci: Option<u32> = None;
 
-                if let Some(job_name) = db.jenkins_interested_job_name.clone() {
+                if let Some(job_name) = db.interest_job_name.clone() {
                     let client = try_get_jenkins_async_client(
                         &db.jenkins_url,
                         &db.jenkins_cookie,
@@ -258,16 +262,7 @@ async fn main() {
                     &db,
                     ci_list.first().copied(),
                     latest_mine_ci,
-                    db.last_inner_version.and_then(|v| {
-                        if ci_list
-                            .binary_search_by(|probe| probe.cmp(&v).reverse())
-                            .is_ok()
-                        {
-                            Some(v)
-                        } else {
-                            None
-                        }
-                    }),
+                    last_used_ci,
                     Some(&ci_list_clone_for_inquire),
                 );
 
@@ -566,7 +561,7 @@ async fn main() {
                             format!("{}", JENKINS_LOGIN_RESULT).as_str(),
                         );
 
-                        db.jenkins_interested_job_name = job_name.or_else(|| {
+                        db.interest_job_name = job_name.or_else(|| {
                             let mut input = Text::from(HINT_INPUT_JENKINS_JOB_NAME).with_validator(
                                 |v: &str| {
                                     if !v.is_empty() {
@@ -579,7 +574,7 @@ async fn main() {
                                 },
                             );
 
-                            let existed = db.jenkins_interested_job_name.clone().or(
+                            let existed = db.interest_job_name.clone().or(
                                 if default_config::JENKINS_JOB_NAME.is_empty() {
                                     None
                                 } else {

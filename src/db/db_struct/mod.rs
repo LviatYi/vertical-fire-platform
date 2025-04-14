@@ -1,6 +1,7 @@
 use crate::db::db_struct::fp_db_v1::FpDbV1;
 use crate::db::db_struct::fp_db_v2::{FpDbV2, VERSION_FP_DB_V2};
 use crate::db::db_struct::fp_db_v3::{FpDbV3, VERSION_FP_DB_V3};
+use crate::db::db_struct::fp_db_v4::{FpDbV4, VERSION_FP_DB_V4};
 use crate::db::db_struct::version_only::VersionOnly;
 use crate::db::db_struct::versioned_data::{UpgradeValue, VersionedData};
 use db_status::DBStatus::{Exist, NotExist};
@@ -11,6 +12,7 @@ use std::path::Path;
 mod fp_db_v1;
 mod fp_db_v2;
 mod fp_db_v3;
+mod fp_db_v4;
 pub mod versioned_data;
 
 mod db_status;
@@ -18,7 +20,7 @@ mod define_versioned_data_type;
 mod version_field;
 mod version_only;
 
-pub type LatestVersionData = FpDbV3;
+pub type LatestVersionData = FpDbV4;
 
 /// # parse content with upgrade
 ///
@@ -50,6 +52,9 @@ fn parse_content_by_version(
     content: &str,
 ) -> Result<Box<dyn VersionedData>, toml::de::Error> {
     match version {
+        VERSION_FP_DB_V4 => {
+            FpDbV4::parse_from_string(content).map(|v| Box::new(v) as Box<dyn VersionedData>)
+        }
         VERSION_FP_DB_V3 => {
             FpDbV3::parse_from_string(content).map(|v| Box::new(v) as Box<dyn VersionedData>)
         }
@@ -89,8 +94,7 @@ mod tests {
     fn test_get_old_file() {
         let mut file = tempfile::NamedTempFile::new().unwrap();
 
-        let content = r#"b = "Dev"
-ci = 2025
+        let content = r#"ci = 2025
 c = 9
 d = 'C:\Users\LviatYi\Desktop\Temp'
 "#;
@@ -104,7 +108,6 @@ d = 'C:\Users\LviatYi\Desktop\Temp'
 
         let config = config.unwrap();
 
-        assert_eq!(config.branch, Some("Dev".to_string()));
         assert_eq!(config.last_inner_version, Some(2025));
         assert_eq!(config.last_player_count, Some(9));
         assert_eq!(
@@ -127,7 +130,6 @@ d = 'C:\Users\LviatYi\Desktop\Temp'
         let mut file = tempfile::NamedTempFile::new().unwrap();
 
         let content = r#"version = 2
-branch = "Dev"
 last_inner_version = 2025
 last_player_count = 9
 blast_path = "C:\\Users\\LviatYi\\Desktop\\Temp"
@@ -141,7 +143,6 @@ blast_path = "C:\\Users\\LviatYi\\Desktop\\Temp"
         assert!(config.is_some());
 
         let config = config.unwrap();
-        assert_eq!(config.branch, Some("Dev".to_string()));
         assert_eq!(config.last_inner_version, Some(2025));
         assert_eq!(config.last_player_count, Some(9));
         assert_eq!(
