@@ -3,40 +3,74 @@ use crate::constant::log::{
     ERR_NEED_A_JENKINS_URL, ERR_NEED_A_JENKINS_USERNAME, ERR_NEED_A_NUMBER,
     ERR_NO_SPECIFIED_PACKAGE, HINT_CUSTOM, HINT_INPUT_JENKINS_API_TOKEN, HINT_INPUT_JENKINS_COOKIE,
     HINT_INPUT_JENKINS_URL, HINT_INPUT_JENKINS_USERNAME, HINT_JENKINS_API_TOKEN_DOC,
-    HINT_JOB_NAME, HINT_LAST_USED_CI_SUFFIX, HINT_LATEST_CI_SUFFIX,
-    HINT_MY_LATEST_CI_SUFFIX, HINT_PLAYER_COUNT, HINT_RUN_COUNT, HINT_RUN_INDEX, HINT_SELECT_CI,
-    HINT_SET_CUSTOM_CI,
+    HINT_LAST_USED_CI_SUFFIX, HINT_LATEST_CI_SUFFIX, HINT_MY_LATEST_CI_SUFFIX, HINT_PLAYER_COUNT,
+    HINT_RUN_COUNT, HINT_RUN_INDEX, HINT_SELECT_CI, HINT_SET_CUSTOM_CI,
 };
 use crate::db::db_struct::LatestVersionData;
 use crate::default_config;
 use dirs::home_dir;
 use formatx::formatx;
+use inquire::error::InquireResult;
 use inquire::validator::ErrorMessage::Custom;
 use inquire::validator::Validation;
 use inquire::{Select, Text};
 use std::path::PathBuf;
 
-pub fn input_job_name(db: &LatestVersionData, val: Option<String>) -> String {
-    val.unwrap_or_else(|| {
-        let mut options = default_config::RECOMMEND_JOB_NAMES.to_vec();
-        if let Some(last_used) = db.interest_job_name.clone() {
-            if let Some(index) = options.iter_mut().position(|&mut v| v == last_used) {
-                let mut origin_options = options.clone();
-                let mut options = origin_options.split_off(index);
-                let mut follow = options.split_off(1);
+/// # input by selection
+///
+/// Select a value by selection.
+///
+/// ### Arguments
+///
+/// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
+/// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
+/// * `options`: The options to select from.
+/// * `hint`: The hint for the selection.
+/// * `default`: The default value to return if no selection is made.
+///
+/// ### Returns
+///
+/// * `Ok` The selected value.
+/// * `Err` No value is available.
+pub fn input_by_selection<T>(
+    param_val: Option<T>,
+    db_val: Option<T>,
+    options: Vec<String>,
+    hint: &str,
+    default: Option<T>,
+) -> InquireResult<T>
+where
+    T: Clone + From<String>,
+{
+    if let Some(val) = param_val {
+        return Ok(val);
+    }
 
-                options.append(&mut origin_options);
-                options.append(&mut follow);
-            }
+    if let Some(val) = db_val {
+        return Ok(val);
+    }
+
+    let selection = Select::new(hint, options).prompt();
+    match selection {
+        Ok(choice) => Ok(choice.to_string().into()),
+        Err(e) => default.ok_or(e),
+    }
+}
+
+pub fn get_job_name_options(interest_job_name: &Option<String>) -> Vec<String> {
+    let mut options = default_config::RECOMMEND_JOB_NAMES.to_vec();
+    if let Some(last_used) = interest_job_name.clone() {
+        if let Some(index) = options.iter_mut().position(|&mut v| v == last_used) {
+            let mut origin_options = options.clone();
+            let mut options = origin_options.split_off(index);
+            let mut follow = options.split_off(1);
+
+            options.append(&mut origin_options);
+            options.append(&mut follow);
         }
+    }
 
-        let selection = Select::new(HINT_JOB_NAME, options).prompt();
-
-        match selection {
-            Ok(choice) => choice.to_string(),
-            Err(_) => "Dev".to_string(),
-        }
-    })
+    options.iter().map(|v| v.to_string()).collect()
 }
 
 pub fn parse_extract_repo(db: &LatestVersionData, val: Option<String>) -> String {

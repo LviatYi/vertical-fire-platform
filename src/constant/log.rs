@@ -1,3 +1,4 @@
+pub const ERR_INPUT_INVALID: &str = "Input invalid.";
 pub const ERR_EMPTY_REPO: &str = "There is no any package in the repo.";
 pub const ERR_NO_SPECIFIED_PACKAGE: &str = "No package found.";
 pub const ERR_NEED_A_NUMBER: &str = "Need a number.";

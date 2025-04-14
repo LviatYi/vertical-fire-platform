@@ -10,20 +10,14 @@ mod run;
 use crate::constant::log::*;
 use crate::constant::util::get_hidden_sensitive_string;
 use crate::db::{delete_db_file, get_db, save_with_error_log};
-use crate::extract::extract_operation_info::{
-    ExtractOperationInfo, OperationStatus, OperationStepType,
-};
-use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
-use crate::extract::repo_decoration::RepoDecoration;
+use crate::extract::cli_do_extract;
 use crate::interact::*;
 use crate::jenkins::query::{
-    query_user_latest_success_info, try_get_jenkins_async_client,
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_cookie,
 };
 use crate::pretty_log::colored_println;
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
-use crossterm::execute;
 use crossterm::style::Color;
 use formatx::formatx;
 use inquire::validator::ErrorMessage::Custom;
@@ -165,269 +159,22 @@ async fn main() {
         match command {
             Commands::Extract {
                 job_name,
-                mut ci,
+                ci,
                 count,
                 build_target_repo_template,
                 main_locator_pattern,
                 secondary_locator_template,
                 dest,
             } => {
-                let mut db = get_db(None);
-
-                db.interest_job_name = Some(input_job_name(&db, job_name));
-
-                db.extract_repo = Some(parse_extract_repo(&db, build_target_repo_template));
-
-                db.extract_locator_pattern =
-                    Some(parse_extract_locator_pattern(&db, main_locator_pattern));
-
-                db.extract_s_locator_template = Some(parse_extract_s_locator_template(
-                    &db,
+                cli_do_extract(
+                    job_name,
+                    ci,
+                    count,
+                    build_target_repo_template,
+                    main_locator_pattern,
                     secondary_locator_template,
-                ));
-
-                let repo_decoration = RepoDecoration::new(
-                    &db.extract_repo.clone().unwrap(),
-                    &db.extract_locator_pattern.clone().unwrap(),
-                    &db.extract_s_locator_template.clone().unwrap(),
-                    &db.interest_job_name.clone().unwrap(),
-                );
-
-                let ci_list = repo_decoration.get_sorted_ci_list();
-                let ci_list_clone_for_inquire = ci_list.clone();
-
-                let fn_check_existing_ci = |v: u32| {
-                    if ci_list
-                        .binary_search_by(|probe| probe.cmp(&v).reverse())
-                        .is_ok()
-                    {
-                        Some(v)
-                    } else {
-                        None
-                    }
-                };
-
-                let last_used_ci = ci
-                    .and_then(fn_check_existing_ci)
-                    .or(db.last_inner_version)
-                    .and_then(fn_check_existing_ci)
-                    .filter(|v| *v != 0);
-
-                let mut latest_mine_ci: Option<u32> = None;
-
-                if let Some(job_name) = db.interest_job_name.clone() {
-                    let client = try_get_jenkins_async_client(
-                        &db.jenkins_url,
-                        &db.jenkins_cookie,
-                        &db.jenkins_username,
-                        &db.jenkins_api_token,
-                    )
-                    .await;
-
-                    let mut jenkins_client_invalid = false;
-                    match client {
-                        Ok(client) => {
-                            let user_latest_info = query_user_latest_success_info(
-                                &client,
-                                &job_name,
-                                &(db.jenkins_username.clone().unwrap()),
-                                None,
-                            )
-                            .await;
-
-                            match user_latest_info {
-                                Ok(Some(info)) => {
-                                    latest_mine_ci = Some(info.number);
-                                }
-                                Ok(None) => {
-                                    latest_mine_ci = None;
-                                }
-                                Err(_) => {
-                                    jenkins_client_invalid = true;
-                                }
-                            }
-                        }
-                        Err(_) => {
-                            jenkins_client_invalid = true;
-                        }
-                    }
-
-                    if jenkins_client_invalid {
-                        let _ =
-                            colored_println(&mut stdout, Color::Red, ERR_JENKINS_CLIENT_INVALID);
-                    }
-                }
-
-                let ci_temp = input_ci(
-                    &db,
-                    ci_list.first().copied(),
-                    latest_mine_ci,
-                    last_used_ci,
-                    Some(&ci_list_clone_for_inquire),
-                );
-
-                if ci_temp.is_none() {
-                    println!("{}", ERR_EMPTY_REPO);
-                    return;
-                }
-
-                db.last_inner_version = ci_temp;
-                let ci_temp = ci_temp.unwrap();
-
-                db.last_player_count = Some(input_player_count(&db, count));
-
-                db.blast_path = Some(input_blast_path(&db, dest, HINT_EXTRACT_TO));
-
-                save_with_error_log(&db, None);
-
-                if let Some(path) = repo_decoration.get_full_path_by_ci(ci_temp) {
-                    if let Some(file_name) = path.file_stem().and_then(|v| v.to_str()) {
-                        let count = db.last_player_count.unwrap();
-                        let pty_logger = pretty_log::VfpPrettyLogger::apply_for(&mut stdout, count);
-
-                        let mut working_status: Vec<ExtractOperationInfo> = (0..count)
-                            .map(|_| ExtractOperationInfo::default())
-                            .collect();
-
-                        let mut handles = vec![];
-                        let (tx, rx) =
-                            std::sync::mpsc::channel::<(u32, OperationStepType, OperationStatus)>();
-
-                        for i in 1..count + 1 {
-                            let tx = tx.clone();
-                            let dest_with_origin_name = db
-                                .blast_path
-                                .clone()
-                                .unwrap()
-                                .as_path()
-                                .join(format!("{}{}", file_name, i));
-                            let path_t = path.clone();
-                            let mend_file_path_t = default_config::MENDING_FILE_PATH;
-                            let handle = std::thread::spawn(move || {
-                                let clean_res = clean_dir(&dest_with_origin_name);
-                                match clean_res {
-                                    Ok(cost_opt) => {
-                                        let _ = tx.send((
-                                            i,
-                                            OperationStepType::Clean,
-                                            OperationStatus::Done(cost_opt),
-                                        ));
-
-                                        let extract_res =
-                                            extract_zip_file(&path_t, &dest_with_origin_name);
-
-                                        match extract_res {
-                                            Ok(cost) => {
-                                                let _ = tx.send((
-                                                    i,
-                                                    OperationStepType::Extract,
-                                                    OperationStatus::Done(Some(cost)),
-                                                ));
-
-                                                let mend_res = mending_user_ini(
-                                                    &dest_with_origin_name,
-                                                    i,
-                                                    &mend_file_path_t,
-                                                );
-
-                                                match mend_res {
-                                                    Ok(cost) => {
-                                                        let _ = tx.send((
-                                                            i,
-                                                            OperationStepType::Mend,
-                                                            OperationStatus::Done(Some(cost)),
-                                                        ));
-                                                    }
-                                                    Err(e) => {
-                                                        let _ = tx.send((
-                                                            i,
-                                                            OperationStepType::Mend,
-                                                            OperationStatus::Err(e.to_string()),
-                                                        ));
-                                                    }
-                                                }
-                                            }
-                                            Err(msg) => {
-                                                let _ = tx.send((
-                                                    i,
-                                                    OperationStepType::Extract,
-                                                    OperationStatus::Err(msg),
-                                                ));
-                                            }
-                                        }
-                                    }
-                                    Err(msg) => {
-                                        let _ = tx.send((
-                                            i,
-                                            OperationStepType::Clean,
-                                            OperationStatus::Err(msg),
-                                        ));
-                                    }
-                                }
-                            });
-
-                            handles.push(handle);
-
-                            if let Some(item) = working_status.get((i - 1) as usize) {
-                                let _ = pty_logger.pretty_log_operation_status(
-                                    &mut stdout,
-                                    i,
-                                    count,
-                                    item,
-                                );
-                            };
-                        }
-
-                        drop(tx);
-
-                        while let Ok((index, op_type, op_stat)) = rx.recv() {
-                            if let Some(item) = working_status.get_mut((index - 1) as usize) {
-                                match op_type {
-                                    OperationStepType::Clean => {
-                                        item.clean_state = op_stat;
-                                    }
-                                    OperationStepType::Extract => {
-                                        item.extract_state = op_stat;
-                                    }
-                                    OperationStepType::Mend => {
-                                        item.mend_state = op_stat;
-                                    }
-                                }
-
-                                let _ = pty_logger.pretty_log_operation_status(
-                                    &mut stdout,
-                                    index - 1,
-                                    count,
-                                    item,
-                                );
-                            }
-                            std::thread::sleep(Duration::from_millis(50));
-                        }
-
-                        for handle in handles {
-                            handle.join().expect("Thread panicked");
-                        }
-                    } else {
-                        let _ = execute!(
-                            stdout,
-                            crossterm::style::SetForegroundColor(Color::Red),
-                            crossterm::style::Print(format!(
-                                "{}\n",
-                                formatx!(ERR_INVALID_PATH).unwrap_or_default()
-                            ))
-                        );
-                    }
-                } else {
-                    let _ = execute!(
-                        stdout,
-                        crossterm::style::SetForegroundColor(Color::Red),
-                        crossterm::style::Print(format!(
-                            "{}\n",
-                            formatx!(ERR_NO_SPECIFIED_PACKAGE).unwrap_or_default()
-                        ))
-                    );
-                }
-                let _ = execute!(stdout, crossterm::style::ResetColor);
+                    dest,
+                ).await;
             }
             Commands::Run {
                 dest,

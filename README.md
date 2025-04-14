@@ -21,6 +21,7 @@ Change Log:
     - 优化了当 Jenkins 登录状态疑似过期时的提示。
     - Jenkins 相关功能结构调整。
     - 调整操作历史存储，取消 branch 字段，合并功能为 interest_job_name 字段。
+    - 持续模块化输入函数。
 - v1.3.7
     - 优化 `main.rs` 中的代码。使用模块化的函数代替过程。
     - 修复当 RunInfo 结果为 null 时引发的解析错误。该错误曾导致当有进行中的 Run Task 时，无法获得用户当前的最新已完成任务。
