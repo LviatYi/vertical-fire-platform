@@ -1,4 +1,4 @@
-use crate::info::jenkins_model::user_id_cause::UserIdCause;
+use crate::jenkins::jenkins_model::user_id_cause::UserIdCause;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]

@@ -1,4 +1,4 @@
-use crate::info::jenkins_model::workflow_build::WorkflowBuild;
+use crate::jenkins::jenkins_model::workflow_build::WorkflowBuild;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]

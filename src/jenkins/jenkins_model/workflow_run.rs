@@ -1,6 +1,6 @@
-use crate::info::jenkins_model::cause::Cause;
-use crate::info::jenkins_model::run_status::RunStatus;
-use crate::info::jenkins_model::workflow_action::{MaybeWorkflowAction, WorkflowAction};
+use crate::jenkins::jenkins_model::cause::Cause;
+use crate::jenkins::jenkins_model::run_status::RunStatus;
+use crate::jenkins::jenkins_model::workflow_action::{MaybeWorkflowAction, WorkflowAction};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
