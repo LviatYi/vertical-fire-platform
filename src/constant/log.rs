@@ -1,8 +1,9 @@
-pub const ERR_INPUT_INVALID: &str = "Input invalid.";
+pub const ERR_INPUT_INVALID: &str = "Invalid input.";
 pub const ERR_EMPTY_REPO: &str = "There is no any package in the repo.";
 pub const ERR_NO_SPECIFIED_PACKAGE: &str = "No package found.";
 pub const ERR_NEED_A_NUMBER: &str = "Need a number.";
 pub const ERR_INVALID_PATH: &str = "Invalid path.";
+pub const ERR_INVALID_PATH_NOT_EXIST: &str = "Invalid path: not exist.";
 pub const ERR_DIR_IN_USE: &str = "Maybe {} is in use. skip.";
 pub const ERR_TEMPLATE_ENGINE_ERROR: &str = "Template engine error.";
 pub const ERR_ZIP_CANNOT_OPEN: &str = "Cannot open the zip file.";
@@ -20,7 +21,6 @@ pub const ERR_NEED_A_JENKINS_URL: &str = "Need a jenkins url.";
 pub const ERR_NEED_A_JENKINS_USERNAME: &str = "Need your jenkins username.";
 pub const ERR_NEED_A_JENKINS_API_TOKEN: &str = "Need your jenkins api token.";
 pub const ERR_NEED_A_JENKINS_COOKIE: &str = "Need your jenkins cookie.";
-pub const ERR_NEED_A_JENKINS_JOB_NAME: &str = "Need a jenkins job name.";
 pub const ERR_JENKINS_CLIENT_INVALID: &str =
     "Cannot connect to jenkins. Maybe you should check your api token or cookie.";
 pub const ERR_JENKINS_CLIENT_INVALID_SIMPLE: &str = "Cannot connect to jenkins.";
@@ -39,7 +39,6 @@ pub const HINT_SELECT_CI: &str = "use ci:";
 pub const HINT_SET_CUSTOM_CI: &str = "use custom ci #";
 pub const HINT_EXTRACT_TO: &str = "extract to: ";
 pub const HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH: &str = "game package home path: ";
-pub const HINT_RUN_INDEX: &str = "run instance index: ";
 pub const HINT_RUN_COUNT: &str = "run instance count: ";
 pub const HINT_INPUT_JENKINS_URL: &str = "input the jenkins url: ";
 pub const HINT_SELECT_LOGIN_METHOD: &str = "choose your login method: ";
@@ -66,5 +65,6 @@ pub const OPERATION_RUN_CHECK: &str = "Checking {}";
 pub const RESULT_RUN: &str = "Instance {} is created.";
 pub const OPERATION_KILL_AND_RETRY: &str = "Killing and retrying...";
 pub const JENKINS_LOGIN_RESULT: &str = "Jenkins login success!";
+pub const QUERYING_USER_LATEST_CI: &str = "Querying user latest ci (It might take some time)...";
 
 pub const CONFIG_APPEND_LINE: &str = "\neadpClientIndex={}\n";

@@ -7,9 +7,7 @@ pub mod query;
 mod tests {
     use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
     use crate::jenkins::query::*;
-    use jenkins_sdk::{
-        AsyncQuery, AsyncRawQuery, JenkinsAsyncClient, JobsInfo, Query, TriggerBuild,
-    };
+    use jenkins_sdk::{AsyncQuery, AsyncRawQuery, JenkinsAsyncClient, JobsInfo, TriggerBuild};
     use reqwest::header::COOKIE;
     use reqwest::Client;
     use serde_json::json;

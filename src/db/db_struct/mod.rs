@@ -4,7 +4,9 @@ use crate::db::db_struct::fp_db_v3::{FpDbV3, VERSION_FP_DB_V3};
 use crate::db::db_struct::fp_db_v4::{FpDbV4, VERSION_FP_DB_V4};
 use crate::db::db_struct::version_only::VersionOnly;
 use crate::db::db_struct::versioned_data::{UpgradeValue, VersionedData};
+use crate::jenkins::query::{try_get_jenkins_async_client, VfpJenkinsClient};
 use db_status::DBStatus::{Exist, NotExist};
+use jenkins_sdk::JenkinsError;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -82,6 +84,16 @@ impl LatestVersionData {
             .map_err(|e| e.to_string())?
             .write_all(str.as_bytes())
             .map_err(|e| e.to_string())
+    }
+
+    pub async fn try_get_jenkins_async_client(&self) -> Result<VfpJenkinsClient, JenkinsError> {
+        try_get_jenkins_async_client(
+            &self.jenkins_url,
+            &self.jenkins_cookie,
+            &self.jenkins_username,
+            &self.jenkins_api_token,
+        )
+        .await
     }
 }
 

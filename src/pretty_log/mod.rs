@@ -69,14 +69,14 @@ impl VfpPrettyLogger {
 
         match status.clean_state {
             OperationStatus::Pending => {
-                let _ = colored_print(
+                colored_print(
                     stdout,
                     Color::Yellow,
                     format!("   {}", OPERATION_CLEAN).as_str(),
                 );
             }
             OperationStatus::Done(Some(d)) => {
-                let _ = colored_print(
+                colored_print(
                     stdout,
                     if working { Color::Green } else { Color::Grey },
                     format!(" {}", formatx!(RESULT_CLEAN, d).unwrap_or_default()).as_str(),
@@ -88,14 +88,14 @@ impl VfpPrettyLogger {
         if let OperationStatus::Done(_) = status.clean_state {
             match status.extract_state {
                 OperationStatus::Pending => {
-                    let _ = colored_print(
+                    colored_print(
                         stdout,
                         Color::Yellow,
                         format!("   {}", OPERATION_EXTRACT).as_str(),
                     );
                 }
                 OperationStatus::Done(Some(d)) => {
-                    let _ = colored_print(
+                    colored_print(
                         stdout,
                         if working { Color::Green } else { Color::Grey },
                         format!(" {}", formatx!(RESULT_EXTRACT, d).unwrap_or_default()).as_str(),
@@ -108,14 +108,14 @@ impl VfpPrettyLogger {
         if let OperationStatus::Done(_) = status.extract_state {
             match status.mend_state {
                 OperationStatus::Pending => {
-                    let _ = colored_print(
+                    colored_print(
                         stdout,
                         Color::Yellow,
                         format!("   {}", OPERATION_MEND).as_str(),
                     );
                 }
                 OperationStatus::Done(Some(d)) => {
-                    let _ = colored_print(
+                    colored_print(
                         stdout,
                         if working { Color::Green } else { Color::Grey },
                         format!(" {}", formatx!(RESULT_MEND, d).unwrap_or_default()).as_str(),
@@ -131,20 +131,24 @@ impl VfpPrettyLogger {
     }
 }
 
-pub fn colored_print(stdout: &mut Stdout, color: Color, content: &str) -> io::Result<()> {
-    execute!(
+pub fn colored_print(stdout: &mut Stdout, color: Color, content: &str) {
+    let _ = execute!(
         stdout,
         SetForegroundColor(color),
         Print(content),
         ResetColor,
-    )
+    );
 }
 
-pub fn colored_println(stdout: &mut Stdout, color: Color, content: &str) -> io::Result<()> {
-    execute!(
+pub fn colored_println(stdout: &mut Stdout, color: Color, content: &str) {
+    let _ = execute!(
         stdout,
         SetForegroundColor(color),
         Print(format!("{}\n", content)),
         ResetColor,
-    )
+    );
+}
+
+pub fn clean_one_line(stdout: &mut Stdout) {
+    let _ = execute!(stdout, MoveUp(1), Clear(ClearType::CurrentLine),);
 }

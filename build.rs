@@ -68,7 +68,6 @@ fn inject_sensitive_data() -> Result<(), ()> {
     let exe_file_name = env::var("EXE_FILE_NAME").unwrap_or_default();
     let check_exe_file_name = env::var("CHECK_EXE_FILE_NAME").unwrap_or_default();
     let jenkins_url = env::var("JENKINS_URL").unwrap_or_default();
-    let jenkins_job_name = env::var("JENKINS_JOB_NAME").unwrap_or_default();
     
     let recommend_job_names = recommend_job_names
         .split([',', ';'])
@@ -85,6 +84,7 @@ fn inject_sensitive_data() -> Result<(), ()> {
 // Used for sensitive data injection.
 
 pub const COUNT: u32 = 4;
+pub const RUN_COUNT: u32 = 1;
 
 pub const RECOMMEND_JOB_NAMES: [&str; {}] = [
 {}];
@@ -99,7 +99,6 @@ pub const EXE_FILE_NAME: &str = \"{}\";
 pub const CHECK_EXE_FILE_NAME: &str = \"{}\";
 
 pub const JENKINS_URL: &str = \"{}\";
-pub const JENKINS_JOB_NAME: &str = \"{}\";
 ",
         recommend_job_names.len(),
         recommend_job_names.join(",\n"),
@@ -111,7 +110,6 @@ pub const JENKINS_JOB_NAME: &str = \"{}\";
         exe_file_name,
         check_exe_file_name,
         jenkins_url,
-        jenkins_job_name,
     );
 
     if let Ok(mut file) = File::create(path) {

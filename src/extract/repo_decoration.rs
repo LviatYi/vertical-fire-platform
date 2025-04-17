@@ -5,6 +5,8 @@ use crate::extract::extractor_util::{
 use std::cell::{Ref, RefCell};
 use std::path::PathBuf;
 
+type CiList = Vec<u32>;
+
 /// # RepoDecoration
 ///
 /// This structure is intended to hold an absolute path to an unpacked source file.
@@ -66,7 +68,7 @@ pub struct RepoDecoration {
 
     sorted_ci_package_names_cached: RefCell<Option<Vec<String>>>,
 
-    sorted_ci_list_cached: RefCell<Option<Vec<u32>>>,
+    sorted_ci_list_cached: RefCell<Option<CiList>>,
 }
 
 impl RepoDecoration {
@@ -107,7 +109,7 @@ impl RepoDecoration {
         })
     }
 
-    pub fn get_sorted_ci_list(&self) -> Ref<Vec<u32>> {
+    pub fn get_sorted_ci_list(&self) -> Ref<CiList> {
         if self.sorted_ci_list_cached.borrow().is_none() {
             self.sorted_ci_list_cached.replace(Some(
                 self.get_cached_locator_list()
@@ -133,6 +135,16 @@ impl RepoDecoration {
                     .join(v)
                     .join(self.secondary_locator_template.as_str())
             })
+    }
+}
+
+pub trait OrderedCiList {
+    fn is_ci_exist(&self, ci: u32) -> bool;
+}
+
+impl OrderedCiList for CiList {
+    fn is_ci_exist(&self, ci: u32) -> bool {
+        self.binary_search(&ci).is_ok()
     }
 }
 
@@ -166,15 +178,13 @@ mod tests {
     #[test]
     fn test_get_latest() {
         let temp_root_dir = tempdir().unwrap();
-        let mut temp_root_dir_path = temp_root_dir.path().to_path_buf();
+        let temp_root_dir_path = temp_root_dir.path().to_path_buf();
         let job_name = "JobName_TEST";
         let mut max_ci = 0;
         let mut latest: u32 = 1;
 
         let r = RepoDecoration::new(
-            &temp_root_dir_path
-                .to_str()
-                .unwrap(),
+            &temp_root_dir_path.to_str().unwrap(),
             "{ID}-Hash.{*}",
             "\\file.md",
             job_name,

@@ -2,6 +2,7 @@
 // Used for sensitive data injection.
 
 pub const COUNT: u32 = 4;
+pub const RUN_COUNT: u32 = 1;
 
 pub const RECOMMEND_JOB_NAMES: [&str; 0] = [
 ];
@@ -16,4 +17,3 @@ pub const EXE_FILE_NAME: &str = "";
 pub const CHECK_EXE_FILE_NAME: &str = "";
 
 pub const JENKINS_URL: &str = "";
-pub const JENKINS_JOB_NAME: &str = "";

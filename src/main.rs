@@ -20,9 +20,7 @@ use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
 use crossterm::style::Color;
 use formatx::formatx;
-use inquire::validator::ErrorMessage::Custom;
-use inquire::validator::Validation;
-use inquire::{Select, Text};
+use inquire::Select;
 use jenkins_sdk::client::AsyncClient;
 use jenkins_sdk::JenkinsError;
 use std::ops::Add;
@@ -78,7 +76,11 @@ enum Commands {
 
         /// expected instant quantity.
         #[arg(short, long)]
-        count_or_index: Option<u32>,
+        count: Option<u32>,
+
+        /// expected instant index.
+        #[arg(short, long)]
+        index: Option<u32>,
 
         /// package name.
         #[arg(short = 'p', long = "package-name")]
@@ -91,10 +93,6 @@ enum Commands {
         /// name of executable file for check.
         #[arg(short = 'k', long = "check-name")]
         check_exe_file_name: Option<String>,
-
-        /// run an instance by index.
-        #[arg(short, long)]
-        single: bool,
 
         /// kill existing instance.
         #[arg(short, long)]
@@ -174,29 +172,63 @@ async fn main() {
                     main_locator_pattern,
                     secondary_locator_template,
                     dest,
-                ).await;
+                )
+                .await;
             }
             Commands::Run {
                 dest,
-                count_or_index,
+                count,
+                index,
                 package_file_stem,
                 exe_file_name,
                 check_exe_file_name,
-                single,
                 force,
                 server,
             } => {
-                let dest =
-                    input_blast_path(&get_db(None), dest, HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH);
+                let dest = input_path(
+                    dest,
+                    get_db(None).blast_path.as_ref(),
+                    true,
+                    HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH,
+                    false,
+                    true,
+                    Some(ERR_INVALID_PATH),
+                );
 
-                let count_or_index = input_count_or_index(count_or_index, single);
+                if dest.is_err() {
+                    println!("{}", ERR_INPUT_INVALID);
+                    return;
+                }
+                let dest = dest.unwrap();
 
-                let package_file_name =
-                    package_file_stem.unwrap_or(default_config::PACKAGE_FILE_STEM.to_string());
-                let exe_file_name =
-                    exe_file_name.unwrap_or(default_config::EXE_FILE_NAME.to_string());
-                let check_exe_file_name =
-                    check_exe_file_name.unwrap_or(default_config::CHECK_EXE_FILE_NAME.to_string());
+                let single = index.is_some();
+
+                let count_or_index = index.or(count).unwrap_or_else(|| {
+                    input_directly_with_default(
+                        None,
+                        None,
+                        false,
+                        HINT_RUN_COUNT,
+                        default_config::RUN_COUNT,
+                        Some(ERR_NEED_A_NUMBER),
+                    )
+                });
+
+                let package_file_name = parse_without_input_with_default(
+                    package_file_stem,
+                    None,
+                    default_config::PACKAGE_FILE_STEM,
+                );
+                let exe_file_name = parse_without_input_with_default(
+                    exe_file_name,
+                    None,
+                    default_config::EXE_FILE_NAME,
+                );
+                let check_exe_file_name = parse_without_input_with_default(
+                    check_exe_file_name,
+                    None,
+                    default_config::CHECK_EXE_FILE_NAME,
+                );
 
                 if single {
                     if let Some(server) = server {
@@ -253,14 +285,23 @@ async fn main() {
             } => {
                 let mut db = get_db(None);
 
-                db.jenkins_url = input_url(&db, url);
+                db.jenkins_url = Some(input_directly_with_default(
+                    url,
+                    db.jenkins_url.as_ref(),
+                    false,
+                    HINT_INPUT_JENKINS_URL,
+                    default_config::JENKINS_URL.to_string(),
+                    Some(ERR_NEED_A_JENKINS_URL),
+                ));
 
-                db.jenkins_username = input_user_name(&db, username);
-
-                if db.jenkins_url.is_none() {
-                    println!("{}", formatx!(ERR_NEED_A_JENKINS_URL).unwrap());
-                    return;
-                }
+                db.jenkins_username = input_directly(
+                    username,
+                    db.jenkins_username.as_ref(),
+                    false,
+                    HINT_INPUT_JENKINS_USERNAME,
+                    Some(ERR_NEED_A_JENKINS_USERNAME),
+                )
+                .ok();
 
                 if db.jenkins_username.is_none() {
                     println!("{}", formatx!(ERR_NEED_A_JENKINS_USERNAME).unwrap());
@@ -278,7 +319,21 @@ async fn main() {
 
                 match login_method {
                     LoginMethod::ApiToken => {
-                        db.jenkins_api_token = Some(input_api_token(&db, api_token));
+                        let hint = formatx!(
+                            HINT_INPUT_JENKINS_API_TOKEN,
+                            db.jenkins_url.clone().unwrap(),
+                            db.jenkins_username.clone().unwrap()
+                        )
+                        .unwrap_or(HINT_JENKINS_API_TOKEN_DOC.to_string());
+
+                        db.jenkins_api_token = input_directly(
+                            api_token,
+                            db.jenkins_api_token.as_ref(),
+                            false,
+                            &hint,
+                            Some(ERR_NEED_A_JENKINS_API_TOKEN),
+                        )
+                        .ok();
 
                         client = try_get_jenkins_async_client_by_api_token(
                             &db.jenkins_url,
@@ -289,7 +344,14 @@ async fn main() {
                         .map(|v| Box::new(v) as Box<dyn AsyncClient>);
                     }
                     LoginMethod::Cookie => {
-                        db.jenkins_cookie = Some(input_cookie(&db, cookie));
+                        db.jenkins_cookie = input_directly(
+                            cookie,
+                            db.jenkins_cookie.as_ref(),
+                            false,
+                            HINT_INPUT_JENKINS_COOKIE,
+                            Some(ERR_NEED_A_JENKINS_COOKIE),
+                        )
+                        .ok();
 
                         client = try_get_jenkins_async_client_by_cookie(
                             &db.jenkins_url,
@@ -302,40 +364,28 @@ async fn main() {
 
                 match client {
                     Ok(_) => {
-                        let _ = colored_println(
+                        colored_println(
                             &mut stdout,
                             Color::Green,
                             format!("{}", JENKINS_LOGIN_RESULT).as_str(),
                         );
 
-                        db.interest_job_name = job_name.or_else(|| {
-                            let mut input = Text::from(HINT_INPUT_JENKINS_JOB_NAME).with_validator(
-                                |v: &str| {
-                                    if !v.is_empty() {
-                                        Ok(Validation::Valid)
-                                    } else {
-                                        Ok(Validation::Invalid(Custom(
-                                            ERR_NEED_A_JENKINS_JOB_NAME.to_string(),
-                                        )))
-                                    }
-                                },
-                            );
-
-                            let existed = db.interest_job_name.clone().or(
-                                if default_config::JENKINS_JOB_NAME.is_empty() {
-                                    None
-                                } else {
-                                    Some(default_config::JENKINS_JOB_NAME.to_string())
-                                },
-                            );
-                            if existed.is_some() {
-                                input = input.with_default(existed.as_deref().unwrap());
-                            }
-
-                            let input = input.prompt();
-
-                            input.ok()
-                        });
+                        if let Ok(val) = input_by_selection(
+                            job_name,
+                            None,
+                            false,
+                            get_job_name_options(&db.interest_job_name),
+                            HINT_INPUT_JENKINS_JOB_NAME,
+                            default_config::RECOMMEND_JOB_NAMES
+                                .first()
+                                .map(|v| v.to_string())
+                                .as_ref(),
+                        ) {
+                            db.interest_job_name = Some(val);
+                        } else {
+                            println!("{}", ERR_EMPTY_REPO);
+                            return;
+                        }
 
                         save_with_error_log(&db, None);
                     }

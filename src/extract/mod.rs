@@ -1,6 +1,6 @@
 use crate::constant::log::{
-    ERR_EMPTY_REPO, ERR_INVALID_PATH, ERR_JENKINS_CLIENT_INVALID, ERR_NO_SPECIFIED_PACKAGE,
-    HINT_EXTRACT_TO, HINT_JOB_NAME,
+    ERR_EMPTY_REPO, ERR_INPUT_INVALID, ERR_INVALID_PATH, ERR_NEED_A_NUMBER,
+    ERR_NO_SPECIFIED_PACKAGE, HINT_EXTRACT_TO, HINT_JOB_NAME, HINT_PLAYER_COUNT,
 };
 use crate::db::{get_db, save_with_error_log};
 use crate::extract::extract_operation_info::{
@@ -9,17 +9,14 @@ use crate::extract::extract_operation_info::{
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::extract::repo_decoration::RepoDecoration;
 use crate::interact::{
-    input_blast_path, input_by_selection, input_ci, input_player_count,
-    parse_extract_locator_pattern, parse_extract_repo, parse_extract_s_locator_template,
+    input_by_selection, input_ci, input_directly_with_default, input_path,
+    parse_without_input_with_default,
 };
-use crate::jenkins::query::{query_user_latest_success_info, try_get_jenkins_async_client};
-use crate::pretty_log::colored_println;
 use crate::{default_config, pretty_log};
 use crossterm::execute;
 use crossterm::style::Color;
 use formatx::formatx;
 use std::path::PathBuf;
-use std::time::Duration;
 
 pub mod extract_operation_info;
 pub mod extractor_util;
@@ -46,11 +43,13 @@ pub async fn cli_do_extract(
     if let Ok(val) = input_by_selection(
         job_name,
         None,
+        false,
         crate::interact::get_job_name_options(&db.interest_job_name),
         HINT_JOB_NAME,
         default_config::RECOMMEND_JOB_NAMES
             .first()
-            .map(|v| v.to_string()),
+            .map(|v| v.to_string())
+            .as_ref(),
     ) {
         db.interest_job_name = Some(val);
     } else {
@@ -58,13 +57,22 @@ pub async fn cli_do_extract(
         return;
     }
 
-    db.extract_repo = Some(parse_extract_repo(&db, build_target_repo_template));
+    db.extract_repo = Some(parse_without_input_with_default(
+        build_target_repo_template,
+        db.extract_repo.as_ref(),
+        default_config::REPO_TEMPLATE,
+    ));
 
-    db.extract_locator_pattern = Some(parse_extract_locator_pattern(&db, main_locator_pattern));
+    db.extract_locator_pattern = Some(parse_without_input_with_default(
+        main_locator_pattern,
+        db.extract_locator_pattern.as_ref(),
+        default_config::LOCATOR_PATTERN,
+    ));
 
-    db.extract_s_locator_template = Some(parse_extract_s_locator_template(
-        &db,
+    db.extract_s_locator_template = Some(parse_without_input_with_default(
         secondary_locator_template,
+        db.extract_s_locator_template.as_ref(),
+        default_config::LOCATOR_TEMPLATE,
     ));
 
     let repo_decoration = RepoDecoration::new(
@@ -74,89 +82,39 @@ pub async fn cli_do_extract(
         &db.interest_job_name.clone().unwrap(),
     );
 
-    let ci_list = repo_decoration.get_sorted_ci_list();
-    let ci_list_clone_for_inquire = ci_list.clone();
-
-    let fn_check_existing_ci = |v: u32| {
-        if ci_list
-            .binary_search_by(|probe| probe.cmp(&v).reverse())
-            .is_ok()
-        {
-            Some(v)
-        } else {
-            None
-        }
-    };
-
-    let last_used_ci = ci
-        .and_then(fn_check_existing_ci)
-        .or(db.last_inner_version)
-        .and_then(fn_check_existing_ci)
-        .filter(|v| *v != 0);
-
-    let mut latest_mine_ci: Option<u32> = None;
-
-    if let Some(job_name) = db.interest_job_name.clone() {
-        let client = try_get_jenkins_async_client(
-            &db.jenkins_url,
-            &db.jenkins_cookie,
-            &db.jenkins_username,
-            &db.jenkins_api_token,
-        )
-        .await;
-
-        let mut jenkins_client_invalid = false;
-        match client {
-            Ok(client) => {
-                let user_latest_info = query_user_latest_success_info(
-                    &client,
-                    &job_name,
-                    &(db.jenkins_username.clone().unwrap()),
-                    None,
-                )
-                .await;
-
-                match user_latest_info {
-                    Ok(Some(info)) => {
-                        latest_mine_ci = Some(info.number);
-                    }
-                    Ok(None) => {
-                        latest_mine_ci = None;
-                    }
-                    Err(_) => {
-                        jenkins_client_invalid = true;
-                    }
-                }
-            }
-            Err(_) => {
-                jenkins_client_invalid = true;
-            }
-        }
-
-        if jenkins_client_invalid {
-            let _ = colored_println(&mut stdout, Color::Red, ERR_JENKINS_CLIENT_INVALID);
-        }
-    }
-
-    let ci_temp = input_ci(
-        &db,
-        ci_list.first().copied(),
-        latest_mine_ci,
-        last_used_ci,
-        Some(&ci_list_clone_for_inquire),
-    );
+    let ci_temp = input_ci(&mut stdout, &db, &repo_decoration, ci).await;
 
     if ci_temp.is_none() {
         println!("{}", ERR_EMPTY_REPO);
         return;
     }
 
-    db.last_inner_version = ci_temp;
     let ci_temp = ci_temp.unwrap();
+    db.last_inner_version = ci_temp.into();
 
-    db.last_player_count = Some(input_player_count(&db, count));
+    db.last_player_count = Some(input_directly_with_default(
+        count,
+        db.last_player_count.as_ref(),
+        false,
+        HINT_PLAYER_COUNT,
+        default_config::COUNT,
+        Some(ERR_NEED_A_NUMBER),
+    ));
 
-    db.blast_path = Some(input_blast_path(&db, dest, HINT_EXTRACT_TO));
+    if let Ok(path) = input_path(
+        dest,
+        db.blast_path.as_ref(),
+        true,
+        HINT_EXTRACT_TO,
+        false,
+        true,
+        Some(ERR_INVALID_PATH),
+    ) {
+        db.blast_path = Some(path);
+    } else {
+        println!("{}", ERR_INPUT_INVALID);
+        return;
+    }
 
     save_with_error_log(&db, None);
 
@@ -267,7 +225,6 @@ pub async fn cli_do_extract(
                     let _ =
                         pty_logger.pretty_log_operation_status(&mut stdout, index - 1, count, item);
                 }
-                std::thread::sleep(Duration::from_millis(50));
             }
 
             for handle in handles {
