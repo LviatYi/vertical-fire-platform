@@ -45,15 +45,15 @@ jobs:
 
       - name: Build
         env:
-          CHECK_EXE_FILE_NAME=: ${{ secrets.CHECK_EXE_FILE_NAME}}
-          EXE_FILE_NAME=: ${{ secrets.EXE_FILE_NAME}}
-          JENKINS_URL=: ${{ secrets.JENKINS_URL}}
-          LOCATOR_PATTERN=: ${{ secrets.LOCATOR_PATTERN}}
-          LOCATOR_TEMPLATE=: ${{ secrets.LOCATOR_TEMPLATE}}
-          MENDING_FILE_PATH=: ${{ secrets.MENDING_FILE_PATH}}
-          PACKAGE_FILE_STEM=: ${{ secrets.PACKAGE_FILE_STEM}}
-          RECOMMEND_JOB_NAMES=: ${{ secrets.RECOMMEND_JOB_NAMES}}
-          REPO_TEMPLATE=: ${{ secrets.REPO_TEMPLATE}}
+          CHECK_EXE_FILE_NAME: ${{ secrets.CHECK_EXE_FILE_NAME}}
+          EXE_FILE_NAME: ${{ secrets.EXE_FILE_NAME}}
+          JENKINS_URL: ${{ secrets.JENKINS_URL}}
+          LOCATOR_PATTERN: ${{ secrets.LOCATOR_PATTERN}}
+          LOCATOR_TEMPLATE: ${{ secrets.LOCATOR_TEMPLATE}}
+          MENDING_FILE_PATH: ${{ secrets.MENDING_FILE_PATH}}
+          PACKAGE_FILE_STEM: ${{ secrets.PACKAGE_FILE_STEM}}
+          RECOMMEND_JOB_NAMES: ${{ secrets.RECOMMEND_JOB_NAMES}}
+          REPO_TEMPLATE: ${{ secrets.REPO_TEMPLATE}}
         run: cargo build --release --target x86_64-pc-windows-msvc
 
       - name: Archive source code
