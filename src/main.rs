@@ -10,25 +10,16 @@ mod run;
 use crate::constant::log::*;
 use crate::constant::util::get_hidden_sensitive_string;
 use crate::db::{delete_db_file, get_db, save_with_error_log};
-use crate::extract::extract_operation_info::{
-    ExtractOperationInfo, OperationStatus, OperationStepType,
-};
-use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
-use crate::extract::repo_decoration::RepoDecoration;
+use crate::extract::cli_do_extract;
 use crate::interact::*;
 use crate::jenkins::query::{
-    query_user_latest_success_info, try_get_jenkins_async_client,
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_cookie,
 };
-use crate::pretty_log::colored_println;
+use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
-use crossterm::execute;
-use crossterm::style::Color;
 use formatx::formatx;
-use inquire::validator::ErrorMessage::Custom;
-use inquire::validator::Validation;
-use inquire::{Select, Text};
+use inquire::Select;
 use jenkins_sdk::client::AsyncClient;
 use jenkins_sdk::JenkinsError;
 use std::ops::Add;
@@ -48,9 +39,9 @@ struct Cli {
 enum Commands {
     /// Extract ci build package.
     Extract {
-        /// branch name.
+        /// job name.
         #[arg(short, long)]
-        branch: Option<String>,
+        job_name: Option<String>,
 
         /// locator identity.
         #[arg(short = '#', long)]
@@ -84,7 +75,11 @@ enum Commands {
 
         /// expected instant quantity.
         #[arg(short, long)]
-        count_or_index: Option<u32>,
+        count: Option<u32>,
+
+        /// expected instant index.
+        #[arg(short, long)]
+        index: Option<u32>,
 
         /// package name.
         #[arg(short = 'p', long = "package-name")]
@@ -97,10 +92,6 @@ enum Commands {
         /// name of executable file for check.
         #[arg(short = 'k', long = "check-name")]
         check_exe_file_name: Option<String>,
-
-        /// run an instance by index.
-        #[arg(short, long)]
-        single: bool,
 
         /// kill existing instance.
         #[arg(short, long)]
@@ -145,6 +136,8 @@ enum Commands {
     },
     /// Clean cache.
     Clean,
+    /// Show debug info.
+    Debug,
 }
 
 #[derive(Debug, Display)]
@@ -164,296 +157,79 @@ async fn main() {
         let mut stdout = std::io::stdout();
         match command {
             Commands::Extract {
-                branch,
-                mut ci,
+                job_name,
+                ci,
                 count,
                 build_target_repo_template,
                 main_locator_pattern,
                 secondary_locator_template,
                 dest,
             } => {
-                let mut db = get_db(None);
-
-                db.branch = Some(input_branch(&db, branch));
-
-                db.extract_repo = Some(parse_extract_repo(&db, build_target_repo_template));
-
-                db.extract_locator_pattern =
-                    Some(parse_extract_locator_pattern(&db, main_locator_pattern));
-
-                db.extract_s_locator_template = Some(parse_extract_s_locator_template(
-                    &db,
+                cli_do_extract(
+                    job_name,
+                    ci,
+                    count,
+                    build_target_repo_template,
+                    main_locator_pattern,
                     secondary_locator_template,
-                ));
-
-                let repo_decoration = RepoDecoration::new(
-                    db.extract_repo.clone().unwrap(),
-                    db.extract_locator_pattern.clone().unwrap(),
-                    db.extract_s_locator_template.clone().unwrap(),
-                    db.branch.clone().unwrap().parse().unwrap_or_default(),
-                );
-
-                let ci_list = repo_decoration.get_sorted_ci_list();
-                let ci_list_clone_for_inquire = ci_list.clone();
-
-                ci = ci
-                    .and_then(|v| {
-                        if ci_list
-                            .binary_search_by(|probe| probe.cmp(&v).reverse())
-                            .is_ok()
-                        {
-                            Some(v)
-                        } else {
-                            None
-                        }
-                    })
-                    .filter(|v| *v != 0);
-
-                let mut latest_mine_ci: Option<u32> = None;
-
-                if let Some(job_name) = db.jenkins_interested_job_name.clone() {
-                    let client = try_get_jenkins_async_client(
-                        &db.jenkins_url,
-                        &db.jenkins_cookie,
-                        &db.jenkins_username,
-                        &db.jenkins_api_token,
-                    )
-                    .await;
-
-                    match client {
-                        Ok(client) => {
-                            let user_latest_info = query_user_latest_success_info(
-                                &client,
-                                &job_name,
-                                &(db.jenkins_username.clone().unwrap()),
-                                None,
-                            )
-                            .await;
-
-                            match user_latest_info {
-                                Ok(Some(info)) => {
-                                    latest_mine_ci = Some(info.number);
-                                }
-                                Ok(None) => {
-                                    latest_mine_ci = None;
-                                }
-                                Err(e) => {
-                                    //TODO_LviatYi:
-                                    println!("[LVIAT] NOTICE HERE!!!: error occurred: {}", e);
-                                }
-                            }
-                        }
-                        Err(_) => {
-                            let _ = colored_println(
-                                &mut stdout,
-                                Color::Red,
-                                ERR_JENKINS_CLIENT_INVALID,
-                            );
-                        }
-                    }
-                }
-
-                let ci_temp = input_ci(
-                    &db,
-                    ci_list.first().copied(),
-                    latest_mine_ci,
-                    db.last_inner_version.and_then(|v| {
-                        if ci_list
-                            .binary_search_by(|probe| probe.cmp(&v).reverse())
-                            .is_ok()
-                        {
-                            Some(v)
-                        } else {
-                            None
-                        }
-                    }),
-                    Some(&ci_list_clone_for_inquire),
-                );
-
-                if ci_temp.is_none() {
-                    println!("{}", ERR_EMPTY_REPO);
-                    return;
-                }
-
-                db.last_inner_version = ci_temp;
-                let ci_temp = ci_temp.unwrap();
-
-                db.last_player_count = Some(input_player_count(&db, count));
-
-                db.blast_path = Some(input_blast_path(&db, dest, HINT_EXTRACT_TO));
-
-                save_with_error_log(&db, None);
-
-                if let Some(path) = repo_decoration.get_full_path_by_ci(ci_temp) {
-                    if let Some(file_name) = path.file_stem().and_then(|v| v.to_str()) {
-                        let count = db.last_player_count.unwrap();
-                        let pty_logger = pretty_log::VfpPrettyLogger::apply_for(&mut stdout, count);
-
-                        let mut working_status: Vec<ExtractOperationInfo> = (0..count)
-                            .map(|_| ExtractOperationInfo::default())
-                            .collect();
-
-                        let mut handles = vec![];
-                        let (tx, rx) =
-                            std::sync::mpsc::channel::<(u32, OperationStepType, OperationStatus)>();
-
-                        for i in 1..count + 1 {
-                            let tx = tx.clone();
-                            let dest_with_origin_name = db
-                                .blast_path
-                                .clone()
-                                .unwrap()
-                                .as_path()
-                                .join(format!("{}{}", file_name, i));
-                            let path_t = path.clone();
-                            let mend_file_path_t = default_config::MENDING_FILE_PATH;
-                            let handle = std::thread::spawn(move || {
-                                let clean_res = clean_dir(&dest_with_origin_name);
-                                match clean_res {
-                                    Ok(cost_opt) => {
-                                        let _ = tx.send((
-                                            i,
-                                            OperationStepType::Clean,
-                                            OperationStatus::Done(cost_opt),
-                                        ));
-
-                                        let extract_res =
-                                            extract_zip_file(&path_t, &dest_with_origin_name);
-
-                                        match extract_res {
-                                            Ok(cost) => {
-                                                let _ = tx.send((
-                                                    i,
-                                                    OperationStepType::Extract,
-                                                    OperationStatus::Done(Some(cost)),
-                                                ));
-
-                                                let mend_res = mending_user_ini(
-                                                    &dest_with_origin_name,
-                                                    i,
-                                                    &mend_file_path_t,
-                                                );
-
-                                                match mend_res {
-                                                    Ok(cost) => {
-                                                        let _ = tx.send((
-                                                            i,
-                                                            OperationStepType::Mend,
-                                                            OperationStatus::Done(Some(cost)),
-                                                        ));
-                                                    }
-                                                    Err(e) => {
-                                                        let _ = tx.send((
-                                                            i,
-                                                            OperationStepType::Mend,
-                                                            OperationStatus::Err(e.to_string()),
-                                                        ));
-                                                    }
-                                                }
-                                            }
-                                            Err(msg) => {
-                                                let _ = tx.send((
-                                                    i,
-                                                    OperationStepType::Extract,
-                                                    OperationStatus::Err(msg),
-                                                ));
-                                            }
-                                        }
-                                    }
-                                    Err(msg) => {
-                                        let _ = tx.send((
-                                            i,
-                                            OperationStepType::Clean,
-                                            OperationStatus::Err(msg),
-                                        ));
-                                    }
-                                }
-                            });
-
-                            handles.push(handle);
-
-                            if let Some(item) = working_status.get((i - 1) as usize) {
-                                let _ = pty_logger.pretty_log_operation_status(
-                                    &mut stdout,
-                                    i,
-                                    count,
-                                    item,
-                                );
-                            };
-                        }
-
-                        drop(tx);
-
-                        while let Ok((index, op_type, op_stat)) = rx.recv() {
-                            if let Some(item) = working_status.get_mut((index - 1) as usize) {
-                                match op_type {
-                                    OperationStepType::Clean => {
-                                        item.clean_state = op_stat;
-                                    }
-                                    OperationStepType::Extract => {
-                                        item.extract_state = op_stat;
-                                    }
-                                    OperationStepType::Mend => {
-                                        item.mend_state = op_stat;
-                                    }
-                                }
-
-                                let _ = pty_logger.pretty_log_operation_status(
-                                    &mut stdout,
-                                    index - 1,
-                                    count,
-                                    item,
-                                );
-                            }
-                            std::thread::sleep(Duration::from_millis(50));
-                        }
-
-                        for handle in handles {
-                            handle.join().expect("Thread panicked");
-                        }
-                    } else {
-                        let _ = execute!(
-                            stdout,
-                            crossterm::style::SetForegroundColor(Color::Red),
-                            crossterm::style::Print(format!(
-                                "{}\n",
-                                formatx!(ERR_INVALID_PATH).unwrap_or_default()
-                            ))
-                        );
-                    }
-                } else {
-                    let _ = execute!(
-                        stdout,
-                        crossterm::style::SetForegroundColor(Color::Red),
-                        crossterm::style::Print(format!(
-                            "{}\n",
-                            formatx!(ERR_NO_SPECIFIED_PACKAGE).unwrap_or_default()
-                        ))
-                    );
-                }
-                let _ = execute!(stdout, crossterm::style::ResetColor);
+                    dest,
+                )
+                .await;
             }
             Commands::Run {
                 dest,
-                count_or_index,
+                count,
+                index,
                 package_file_stem,
                 exe_file_name,
                 check_exe_file_name,
-                single,
                 force,
                 server,
             } => {
-                let dest =
-                    input_blast_path(&get_db(None), dest, HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH);
+                let dest = input_path(
+                    dest,
+                    get_db(None).blast_path.as_ref(),
+                    true,
+                    HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH,
+                    false,
+                    true,
+                    Some(ERR_INVALID_PATH),
+                );
 
-                let count_or_index = input_count_or_index(count_or_index, single);
+                if dest.is_err() {
+                    println!("{}", ERR_INPUT_INVALID);
+                    return;
+                }
+                let dest = dest.unwrap();
 
-                let package_file_name =
-                    package_file_stem.unwrap_or(default_config::PACKAGE_FILE_STEM.to_string());
-                let exe_file_name =
-                    exe_file_name.unwrap_or(default_config::EXE_FILE_NAME.to_string());
-                let check_exe_file_name =
-                    check_exe_file_name.unwrap_or(default_config::CHECK_EXE_FILE_NAME.to_string());
+                let single = index.is_some();
+
+                let count_or_index = index.or(count).unwrap_or_else(|| {
+                    input_directly_with_default(
+                        None,
+                        None,
+                        false,
+                        HINT_RUN_COUNT,
+                        default_config::RUN_COUNT,
+                        Some(ERR_NEED_A_NUMBER),
+                    )
+                });
+
+                let package_file_name = parse_without_input_with_default(
+                    package_file_stem,
+                    None,
+                    default_config::PACKAGE_FILE_STEM,
+                );
+                let exe_file_name = parse_without_input_with_default(
+                    exe_file_name,
+                    None,
+                    default_config::EXE_FILE_NAME,
+                );
+                let check_exe_file_name = parse_without_input_with_default(
+                    check_exe_file_name,
+                    None,
+                    default_config::CHECK_EXE_FILE_NAME,
+                );
 
                 if single {
                     if let Some(server) = server {
@@ -510,14 +286,23 @@ async fn main() {
             } => {
                 let mut db = get_db(None);
 
-                db.jenkins_url = input_url(&db, url);
+                db.jenkins_url = Some(input_directly_with_default(
+                    url,
+                    db.jenkins_url.as_ref(),
+                    false,
+                    HINT_INPUT_JENKINS_URL,
+                    default_config::JENKINS_URL.to_string(),
+                    Some(ERR_NEED_A_JENKINS_URL),
+                ));
 
-                db.jenkins_username = input_user_name(&db, username);
-
-                if db.jenkins_url.is_none() {
-                    println!("{}", formatx!(ERR_NEED_A_JENKINS_URL).unwrap());
-                    return;
-                }
+                db.jenkins_username = input_directly(
+                    username,
+                    db.jenkins_username.as_ref(),
+                    false,
+                    HINT_INPUT_JENKINS_USERNAME,
+                    Some(ERR_NEED_A_JENKINS_USERNAME),
+                )
+                .ok();
 
                 if db.jenkins_username.is_none() {
                     println!("{}", formatx!(ERR_NEED_A_JENKINS_USERNAME).unwrap());
@@ -535,7 +320,21 @@ async fn main() {
 
                 match login_method {
                     LoginMethod::ApiToken => {
-                        db.jenkins_api_token = Some(input_api_token(&db, api_token));
+                        let hint = formatx!(
+                            HINT_INPUT_JENKINS_API_TOKEN,
+                            db.jenkins_url.clone().unwrap(),
+                            db.jenkins_username.clone().unwrap()
+                        )
+                        .unwrap_or(HINT_JENKINS_API_TOKEN_DOC.to_string());
+
+                        db.jenkins_api_token = input_directly(
+                            api_token,
+                            db.jenkins_api_token.as_ref(),
+                            false,
+                            &hint,
+                            Some(ERR_NEED_A_JENKINS_API_TOKEN),
+                        )
+                        .ok();
 
                         client = try_get_jenkins_async_client_by_api_token(
                             &db.jenkins_url,
@@ -546,7 +345,14 @@ async fn main() {
                         .map(|v| Box::new(v) as Box<dyn AsyncClient>);
                     }
                     LoginMethod::Cookie => {
-                        db.jenkins_cookie = Some(input_cookie(&db, cookie));
+                        db.jenkins_cookie = input_directly(
+                            cookie,
+                            db.jenkins_cookie.as_ref(),
+                            false,
+                            HINT_INPUT_JENKINS_COOKIE,
+                            Some(ERR_NEED_A_JENKINS_COOKIE),
+                        )
+                        .ok();
 
                         client = try_get_jenkins_async_client_by_cookie(
                             &db.jenkins_url,
@@ -559,40 +365,30 @@ async fn main() {
 
                 match client {
                     Ok(_) => {
-                        let _ = colored_println(
+                        colored_println(
                             &mut stdout,
-                            Color::Green,
+                            ThemeColor::Success,
                             format!("{}", JENKINS_LOGIN_RESULT).as_str(),
                         );
 
-                        db.jenkins_interested_job_name = job_name.or_else(|| {
-                            let mut input = Text::from(HINT_INPUT_JENKINS_JOB_NAME).with_validator(
-                                |v: &str| {
-                                    if !v.is_empty() {
-                                        Ok(Validation::Valid)
-                                    } else {
-                                        Ok(Validation::Invalid(Custom(
-                                            ERR_NEED_A_JENKINS_JOB_NAME.to_string(),
-                                        )))
-                                    }
-                                },
-                            );
+                        save_with_error_log(&db, None);
 
-                            let existed = db.jenkins_interested_job_name.clone().or(
-                                if default_config::JENKINS_JOB_NAME.is_empty() {
-                                    None
-                                } else {
-                                    Some(default_config::JENKINS_JOB_NAME.to_string())
-                                },
-                            );
-                            if existed.is_some() {
-                                input = input.with_default(existed.as_deref().unwrap());
-                            }
-
-                            let input = input.prompt();
-
-                            input.ok()
-                        });
+                        if let Ok(val) = input_by_selection(
+                            job_name,
+                            None,
+                            false,
+                            get_job_name_options(&db.interest_job_name),
+                            HINT_INPUT_JENKINS_JOB_NAME,
+                            default_config::RECOMMEND_JOB_NAMES
+                                .first()
+                                .map(|v| v.to_string())
+                                .as_ref(),
+                        ) {
+                            db.interest_job_name = Some(val);
+                        } else {
+                            println!("{}", ERR_EMPTY_REPO);
+                            return;
+                        }
 
                         save_with_error_log(&db, None);
                     }
@@ -629,6 +425,32 @@ async fn main() {
             }
             Commands::Clean => {
                 delete_db_file(None);
+            }
+            Commands::Debug => {
+                println!("Debug info:");
+                println!("COUNT: {:#?}", default_config::COUNT);
+                println!("RUN_COUNT: {:#?}", default_config::RUN_COUNT);
+                println!(
+                    "RECOMMEND_JOB_NAMES: {:#?}",
+                    default_config::RECOMMEND_JOB_NAMES
+                );
+                println!("REPO_TEMPLATE: {:#?}", default_config::REPO_TEMPLATE);
+                println!("LOCATOR_PATTERN: {:#?}", default_config::LOCATOR_PATTERN);
+                println!("LOCATOR_TEMPLATE: {:#?}", default_config::LOCATOR_TEMPLATE);
+                println!(
+                    "MENDING_FILE_PATH: {:#?}",
+                    default_config::MENDING_FILE_PATH
+                );
+                println!(
+                    "PACKAGE_FILE_STEM: {:#?}",
+                    default_config::PACKAGE_FILE_STEM
+                );
+                println!("EXE_FILE_NAME: {:#?}", default_config::EXE_FILE_NAME);
+                println!(
+                    "CHECK_EXE_FILE_NAME: {:#?}",
+                    default_config::CHECK_EXE_FILE_NAME
+                );
+                println!("JENKINS_URL: {:#?}", default_config::JENKINS_URL);
             }
         }
 

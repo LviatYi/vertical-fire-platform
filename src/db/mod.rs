@@ -69,7 +69,7 @@ pub fn save_with_error_log(db: &LatestVersionData, path: Option<&Path>) {
     }
 }
 
-fn get_path_or_home_path(path: Option<&Path>) -> PathBuf {
+fn get_path_or_home_path(path: Option<&Path>) -> PathBuf {    
     path.unwrap_or(&home_dir().unwrap_or_default())
         .to_path_buf()
 }
@@ -80,13 +80,17 @@ mod tests {
 
     impl PartialEq for LatestVersionData {
         fn eq(&self, other: &Self) -> bool {
-            self.branch == other.branch
-                && self.last_inner_version == other.last_inner_version
+            self.last_inner_version == other.last_inner_version
                 && self.last_player_count == other.last_player_count
+                && self.interest_job_name == other.interest_job_name
                 && self.extract_repo == other.extract_repo
                 && self.extract_locator_pattern == other.extract_locator_pattern
                 && self.extract_s_locator_template == other.extract_s_locator_template
                 && self.blast_path == other.blast_path
+                && self.jenkins_url == other.jenkins_url
+                && self.jenkins_username == other.jenkins_username
+                && self.jenkins_api_token == other.jenkins_api_token
+                && self.jenkins_cookie == other.jenkins_cookie
         }
     }
 
@@ -103,13 +107,8 @@ mod tests {
 
         let mut db = LatestVersionData::default();
 
-        db.branch = Some("test_branch".to_string());
         db.last_inner_version = Some(1);
         db.last_player_count = Some(2);
-        db.extract_repo = Some("test_repo".to_string());
-        db.extract_locator_pattern = Some("test_pattern".to_string());
-        db.extract_s_locator_template = Some("test_template".to_string());
-        db.blast_path = Some(PathBuf::from("test_blast_path"));
 
         db.save(temp_file.path()).unwrap();
 
@@ -117,14 +116,9 @@ mod tests {
 
         assert_eq!(
             content,
-            r#"version = 2
-branch = "test_branch"
+            r#"version = 4
 last_inner_version = 1
 last_player_count = 2
-extract_repo = "test_repo"
-extract_locator_pattern = "test_pattern"
-extract_s_locator_template = "test_template"
-blast_path = "test_blast_path"
 "#
         );
 

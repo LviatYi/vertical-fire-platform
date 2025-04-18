@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.3.7  
+v1.3.9  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -17,8 +17,17 @@ by LviatYi
 
 Change Log:
 
-- UNRELEASED
+- v1.3.9
+    - 提前存储成功登陆后的 Jenkins 信息。
+    - 添加调试模式。
+- v1.3.8
     - 优化了当 Jenkins 登录状态疑似过期时的提示。
+    - Jenkins 相关功能结构调整。
+    - 调整操作历史存储，取消 branch 字段，合并功能为 interest_job_name 字段。
+    - 持续模块化输入函数。
+    - 添加查询用户最新包时的等待提示文本。
+    - 向查询用户最新包添加额外的信息：构建中、构建失败。
+    - 优化输出颜色，使其更具表达性。
 - v1.3.7
     - 优化 `main.rs` 中的代码。使用模块化的函数代替过程。
     - 修复当 RunInfo 结果为 null 时引发的解析错误。该错误曾导致当有进行中的 Run Task 时，无法获得用户当前的最新已完成任务。
@@ -78,7 +87,7 @@ setx path "%path%;PATH_TO_FP_ROOT_DIR"
 
 ```shell
 // usage
-fp extract -b dev -ci 1111 -c 4 -d C:/path/to/extract
+fp extract -j dev -ci 1111 -c 4 -d C:/path/to/extract
 ```
 
 也可以这样使用：
@@ -92,14 +101,13 @@ fp extract
 
 Extract 提供了以下参数：
 
-- **-b, --branch <BRANCH>** 分支名。
+- **-j, --job-name <JOB_NAME>** 任务名。
 - **-#, --ci <CI>** 包 ID。用于定位包。
 - **-c, --count <COUNT>** 期望数量。指定解压数量。
 - **--repo <BUILD_TARGET_REPO_TEMPLATE>** [仅调试] 包仓库模板。在这其中搜索包。
 - **--locator-pattern <MAIN_LOCATOR_PATTERN>** [仅调试] 主定位器模式。
 - **--s-locator-template <SECONDARY_LOCATOR_TEMPLATE>** [仅调试] 次定位器模板。
 - **-d, --dest <DEST>** 解压目标路径。
-- **-r, --reset** 清除操作历史缓存。
 
 ---
 
@@ -120,11 +128,11 @@ fp run
 ```
 
 - **-d, --dest <DEST>** 解压目标路径。一般与 Extract 的 -d 路径相同。
-- **-c, --count-or-index <COUNT_OR_INDEX>** 期望数量或索引。指定启动的个数或索引，具体类型取决于 -s 参数。
+- **-c, --count-or-index <COUNT_OR_INDEX>** 期望数量。指定启动的个数。
+- **-i, --index <INDEX>** 索引。指定启动的索引。当指定时，无视 -c 参数。
 - **-p, --package-name <PACKAGE_FILE_STEM>** 包名。用于确定文件夹名称。
 - **-e, --exe-name <EXE_FILE_NAME>** 可执行文件名。
 - **-k, --check-name <CHECK_EXE_FILE_NAME>** 用于检查实例是否已存在的可执行文件名。
-- **-s, --single** 是否单个启动。否则多启动。单个启动意味着 -c 参数为索引。
 - **-f, --force** 强制启动。若实例已存在则关闭它。
 - **-S, --server <SERVER>** 使用指定的服务器。
 

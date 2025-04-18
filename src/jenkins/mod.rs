@@ -7,9 +7,7 @@ pub mod query;
 mod tests {
     use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
     use crate::jenkins::query::*;
-    use jenkins_sdk::{
-        AsyncQuery, AsyncRawQuery, JenkinsAsyncClient, JobsInfo, Query, TriggerBuild,
-    };
+    use jenkins_sdk::{AsyncQuery, AsyncRawQuery, JenkinsAsyncClient, JobsInfo, TriggerBuild};
     use reqwest::header::COOKIE;
     use reqwest::Client;
     use serde_json::json;
@@ -239,9 +237,9 @@ mod tests {
             VfpJenkinsClient::ApiTokenClient(JenkinsAsyncClient::new(URL, my_user_id, API_TOKEN));
         let job_name = JOB_NAME.to_string();
 
-        match query_user_latest_success_info(&client, &job_name, my_user_id, Some(200)).await {
-            Ok(run) => {
-                if let Some(run) = run {
+        match query_user_latest_info(&client, &job_name, my_user_id, Some(200)).await {
+            Ok(user_latest_workflow_info) => {
+                if let Some(run) = user_latest_workflow_info.latest_success {
                     println!("Found my latest build: {:#?}", run);
                 } else {
                     println!("No builds found for user: {}", my_user_id);
