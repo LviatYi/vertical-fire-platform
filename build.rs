@@ -5,10 +5,10 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 
 fn main() {
-    eprintln!("cargo build with build.rs is running.");
+    println!("cargo build with build.rs is running.");
 
     let out_dir = env::var("OUT_DIR").unwrap();
-    eprintln!("cargo:outdir={}", out_dir);
+    println!("cargo:outdir={}", out_dir);
     let root = Path::new(&out_dir)
         .parent()
         .unwrap()
@@ -20,13 +20,13 @@ fn main() {
         .unwrap()
         .parent()
         .unwrap();
-    eprintln!("cargo:root={:?}", root);
+    println!("cargo:root={:?}", root);
 
     let readme_path = root.join("README.md");
     let version = env::var("CARGO_PKG_VERSION").unwrap();
 
     if let Ok(file) = File::open(&readme_path) {
-        eprintln!("Updating README.md with version {}", version);
+        println!("Updating README.md with version {}", version);
         let version_regex = Regex::new(r"^v\d+\.\d+\.\d+[ab]?\s*$").unwrap();
         let buf_reader = BufReader::new(file);
         let lines: Result<Vec<_>, _> = buf_reader.lines().collect();
@@ -35,7 +35,7 @@ fn main() {
         if let Ok(lines) = lines {
             for line in lines {
                 if version_regex.is_match(&line) {
-                    eprintln!("Found version line: {}", line);
+                    println!("Found version line: {}", line);
                     new_content.push_str(&format!("v{}  \n", version));
                 } else {
                     new_content.push_str(&line);
@@ -55,7 +55,7 @@ fn main() {
 fn inject_sensitive_data() -> Result<(), ()> {
     let path = Path::new("src/default_config/mod.rs");
     if !path.is_file() {
-        eprintln!("File not found: {:?}", path);
+        println!("File not found: {:?}", path);
         return Err(());
     }
 
@@ -69,28 +69,14 @@ fn inject_sensitive_data() -> Result<(), ()> {
     let check_exe_file_name = env::var("CHECK_EXE_FILE_NAME").unwrap_or_default();
     let jenkins_url = env::var("JENKINS_URL").unwrap_or_default();
 
-    //TODO_LviatYi:
-    eprintln!(
-        "[LVIAT] NOTICE HERE!!!: RECOMMEND_JOB_NAMES SET: {}",
-        recommend_job_names
-    );
-
     let recommend_job_names = recommend_job_names
         .split([',', ';'])
         .filter(|s| !s.is_empty())
         .map(|s| format!("\t\t\"{}\"", s.trim()))
         .collect::<Vec<_>>();
-
-    if recommend_job_names.is_empty() {
-        //TODO_LviatYi:
-        eprintln!(
-            "[LVIAT] NOTICE HERE!!!: RECOMMEND_JOB_NAMES GOT FAILED: {:?}",
-            recommend_job_names
-        );
-    }
-
+    
     if repo_template.is_empty() {
-        eprintln!("ENV VARIABLE NOT SET");
+        println!("ENV VARIABLE NOT SET");
     }
 
     let content = format!(
@@ -128,14 +114,14 @@ pub const JENKINS_URL: &str = \"{}\";
 
     if let Ok(mut file) = File::create(path) {
         if file.write_all(content.as_bytes()).is_ok() {
-            eprintln!("Injected sensitive data into src/default_config/mod.rs");
+            println!("Injected sensitive data into src/default_config/mod.rs");
             Ok(())
         } else {
-            eprintln!("Failed to inject sensitive data into src/default_config/mod.rs");
+            println!("Failed to inject sensitive data into src/default_config/mod.rs");
             Err(())
         }
     } else {
-        eprintln!("Failed to create src/default_config/mod.rs");
+        println!("Failed to create src/default_config/mod.rs");
         Err(())
     }
 }
