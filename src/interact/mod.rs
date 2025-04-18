@@ -10,7 +10,6 @@ use crate::default_config;
 use crate::extract::repo_decoration::{OrderedCiList, RepoDecoration};
 use crate::jenkins::query::query_user_latest_info;
 use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
-use crossterm::style::Color;
 use dirs::home_dir;
 use formatx::formatx;
 use inquire::error::InquireResult;
@@ -349,14 +348,16 @@ pub async fn input_ci(
     //region latest mine ci
     let mut latest_mine_ci: Option<u32> = None;
     if let Some(job_name) = db.interest_job_name.clone() {
+
+        let mut jenkins_client_invalid = false;
+        let client = db.try_get_jenkins_async_client(true).await;
+        
         colored_println(
             stdout,
             ThemeColor::Second,
             crate::constant::log::QUERYING_USER_LATEST_CI,
         );
-
-        let mut jenkins_client_invalid = false;
-        let client = db.try_get_jenkins_async_client().await;
+        
         match client {
             Ok(client) => {
                 let user_latest_info_result = query_user_latest_info(

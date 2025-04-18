@@ -1,3 +1,4 @@
+use crate::constant::log::{LOGIN_SUCCESS_BY_API_TOKEN, LOGIN_SUCCESS_BY_COOKIE};
 use crate::db::db_struct::fp_db_v1::FpDbV1;
 use crate::db::db_struct::fp_db_v2::{FpDbV2, VERSION_FP_DB_V2};
 use crate::db::db_struct::fp_db_v3::{FpDbV3, VERSION_FP_DB_V3};
@@ -5,6 +6,7 @@ use crate::db::db_struct::fp_db_v4::{FpDbV4, VERSION_FP_DB_V4};
 use crate::db::db_struct::version_only::VersionOnly;
 use crate::db::db_struct::versioned_data::{UpgradeValue, VersionedData};
 use crate::jenkins::query::{try_get_jenkins_async_client, VfpJenkinsClient};
+use crate::pretty_log::{colored_println, ThemeColor};
 use db_status::DBStatus::{Exist, NotExist};
 use jenkins_sdk::JenkinsError;
 use std::fs::File;
@@ -86,14 +88,33 @@ impl LatestVersionData {
             .map_err(|e| e.to_string())
     }
 
-    pub async fn try_get_jenkins_async_client(&self) -> Result<VfpJenkinsClient, JenkinsError> {
-        try_get_jenkins_async_client(
+    pub async fn try_get_jenkins_async_client(
+        &self,
+        show_client_type: bool,
+    ) -> Result<VfpJenkinsClient, JenkinsError> {
+        let client = try_get_jenkins_async_client(
             &self.jenkins_url,
             &self.jenkins_cookie,
             &self.jenkins_username,
             &self.jenkins_api_token,
         )
-        .await
+        .await;
+
+        if show_client_type {
+            if let Ok(ref client) = client {
+                let mut stdout = std::io::stdout();
+                match client {
+                    VfpJenkinsClient::ApiTokenClient(_) => {
+                        colored_println(&mut stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_COOKIE)
+                    }
+                    VfpJenkinsClient::CookiedClient(_) => {
+                        colored_println(&mut stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_API_TOKEN)
+                    }
+                }
+            }
+        }
+
+        client
     }
 }
 

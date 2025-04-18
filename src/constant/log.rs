@@ -54,6 +54,8 @@ pub const HINT_INPUT_JENKINS_JOB_NAME: &str = "input the jenkins job name: ";
 pub const HINT_JENKINS_API_TOKEN_DOC: &str =
     "https://www.jenkins.io/doc/book/using/remote-access-api/";
 
+pub const LOGIN_SUCCESS_BY_COOKIE: &str = "Login success by cookie!";
+pub const LOGIN_SUCCESS_BY_API_TOKEN: &str = "Login success by api token!";
 pub const OPERATION_TITLE: &str = "Work at index {}.";
 pub const OPERATION_FINISHED: &str = "Finished at index {}.";
 pub const OPERATION_FAILED: &str = "Failed at index {}.";

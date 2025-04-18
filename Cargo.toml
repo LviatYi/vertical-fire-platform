@@ -1,6 +1,6 @@
 [package]
 name = "vertical-fire-platform"
-version = "1.3.7"
+version = "1.3.8"
 edition = "2021"
 authors = ["LviatYi"]
 build = "build.rs"
@@ -17,7 +17,6 @@ jenkins-sdk = "0.1.5"
 rand = "0.9.0-alpha.2"
 regex = "1.11.1"
 serde = { version = "1.0.215", features = ["derive"] }
-strum = "0.26.3"
 strum_macros = "0.26.4"
 toml = "0.8.19"
 zip = "2.2.1"
