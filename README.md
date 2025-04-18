@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.3.8  
+v1.3.9  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -17,6 +17,9 @@ by LviatYi
 
 Change Log:
 
+- v1.3.9
+    - 提前存储成功登陆后的 Jenkins 信息。
+    - 添加调试模式。
 - v1.3.8
     - 优化了当 Jenkins 登录状态疑似过期时的提示。
     - Jenkins 相关功能结构调整。

@@ -136,6 +136,8 @@ enum Commands {
     },
     /// Clean cache.
     Clean,
+    /// Show debug info.
+    Debug,
 }
 
 #[derive(Debug, Display)]
@@ -369,6 +371,8 @@ async fn main() {
                             format!("{}", JENKINS_LOGIN_RESULT).as_str(),
                         );
 
+                        save_with_error_log(&db, None);
+
                         if let Ok(val) = input_by_selection(
                             job_name,
                             None,
@@ -421,6 +425,32 @@ async fn main() {
             }
             Commands::Clean => {
                 delete_db_file(None);
+            }
+            Commands::Debug => {
+                println!("Debug info:");
+                println!("COUNT: {:#?}", default_config::COUNT);
+                println!("RUN_COUNT: {:#?}", default_config::RUN_COUNT);
+                println!(
+                    "RECOMMEND_JOB_NAMES: {:#?}",
+                    default_config::RECOMMEND_JOB_NAMES
+                );
+                println!("REPO_TEMPLATE: {:#?}", default_config::REPO_TEMPLATE);
+                println!("LOCATOR_PATTERN: {:#?}", default_config::LOCATOR_PATTERN);
+                println!("LOCATOR_TEMPLATE: {:#?}", default_config::LOCATOR_TEMPLATE);
+                println!(
+                    "MENDING_FILE_PATH: {:#?}",
+                    default_config::MENDING_FILE_PATH
+                );
+                println!(
+                    "PACKAGE_FILE_STEM: {:#?}",
+                    default_config::PACKAGE_FILE_STEM
+                );
+                println!("EXE_FILE_NAME: {:#?}", default_config::EXE_FILE_NAME);
+                println!(
+                    "CHECK_EXE_FILE_NAME: {:#?}",
+                    default_config::CHECK_EXE_FILE_NAME
+                );
+                println!("JENKINS_URL: {:#?}", default_config::JENKINS_URL);
             }
         }
 
