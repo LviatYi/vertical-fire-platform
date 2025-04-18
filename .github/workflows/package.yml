@@ -54,7 +54,7 @@ jobs:
           CHECK_EXE_FILE_NAME: ${{ secrets.CHECK_EXE_FILE_NAME }}
           JENKINS_JOB_NAME: ${{ secrets.JENKINS_JOB_NAME }}
           JENKINS_URL: ${{ secrets.JENKINS_URL }}
-        run: cargo build --release --target x86_64-pc-windows-msvc
+        run: cargo build --release --target x86_64-pc-windows-msvc -vv
 
       - name: Archive source code
         run: git archive -o ${{env.SRC_FILENAME}} HEAD
