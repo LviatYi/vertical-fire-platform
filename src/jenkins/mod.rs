@@ -2,6 +2,7 @@ mod cookied_jenkins_async_client;
 pub mod jenkins_endpoint;
 mod jenkins_model;
 pub mod query;
+pub mod watch;
 
 #[cfg(test)]
 mod tests {
