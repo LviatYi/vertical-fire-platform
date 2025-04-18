@@ -84,7 +84,7 @@ setx path "%path%;PATH_TO_FP_ROOT_DIR"
 
 ```shell
 // usage
-fp extract -b dev -ci 1111 -c 4 -d C:/path/to/extract
+fp extract -j dev -ci 1111 -c 4 -d C:/path/to/extract
 ```
 
 也可以这样使用：
@@ -98,14 +98,13 @@ fp extract
 
 Extract 提供了以下参数：
 
-- **-b, --branch <BRANCH>** 分支名。
+- **-j, --job-name <JOB_NAME>** 任务名。
 - **-#, --ci <CI>** 包 ID。用于定位包。
 - **-c, --count <COUNT>** 期望数量。指定解压数量。
 - **--repo <BUILD_TARGET_REPO_TEMPLATE>** [仅调试] 包仓库模板。在这其中搜索包。
 - **--locator-pattern <MAIN_LOCATOR_PATTERN>** [仅调试] 主定位器模式。
 - **--s-locator-template <SECONDARY_LOCATOR_TEMPLATE>** [仅调试] 次定位器模板。
 - **-d, --dest <DEST>** 解压目标路径。
-- **-r, --reset** 清除操作历史缓存。
 
 ---
 
@@ -126,11 +125,11 @@ fp run
 ```
 
 - **-d, --dest <DEST>** 解压目标路径。一般与 Extract 的 -d 路径相同。
-- **-c, --count-or-index <COUNT_OR_INDEX>** 期望数量或索引。指定启动的个数或索引，具体类型取决于 -s 参数。
+- **-c, --count-or-index <COUNT_OR_INDEX>** 期望数量。指定启动的个数。
+- **-i, --index <INDEX>** 索引。指定启动的索引。当指定时，无视 -c 参数。
 - **-p, --package-name <PACKAGE_FILE_STEM>** 包名。用于确定文件夹名称。
 - **-e, --exe-name <EXE_FILE_NAME>** 可执行文件名。
 - **-k, --check-name <CHECK_EXE_FILE_NAME>** 用于检查实例是否已存在的可执行文件名。
-- **-s, --single** 是否单个启动。否则多启动。单个启动意味着 -c 参数为索引。
 - **-f, --force** 强制启动。若实例已存在则关闭它。
 - **-S, --server <SERVER>** 使用指定的服务器。
 
