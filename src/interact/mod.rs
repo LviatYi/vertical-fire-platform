@@ -1,13 +1,15 @@
 use crate::constant::log::{
     ERR_INPUT_INVALID, ERR_INVALID_PATH, ERR_INVALID_PATH_NOT_EXIST, ERR_JENKINS_CLIENT_INVALID,
     ERR_NEED_A_NUMBER, ERR_NO_SPECIFIED_PACKAGE, HINT_CUSTOM, HINT_LAST_USED_CI_SUFFIX,
-    HINT_LATEST_CI_SUFFIX, HINT_MY_LATEST_CI_SUFFIX, HINT_SELECT_CI, HINT_SET_CUSTOM_CI,
+    HINT_LATEST_CI_SUFFIX, HINT_MY_LATEST_CI_SUFFIX, HINT_MY_LATEST_FAIL_CI_SUFFIX,
+    HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX, HINT_NO_MY_LATEST_CI_SUFFIX, HINT_SELECT_CI,
+    HINT_SET_CUSTOM_CI,
 };
 use crate::db::db_struct::LatestVersionData;
 use crate::default_config;
 use crate::extract::repo_decoration::{OrderedCiList, RepoDecoration};
-use crate::jenkins::query::query_user_latest_success_info;
-use crate::pretty_log::{clean_one_line, colored_println};
+use crate::jenkins::query::query_user_latest_info;
+use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
 use crossterm::style::Color;
 use dirs::home_dir;
 use formatx::formatx;
@@ -349,7 +351,7 @@ pub async fn input_ci(
     if let Some(job_name) = db.interest_job_name.clone() {
         colored_println(
             stdout,
-            Color::Grey,
+            ThemeColor::Second,
             crate::constant::log::QUERYING_USER_LATEST_CI,
         );
 
@@ -357,7 +359,7 @@ pub async fn input_ci(
         let client = db.try_get_jenkins_async_client().await;
         match client {
             Ok(client) => {
-                let user_latest_info = query_user_latest_success_info(
+                let user_latest_info_result = query_user_latest_info(
                     &client,
                     &job_name,
                     &(db.jenkins_username.clone().unwrap()),
@@ -365,23 +367,61 @@ pub async fn input_ci(
                 )
                 .await;
 
-                match user_latest_info {
-                    Ok(Some(info)) => {
-                        latest_mine_ci = Some(info.number);
-                        options.push(format!(
-                            "{}{}",
-                            info.number,
-                            formatx!(
-                                HINT_MY_LATEST_CI_SUFFIX,
+                match user_latest_info_result {
+                    Ok(user_latest_info) => match user_latest_info.latest_success {
+                        Some(ref latest_success) => {
+                            latest_mine_ci = Some(latest_success.number);
+                            let mut opt_hint = latest_success.number.to_string()
+                                + formatx!(
+                                    HINT_MY_LATEST_CI_SUFFIX,
+                                    db.jenkins_username.clone().unwrap_or_default()
+                                )
+                                .unwrap_or_default()
+                                .as_str();
+
+                            if let Some(ref in_progress) = user_latest_info.in_progress {
+                                opt_hint += formatx!(
+                                    HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX,
+                                    in_progress.number
+                                )
+                                .unwrap_or_default()
+                                .as_str();
+                            }
+
+                            if let Some(ref failed) = user_latest_info.failed {
+                                opt_hint += formatx!(HINT_MY_LATEST_FAIL_CI_SUFFIX, failed.number)
+                                    .unwrap_or_default()
+                                    .as_str();
+                            }
+
+                            options.push(opt_hint);
+                            latest_mine_opt_index = options.len() - 1;
+                        }
+                        None => {
+                            let mut opt_hint = formatx!(
+                                HINT_NO_MY_LATEST_CI_SUFFIX,
                                 db.jenkins_username.clone().unwrap_or_default()
                             )
-                            .unwrap_or_default()
-                        ));
-                        latest_mine_opt_index = options.len() - 1;
-                    }
-                    Ok(None) => {
-                        latest_mine_ci = None;
-                    }
+                            .unwrap_or_default();
+                            if let Some(ref in_progress) = user_latest_info.in_progress {
+                                opt_hint += formatx!(
+                                    HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX,
+                                    in_progress.number
+                                )
+                                .unwrap_or_default()
+                                .as_str();
+                            }
+
+                            if let Some(ref failed) = user_latest_info.failed {
+                                opt_hint += formatx!(HINT_MY_LATEST_FAIL_CI_SUFFIX, failed.number)
+                                    .unwrap_or_default()
+                                    .as_str();
+                            }
+
+                            colored_println(stdout, ThemeColor::Second, &opt_hint);
+                        }
+                    },
+
                     Err(_) => {
                         jenkins_client_invalid = true;
                     }
@@ -394,7 +434,7 @@ pub async fn input_ci(
 
         clean_one_line(stdout);
         if jenkins_client_invalid {
-            colored_println(stdout, Color::Red, ERR_JENKINS_CLIENT_INVALID);
+            colored_println(stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
         }
     }
     //endregion

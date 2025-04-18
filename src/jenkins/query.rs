@@ -123,25 +123,48 @@ pub async fn query_run_info(
     .await
 }
 
-pub async fn query_user_latest_success_info(
+pub struct UserLatestWorkflowInfo {
+    pub latest_success: Option<WorkflowRun>,
+
+    pub in_progress: Option<WorkflowRun>,
+
+    pub failed: Option<WorkflowRun>,
+}
+
+pub async fn query_user_latest_info(
     client: &VfpJenkinsClient,
     job_name: &str,
     user_id: &str,
     count: Option<u32>,
-) -> Result<Option<WorkflowRun>, JenkinsError> {
+) -> Result<UserLatestWorkflowInfo, JenkinsError> {
     let builds = query_builds_in_job(client, job_name, count).await?;
-    let mut user_latest_build_number: Option<WorkflowRun> = None;
+
+    let mut ret = UserLatestWorkflowInfo {
+        latest_success: None,
+        in_progress: None,
+        failed: None,
+    };
 
     for b in builds.builds {
         if let Ok(run_info) = query_run_info(client, job_name, b.number).await {
-            if run_info.is_mine(user_id) && run_info.result == RunStatus::Success {
-                user_latest_build_number = Some(run_info);
-                break;
+            if run_info.is_mine(user_id) {
+                match run_info.result {
+                    RunStatus::Success => {
+                        ret.latest_success = Some(run_info);
+                        break;
+                    }
+                    RunStatus::Failure => {
+                        ret.failed = Some(run_info);
+                    }
+                    RunStatus::Processing => {
+                        ret.in_progress = Some(run_info);
+                    }
+                }
             }
         }
     }
 
-    Ok(user_latest_build_number)
+    Ok(ret)
 }
 
 pub async fn query_run_log(

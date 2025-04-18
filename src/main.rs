@@ -15,10 +15,9 @@ use crate::interact::*;
 use crate::jenkins::query::{
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_cookie,
 };
-use crate::pretty_log::colored_println;
+use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
-use crossterm::style::Color;
 use formatx::formatx;
 use inquire::Select;
 use jenkins_sdk::client::AsyncClient;
@@ -366,7 +365,7 @@ async fn main() {
                     Ok(_) => {
                         colored_println(
                             &mut stdout,
-                            Color::Green,
+                            ThemeColor::Success,
                             format!("{}", JENKINS_LOGIN_RESULT).as_str(),
                         );
 

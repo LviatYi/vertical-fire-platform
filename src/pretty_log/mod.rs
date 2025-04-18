@@ -71,14 +71,18 @@ impl VfpPrettyLogger {
             OperationStatus::Pending => {
                 colored_print(
                     stdout,
-                    Color::Yellow,
+                    ThemeColor::Warn,
                     format!("   {}", OPERATION_CLEAN).as_str(),
                 );
             }
             OperationStatus::Done(Some(d)) => {
                 colored_print(
                     stdout,
-                    if working { Color::Green } else { Color::Grey },
+                    if working {
+                        ThemeColor::Success
+                    } else {
+                        ThemeColor::Second
+                    },
                     format!(" {}", formatx!(RESULT_CLEAN, d).unwrap_or_default()).as_str(),
                 );
             }
@@ -90,14 +94,18 @@ impl VfpPrettyLogger {
                 OperationStatus::Pending => {
                     colored_print(
                         stdout,
-                        Color::Yellow,
+                        ThemeColor::Warn,
                         format!("   {}", OPERATION_EXTRACT).as_str(),
                     );
                 }
                 OperationStatus::Done(Some(d)) => {
                     colored_print(
                         stdout,
-                        if working { Color::Green } else { Color::Grey },
+                        if working {
+                            ThemeColor::Success
+                        } else {
+                            ThemeColor::Second
+                        },
                         format!(" {}", formatx!(RESULT_EXTRACT, d).unwrap_or_default()).as_str(),
                     );
                 }
@@ -110,14 +118,18 @@ impl VfpPrettyLogger {
                 OperationStatus::Pending => {
                     colored_print(
                         stdout,
-                        Color::Yellow,
+                        ThemeColor::Warn,
                         format!("   {}", OPERATION_MEND).as_str(),
                     );
                 }
                 OperationStatus::Done(Some(d)) => {
                     colored_print(
                         stdout,
-                        if working { Color::Green } else { Color::Grey },
+                        if working {
+                            ThemeColor::Success
+                        } else {
+                            ThemeColor::Second
+                        },
                         format!(" {}", formatx!(RESULT_MEND, d).unwrap_or_default()).as_str(),
                     );
                 }
@@ -131,19 +143,39 @@ impl VfpPrettyLogger {
     }
 }
 
-pub fn colored_print(stdout: &mut Stdout, color: Color, content: &str) {
+pub enum ThemeColor {
+    Main,
+    Second,
+    Success,
+    Warn,
+    Error,
+}
+
+impl ThemeColor {
+    pub fn to_color(&self) -> Color {
+        match self {
+            ThemeColor::Main => Color::Grey,
+            ThemeColor::Second => Color::DarkGrey,
+            ThemeColor::Success => Color::Green,
+            ThemeColor::Warn => Color::Yellow,
+            ThemeColor::Error => Color::Red,
+        }
+    }
+}
+
+pub fn colored_print(stdout: &mut Stdout, color: ThemeColor, content: &str) {
     let _ = execute!(
         stdout,
-        SetForegroundColor(color),
+        SetForegroundColor(color.to_color()),
         Print(content),
         ResetColor,
     );
 }
 
-pub fn colored_println(stdout: &mut Stdout, color: Color, content: &str) {
+pub fn colored_println(stdout: &mut Stdout, color: ThemeColor, content: &str) {
     let _ = execute!(
         stdout,
-        SetForegroundColor(color),
+        SetForegroundColor(color.to_color()),
         Print(format!("{}\n", content)),
         ResetColor,
     );
