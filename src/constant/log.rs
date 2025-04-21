@@ -73,7 +73,7 @@ pub const RESULT_RUN: &str = "Instance {} is created.";
 pub const OPERATION_KILL_AND_RETRY: &str = "Killing and retrying...";
 pub const JENKINS_LOGIN_RESULT: &str = "Jenkins login success!";
 pub const QUERYING_USER_LATEST_CI: &str = "Querying user latest ci (It might take some time)...";
-pub const WATCHING_RUN_TASK_IN_PROGRESS: &str = "Watching run task {} of {} in progress...";
+pub const WATCHING_RUN_TASK_IN_PROGRESS: &str = "Watching run task {} of {} in progress...(last check at {})";
 pub const WATCHING_RUN_TASK_SUCCESS: &str = "Run task {} of {} finished with SUCCESS.";
 pub const WATCHING_RUN_TASK_FAILURE: &str = "Run task {} of {} finished with FAILURE.";
 

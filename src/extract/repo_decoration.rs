@@ -139,12 +139,13 @@ impl RepoDecoration {
 }
 
 pub trait OrderedCiList {
-    fn is_ci_exist(&self, ci: u32) -> bool;
+    fn is_ci_exist(&self, ci: &u32) -> bool;
 }
 
 impl OrderedCiList for CiList {
-    fn is_ci_exist(&self, ci: u32) -> bool {
-        self.binary_search(&ci).is_ok()
+    fn is_ci_exist(&self, ci: &u32) -> bool {
+        self.binary_search_by(|probe| probe.cmp(ci).reverse())
+            .is_ok()
     }
 }
 

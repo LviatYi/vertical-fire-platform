@@ -163,7 +163,7 @@ pub async fn cli_do_extract(
                                     let mend_res = mending_user_ini(
                                         &dest_with_origin_name,
                                         i,
-                                        &mend_file_path_t,
+                                        mend_file_path_t,
                                     );
 
                                     match mend_res {

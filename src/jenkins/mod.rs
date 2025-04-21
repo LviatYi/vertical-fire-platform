@@ -14,6 +14,7 @@ mod tests {
     use reqwest::Client;
     use serde_json::json;
     use std::time::Instant;
+    use win_toast_notify::WinToastNotify;
 
     const URL: &str = "";
     const USERNAME: &str = "";
@@ -293,7 +294,14 @@ mod tests {
 
         match result {
             Ok(_) => {
-                println!("Watch completed successfully.");
+                println!("Watch completed successfully. Send toast.");
+                WinToastNotify::new()
+                    .set_title("Vertical FP")
+                    .set_messages(vec![
+                        "Run Task Completed with Success."
+                    ])
+                    .show()
+                    .expect("Failed to show toast notification")
             }
             Err(e) => {
                 println!("Error: {:#?}", e);

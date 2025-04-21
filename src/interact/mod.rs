@@ -314,7 +314,7 @@ pub fn get_job_name_options(interest_job_name: &Option<String>) -> Vec<String> {
     if let Some(last_used) = interest_job_name.clone() {
         if let Some(index) = options.iter_mut().position(|&mut v| v == last_used) {
             let mut origin_options = options.clone();
-            let mut options = origin_options.split_off(index);
+            options = origin_options.split_off(index);
             let mut follow = options.split_off(1);
 
             options.append(&mut origin_options);
@@ -449,7 +449,7 @@ pub async fn input_ci(
     let exist_ci_list = repo_decoration.get_sorted_ci_list();
 
     //region last used ci
-    if let Some(last_used) = last_used {
+    if let Some(ref last_used) = last_used {
         if exist_ci_list.deref().is_ci_exist(last_used) {
             options.push(format!("{}{}", last_used, HINT_LAST_USED_CI_SUFFIX));
             last_used_index = options.len() - 1;
@@ -479,7 +479,7 @@ pub async fn input_ci(
 
                 let input = Text::from(HINT_SET_CUSTOM_CI)
                     .with_validator(move |v: &str| {
-                        if let Ok(ci) = v.parse::<u32>() {
+                        if let Ok(ref ci) = v.parse::<u32>() {
                             if exist_ci_list_for_inquire.is_ci_exist(ci) {
                                 Ok(Validation::Valid)
                             } else {
