@@ -85,6 +85,7 @@ fn inject_sensitive_data() -> Result<(), ()> {
 
 pub const COUNT: u32 = 4;
 pub const RUN_COUNT: u32 = 1;
+pub const WATCH_INTERVAL: u64 = 10;
 
 pub const RECOMMEND_JOB_NAMES: [&str; {}] = [
 {}];

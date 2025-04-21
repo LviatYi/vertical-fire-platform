@@ -166,6 +166,7 @@ async fn main() {
                 dest,
             } => {
                 cli_do_extract(
+                    &mut stdout,
                     job_name,
                     ci,
                     count,

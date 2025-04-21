@@ -8,6 +8,7 @@ pub mod watch;
 mod tests {
     use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
     use crate::jenkins::query::*;
+    use crate::jenkins::watch::watch;
     use jenkins_sdk::{AsyncQuery, AsyncRawQuery, JenkinsAsyncClient, JobsInfo, TriggerBuild};
     use reqwest::header::COOKIE;
     use reqwest::Client;
@@ -133,7 +134,7 @@ mod tests {
         let req = (&client)
             .request(
                 "GET".parse().unwrap(),
-                format!("{}/job/{}/{}/api/json?tree=number,actions[causes[userId],parameters[name,value]],result",URL, job_name, run_id),
+                format!("{}/job/{}/{}/api/json?tree=number,actions[causes[userId],parameters[name,value]],result", URL, job_name, run_id),
             )
             .header(COOKIE, JENKINS_COOKIE)
             .header("User-Agent", "jenkins-sdk-rust");
@@ -279,6 +280,23 @@ mod tests {
             }
             Err(e) => {
                 println!("Failed to parse JSON: {:#?}", e);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_watch() {
+        let mut stdout = std::io::stdout();
+        let client_valid =
+            VfpJenkinsClient::ApiTokenClient(JenkinsAsyncClient::new(URL, USERNAME, API_TOKEN));
+        let result = watch(&mut stdout, client_valid, USERNAME, JOB_NAME, None).await;
+
+        match result {
+            Ok(_) => {
+                println!("Watch completed successfully.");
+            }
+            Err(e) => {
+                println!("Error: {:#?}", e);
             }
         }
     }

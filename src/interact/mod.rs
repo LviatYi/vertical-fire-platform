@@ -348,16 +348,15 @@ pub async fn input_ci(
     //region latest mine ci
     let mut latest_mine_ci: Option<u32> = None;
     if let Some(job_name) = db.interest_job_name.clone() {
-
         let mut jenkins_client_invalid = false;
-        let client = db.try_get_jenkins_async_client(true).await;
-        
+        let client = db.try_get_jenkins_async_client(stdout, true).await;
+
         colored_println(
             stdout,
             ThemeColor::Second,
             crate::constant::log::QUERYING_USER_LATEST_CI,
         );
-        
+
         match client {
             Ok(client) => {
                 let user_latest_info_result = query_user_latest_info(

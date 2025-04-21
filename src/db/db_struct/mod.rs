@@ -10,7 +10,7 @@ use crate::pretty_log::{colored_println, ThemeColor};
 use db_status::DBStatus::{Exist, NotExist};
 use jenkins_sdk::JenkinsError;
 use std::fs::File;
-use std::io::Write;
+use std::io::{Stdout, Write};
 use std::path::Path;
 
 mod fp_db_v1;
@@ -90,6 +90,7 @@ impl LatestVersionData {
 
     pub async fn try_get_jenkins_async_client(
         &self,
+        stdout: &mut Stdout,
         show_client_type: bool,
     ) -> Result<VfpJenkinsClient, JenkinsError> {
         let client = try_get_jenkins_async_client(
@@ -98,17 +99,16 @@ impl LatestVersionData {
             &self.jenkins_username,
             &self.jenkins_api_token,
         )
-        .await;
+            .await;
 
         if show_client_type {
             if let Ok(ref client) = client {
-                let mut stdout = std::io::stdout();
                 match client {
                     VfpJenkinsClient::ApiTokenClient(_) => {
-                        colored_println(&mut stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_COOKIE)
+                        colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_COOKIE)
                     }
                     VfpJenkinsClient::CookiedClient(_) => {
-                        colored_println(&mut stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_API_TOKEN)
+                        colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_API_TOKEN)
                     }
                 }
             }

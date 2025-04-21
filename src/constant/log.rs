@@ -28,6 +28,8 @@ pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID: &str =
     "Url: {}.\nUsername: {}\nApi-Token: {}\nMaybe you should check your api token.\nErr: {}";
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_COOKIE_INVALID: &str =
     "Url: {}.\nCookie: {}\nMaybe you should check your cookie.\nErr: {}";
+pub const ERR_NO_IN_PROGRESS_RUN_TASK: &str = "There is no in progress run task.";
+pub const ERR_WATCH_RUN_TASK_FAILED: &str = "The watched run task failed.";
 
 pub const HINT_JOB_NAME: &str = "use job:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
@@ -71,5 +73,8 @@ pub const RESULT_RUN: &str = "Instance {} is created.";
 pub const OPERATION_KILL_AND_RETRY: &str = "Killing and retrying...";
 pub const JENKINS_LOGIN_RESULT: &str = "Jenkins login success!";
 pub const QUERYING_USER_LATEST_CI: &str = "Querying user latest ci (It might take some time)...";
+pub const WATCHING_RUN_TASK_IN_PROGRESS: &str = "Watching run task {} of {} in progress...";
+pub const WATCHING_RUN_TASK_SUCCESS: &str = "Run task {} of {} finished with SUCCESS.";
+pub const WATCHING_RUN_TASK_FAILURE: &str = "Run task {} of {} finished with FAILURE.";
 
 pub const CONFIG_APPEND_LINE: &str = "\neadpClientIndex={}\n";

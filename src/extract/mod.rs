@@ -16,6 +16,7 @@ use crate::{default_config, pretty_log};
 use crossterm::execute;
 use crossterm::style::Color;
 use formatx::formatx;
+use std::io::Stdout;
 use std::path::PathBuf;
 
 pub mod extract_operation_info;
@@ -28,6 +29,7 @@ pub mod repo_decoration;
 ///
 /// Contains Inquire(input requests) and console output.
 pub async fn cli_do_extract(
+    stdout: &mut Stdout,
     job_name: Option<String>,
     ci: Option<u32>,
     count: Option<u32>,
@@ -36,8 +38,6 @@ pub async fn cli_do_extract(
     secondary_locator_template: Option<String>,
     dest: Option<PathBuf>,
 ) {
-    let mut stdout = std::io::stdout();
-
     let mut db = get_db(None);
 
     if let Ok(val) = input_by_selection(
@@ -82,7 +82,7 @@ pub async fn cli_do_extract(
         &db.interest_job_name.clone().unwrap(),
     );
 
-    let ci_temp = input_ci(&mut stdout, &db, &repo_decoration, ci).await;
+    let ci_temp = input_ci(stdout, &db, &repo_decoration, ci).await;
 
     if ci_temp.is_none() {
         println!("{}", ERR_EMPTY_REPO);
@@ -121,7 +121,7 @@ pub async fn cli_do_extract(
     if let Some(path) = repo_decoration.get_full_path_by_ci(ci_temp) {
         if let Some(file_name) = path.file_stem().and_then(|v| v.to_str()) {
             let count = db.last_player_count.unwrap();
-            let pty_logger = pretty_log::VfpPrettyLogger::apply_for(&mut stdout, count);
+            let pty_logger = pretty_log::VfpPrettyLogger::apply_for(stdout, count);
 
             let mut working_status: Vec<ExtractOperationInfo> = (0..count)
                 .map(|_| ExtractOperationInfo::default())
@@ -202,7 +202,7 @@ pub async fn cli_do_extract(
                 handles.push(handle);
 
                 if let Some(item) = working_status.get((i - 1) as usize) {
-                    let _ = pty_logger.pretty_log_operation_status(&mut stdout, i, count, item);
+                    let _ = pty_logger.pretty_log_operation_status(stdout, i, count, item);
                 };
             }
 
@@ -222,8 +222,7 @@ pub async fn cli_do_extract(
                         }
                     }
 
-                    let _ =
-                        pty_logger.pretty_log_operation_status(&mut stdout, index - 1, count, item);
+                    let _ = pty_logger.pretty_log_operation_status(stdout, index - 1, count, item);
                 }
             }
 
@@ -232,7 +231,7 @@ pub async fn cli_do_extract(
             }
         } else {
             let _ = execute!(
-                &mut stdout,
+                stdout,
                 crossterm::style::SetForegroundColor(Color::Red),
                 crossterm::style::Print(format!(
                     "{}\n",
@@ -242,7 +241,7 @@ pub async fn cli_do_extract(
         }
     } else {
         let _ = execute!(
-            &mut stdout,
+            stdout,
             crossterm::style::SetForegroundColor(Color::Red),
             crossterm::style::Print(format!(
                 "{}\n",
@@ -250,5 +249,5 @@ pub async fn cli_do_extract(
             ))
         );
     }
-    let _ = execute!(&mut stdout, crossterm::style::ResetColor);
+    let _ = execute!(stdout, crossterm::style::ResetColor);
 }
