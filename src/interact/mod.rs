@@ -446,10 +446,14 @@ pub async fn input_ci(
     }
     //endregion
 
+    let exist_ci_list = repo_decoration.get_sorted_ci_list();
+
     //region last used ci
     if let Some(last_used) = last_used {
-        options.push(format!("{}{}", last_used, HINT_LAST_USED_CI_SUFFIX));
-        last_used_index = options.len() - 1;
+        if exist_ci_list.deref().is_ci_exist(last_used) {
+            options.push(format!("{}{}", last_used, HINT_LAST_USED_CI_SUFFIX));
+            last_used_index = options.len() - 1;
+        }
     }
     //endregion
 
