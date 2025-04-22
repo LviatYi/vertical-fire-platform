@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.3.9  
+v1.3.10  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -17,7 +17,7 @@ by LviatYi
 
 Change Log:
 
-- UNRELEASE
+- v1.3.10
     - 添加 watch 功能。它会在 Jenkins 上有新包时，自动下载并解压。
     - 取消 Login 命令时请求 job_name 的输入。现在流程上不再必要。
     - 修复 错误的 build number of last run checking。该错误导致查询用户上次解压包时，若该包不是最新包，则错误推断为不存在。
