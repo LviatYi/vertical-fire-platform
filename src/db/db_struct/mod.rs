@@ -105,10 +105,10 @@ impl LatestVersionData {
             if let Ok(ref client) = client {
                 match client {
                     VfpJenkinsClient::ApiTokenClient(_) => {
-                        colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_COOKIE)
+                        colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_API_TOKEN)
                     }
                     VfpJenkinsClient::CookiedClient(_) => {
-                        colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_API_TOKEN)
+                        colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_COOKIE)
                     }
                 }
             }
