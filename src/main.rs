@@ -135,10 +135,6 @@ enum Commands {
         /// [Unsafe] You can get it by F12 in any jenkins web page.
         #[arg(short, long)]
         cookie: Option<String>,
-
-        /// Jenkins interested job name.
-        #[arg(short, long)]
-        job_name: Option<String>,
     },
     /// Watch a Jenkins build task.
     Watch {
@@ -303,7 +299,6 @@ async fn main() {
                 username,
                 api_token,
                 cookie,
-                job_name,
             } => {
                 let mut db = get_db(None);
 

@@ -151,10 +151,10 @@ fp run
 
 ```shell
 // usage
-fp login --url https://your.jenkins.url -u your_username -a your_api_token -j your_interested_job_name
+fp login --url https://your.jenkins.url -u your_username -a your_api_token
 
 // or
-fp login --url https://your.jenkins.url -u your_username -c your_cookie -j your_interested_job_name
+fp login --url https://your.jenkins.url -u your_username -c your_cookie
 ```
 
 也可以这样使用：
@@ -168,7 +168,6 @@ fp login
 - **-a, --api-token <API_TOKEN>** API
   token。你可以在此处获得更多信息：https://www.jenkins.io/doc/book/using/remote-access-api/
 - **-c, --cookie <COOKIE>** Cookie。它不是很安全，但它在我的用例中更快。如果你不知道哪里可以找到 Cookie，请不要使用。
-- **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
 
 ---
 
