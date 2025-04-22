@@ -19,6 +19,7 @@ Change Log:
 
 - UNRELEASE
     - 添加 watch 功能。它会在 Jenkins 上有新包时，自动下载并解压。
+    - 取消 Login 命令时请求 job_name 的输入。现在流程上不再必要。
     - 修复 错误的 build number of last run checking。该错误导致查询用户上次解压包时，若该包不是最新包，则错误推断为不存在。
     - 修复 在输入 job name 时，未根据上次输入对 Jenkins 进行排序。
 - v1.3.9
@@ -140,6 +141,8 @@ fp run
 - **-f, --force** 强制启动。若实例已存在则关闭它。
 - **-S, --server <SERVER>** 使用指定的服务器。
 
+---
+
 ### Login
 
 登录 Jenkins 以获得实时信息支持。
@@ -166,6 +169,30 @@ fp login
   token。你可以在此处获得更多信息：https://www.jenkins.io/doc/book/using/remote-access-api/
 - **-c, --cookie <COOKIE>** Cookie。它不是很安全，但它在我的用例中更快。如果你不知道哪里可以找到 Cookie，请不要使用。
 - **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
+
+---
+
+### Watch
+
+监控 Jenkins 平台的 Run task 完成状态，以自动进行进一步操作。
+
+可以这样使用：
+
+```shell
+// usage
+fp watch -j your_interested_job_name -ci 1111 -e
+```
+
+也可以这样使用：
+
+```shell
+// usage
+fp watch -e
+```
+
+- **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
+- **-#, --ci <CI>** 包 ID。用于定位包。
+- **-e** 在所需的操作成功后自动解压。
 
 ---
 

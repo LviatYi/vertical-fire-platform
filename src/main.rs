@@ -12,10 +12,10 @@ use crate::constant::util::get_hidden_sensitive_string;
 use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::extract::cli_do_extract;
 use crate::interact::*;
+use crate::jenkins::ci_do_watch;
 use crate::jenkins::query::{
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_cookie,
 };
-use crate::jenkins::watch::{watch, VfpWatchError};
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
@@ -27,7 +27,6 @@ use std::ops::{Add, Deref};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use strum_macros::Display;
-use win_toast_notify::WinToastNotify;
 
 #[derive(Parser)]
 #[command(name="Vertical Fire Platform", author, version, about(env!("CARGO_PKG_DESCRIPTION")), long_about=None,arg_required_else_help=true
@@ -389,25 +388,6 @@ async fn main() {
                         );
 
                         save_with_error_log(&db, None);
-
-                        if let Ok(val) = input_by_selection(
-                            job_name,
-                            None,
-                            false,
-                            get_job_name_options(&db.interest_job_name),
-                            HINT_INPUT_JENKINS_JOB_NAME,
-                            default_config::RECOMMEND_JOB_NAMES
-                                .first()
-                                .map(|v| v.to_string())
-                                .as_ref(),
-                        ) {
-                            db.interest_job_name = Some(val);
-                        } else {
-                            println!("{}", ERR_EMPTY_REPO);
-                            return;
-                        }
-
-                        save_with_error_log(&db, None);
                     }
                     Err(e) => {
                         let err_msg = match login_method {
@@ -445,104 +425,11 @@ async fn main() {
                 ci,
                 extract,
             } => {
-                let db = get_db(None);
-                let client = db.try_get_jenkins_async_client(&mut stdout, true).await;
-                let mut success_build_number = None;
-                let mut used_job_name = None;
-
-                if let Ok(client) = client {
-                    let job_name = input_by_selection(
-                        job_name,
-                        db.interest_job_name.as_ref(),
-                        true,
-                        get_job_name_options(&db.interest_job_name),
-                        HINT_INPUT_JENKINS_JOB_NAME,
-                        default_config::RECOMMEND_JOB_NAMES
-                            .first()
-                            .map(|v| v.to_string())
-                            .as_ref(),
-                    );
-
-                    if job_name.is_err() {
-                        println!("{}", ERR_EMPTY_REPO);
-                        return;
-                    }
-                    used_job_name = Some(job_name.unwrap());
-
-                    match db.jenkins_username {
-                        Some(ref username) => {
-                            let result = watch(
-                                &mut stdout,
-                                client,
-                                username,
-                                &used_job_name.clone().unwrap(),
-                                ci,
-                            )
-                            .await;
-
-                            match result {
-                                Ok(build_number) => {
-                                    success_build_number = Some(build_number);
-                                    colored_println(
-                                        &mut stdout,
-                                        ThemeColor::Success,
-                                        &formatx!(
-                                            WATCHING_RUN_TASK_SUCCESS,
-                                            build_number,
-                                            used_job_name.as_ref().unwrap()
-                                        )
-                                        .unwrap_or_default(),
-                                    );
-                                    WinToastNotify::new()
-                                        .set_title("Vertical FP")
-                                        .set_messages(vec!["Run Task Completed with Success."])
-                                        .show()
-                                        .expect("Failed to show toast notification")
-                                }
-                                Err(e) => match e {
-                                    VfpWatchError::JenkinsError(_) => {
-                                        colored_println(
-                                            &mut stdout,
-                                            ThemeColor::Error,
-                                            ERR_NO_IN_PROGRESS_RUN_TASK,
-                                        );
-                                    }
-                                    VfpWatchError::NoValidRunTask => {
-                                        colored_println(
-                                            &mut stdout,
-                                            ThemeColor::Error,
-                                            ERR_NO_VALID_RUN_TASK,
-                                        );
-                                    }
-                                    VfpWatchError::WatchTaskFailed(build_number, log) => {
-                                        colored_println(
-                                            &mut stdout,
-                                            ThemeColor::Error,
-                                            &formatx!(
-                                                WATCHING_RUN_TASK_FAILURE,
-                                                build_number,
-                                                used_job_name.as_ref().unwrap()
-                                            )
-                                            .unwrap_or_default(),
-                                        );
-                                        colored_println(&mut stdout, ThemeColor::Main, &log);
-                                    }
-                                },
-                            }
-                        }
-                        None => {
-                            colored_println(
-                                &mut stdout,
-                                ThemeColor::Error,
-                                ERR_NEED_A_JENKINS_USERNAME,
-                            );
-                        }
-                    }
-                } else {
-                    colored_println(&mut stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
-                }
+                let (used_job_name, success_build_number) =
+                    ci_do_watch(&mut stdout, job_name, ci).await;
 
                 if extract {
+                    let db = get_db(None);
                     if let Some(build_number) = success_build_number {
                         let job_name = used_job_name;
                         let ci = Some(build_number);

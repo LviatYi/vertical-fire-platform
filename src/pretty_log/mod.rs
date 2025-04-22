@@ -7,6 +7,7 @@ use crossterm::terminal::{Clear, ClearType};
 use formatx::formatx;
 use std::io;
 use std::io::{Stdout, Write};
+use win_toast_notify::WinToastNotify;
 
 pub struct VfpPrettyLogger;
 
@@ -183,4 +184,15 @@ pub fn colored_println(stdout: &mut Stdout, color: ThemeColor, content: &str) {
 
 pub fn clean_one_line(stdout: &mut Stdout) {
     let _ = execute!(stdout, MoveUp(1), Clear(ClearType::CurrentLine),);
+}
+
+pub fn toast(title: &str, msg: Vec<&str>) {
+    WinToastNotify::new()
+        .set_title(&format!(
+            "⠄⠄⠄V-F Platform {} ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼",
+            title
+        ))
+        .set_messages(msg)
+        .show()
+        .expect(ERR_TOAST_SHOW_FAILED)
 }

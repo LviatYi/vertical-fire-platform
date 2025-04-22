@@ -31,6 +31,7 @@ pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_COOKIE_INVALID: &str =
 pub const ERR_NO_IN_PROGRESS_RUN_TASK: &str = "There is no in progress run task.";
 pub const ERR_NO_VALID_RUN_TASK: &str = "There is no valid run task (in progress, failure or success).";
 pub const ERR_WATCH_RUN_TASK_FAILED: &str = "The watched run task failed.";
+pub const ERR_TOAST_SHOW_FAILED: &str = "Failed to show toast notification.";
 
 pub const HINT_JOB_NAME: &str = "use job:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
@@ -78,5 +79,7 @@ pub const WATCHING_RUN_TASK_IN_PROGRESS_PREPARE: &str = "Prepare to watching run
 pub const WATCHING_RUN_TASK_IN_PROGRESS: &str = "Watching run task {} of {} in progress...(last check at {})";
 pub const WATCHING_RUN_TASK_SUCCESS: &str = "Run task {} of {} finished with SUCCESS.";
 pub const WATCHING_RUN_TASK_FAILURE: &str = "Run task {} of {} finished with FAILURE.";
+pub const RUN_TASK_COMPLETED: &str = "Run Task Completed with Success.";
+pub const EXTRACT_TASK_COMPLETED: &str = "All Extract Completed.";
 
 pub const CONFIG_APPEND_LINE: &str = "\neadpClientIndex={}\n";

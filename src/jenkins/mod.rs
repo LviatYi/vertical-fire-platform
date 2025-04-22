@@ -1,8 +1,107 @@
+use crate::constant::log::*;
+use crate::db::get_db;
+use crate::default_config;
+use crate::interact::{get_job_name_options, input_by_selection};
+use crate::jenkins::watch::{watch, VfpWatchError};
+use crate::pretty_log::{colored_println, toast, ThemeColor};
+use formatx::formatx;
+use std::io::Stdout;
+
 mod cookied_jenkins_async_client;
 pub mod jenkins_endpoint;
 mod jenkins_model;
 pub mod query;
 pub mod watch;
+
+pub async fn ci_do_watch(
+    stdout: &mut Stdout,
+    job_name: Option<String>,
+    ci: Option<u32>,
+) -> (Option<String>, Option<u32>) {
+    let mut success_build_number = None;
+    let mut used_job_name = None;
+    let db = get_db(None);
+    let client = db.try_get_jenkins_async_client(stdout, true).await;
+
+    if let Ok(client) = client {
+        let job_name = input_by_selection(
+            job_name,
+            db.interest_job_name.as_ref(),
+            true,
+            get_job_name_options(&db.interest_job_name),
+            HINT_INPUT_JENKINS_JOB_NAME,
+            default_config::RECOMMEND_JOB_NAMES
+                .first()
+                .map(|v| v.to_string())
+                .as_ref(),
+        );
+
+        if job_name.is_err() {
+            println!("{}", ERR_EMPTY_REPO);
+            return (used_job_name, success_build_number);
+        }
+        used_job_name = Some(job_name.unwrap());
+
+        match db.jenkins_username {
+            Some(ref username) => {
+                let result = watch(
+                    stdout,
+                    client,
+                    username,
+                    &used_job_name.clone().unwrap(),
+                    ci,
+                )
+                .await;
+
+                match result {
+                    Ok(build_number) => {
+                        success_build_number = Some(build_number);
+                        colored_println(
+                            stdout,
+                            ThemeColor::Success,
+                            &formatx!(
+                                WATCHING_RUN_TASK_SUCCESS,
+                                build_number,
+                                used_job_name.as_ref().unwrap()
+                            )
+                            .unwrap_or_default(),
+                        );
+
+                        toast("Watch", vec![RUN_TASK_COMPLETED]);
+                    }
+                    Err(e) => match e {
+                        VfpWatchError::JenkinsError(_) => {
+                            colored_println(stdout, ThemeColor::Error, ERR_NO_IN_PROGRESS_RUN_TASK);
+                        }
+                        VfpWatchError::NoValidRunTask => {
+                            colored_println(stdout, ThemeColor::Error, ERR_NO_VALID_RUN_TASK);
+                        }
+                        VfpWatchError::WatchTaskFailed(build_number, log) => {
+                            colored_println(
+                                stdout,
+                                ThemeColor::Error,
+                                &formatx!(
+                                    WATCHING_RUN_TASK_FAILURE,
+                                    build_number,
+                                    used_job_name.as_ref().unwrap()
+                                )
+                                .unwrap_or_default(),
+                            );
+                            colored_println(stdout, ThemeColor::Main, &log);
+                        }
+                    },
+                }
+            }
+            None => {
+                colored_println(stdout, ThemeColor::Error, ERR_NEED_A_JENKINS_USERNAME);
+            }
+        }
+    } else {
+        colored_println(stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
+    }
+
+    (used_job_name, success_build_number)
+}
 
 #[cfg(test)]
 mod tests {
@@ -297,9 +396,7 @@ mod tests {
                 println!("Watch completed successfully. Send toast.");
                 WinToastNotify::new()
                     .set_title("Vertical FP")
-                    .set_messages(vec![
-                        "Run Task Completed with Success."
-                    ])
+                    .set_messages(vec!["Run Task Completed with Success."])
                     .show()
                     .expect("Failed to show toast notification")
             }

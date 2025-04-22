@@ -1,6 +1,7 @@
 use crate::constant::log::{
     ERR_EMPTY_REPO, ERR_INPUT_INVALID, ERR_INVALID_PATH, ERR_NEED_A_NUMBER,
-    ERR_NO_SPECIFIED_PACKAGE, HINT_EXTRACT_TO, HINT_JOB_NAME, HINT_PLAYER_COUNT,
+    ERR_NO_SPECIFIED_PACKAGE, EXTRACT_TASK_COMPLETED, HINT_EXTRACT_TO, HINT_JOB_NAME,
+    HINT_PLAYER_COUNT,
 };
 use crate::db::{get_db, save_with_error_log};
 use crate::extract::extract_operation_info::{
@@ -12,6 +13,7 @@ use crate::interact::{
     input_by_selection, input_ci, input_directly_with_default, input_path,
     parse_without_input_with_default,
 };
+use crate::pretty_log::toast;
 use crate::{default_config, pretty_log};
 use crossterm::execute;
 use crossterm::style::Color;
@@ -229,6 +231,8 @@ pub async fn cli_do_extract(
             for handle in handles {
                 handle.join().expect("Thread panicked");
             }
+
+            toast("Extract", vec![EXTRACT_TASK_COMPLETED]);
         } else {
             let _ = execute!(
                 stdout,
