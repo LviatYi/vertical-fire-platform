@@ -29,7 +29,12 @@ use std::time::Duration;
 use strum_macros::Display;
 
 #[derive(Parser)]
-#[command(name="Vertical Fire Platform", author, version, about(env!("CARGO_PKG_DESCRIPTION")), long_about=None,arg_required_else_help=true
+#[command(name="Vertical Fire Platform",
+  author,
+  version,
+  about(env!("CARGO_PKG_DESCRIPTION")),
+  long_about=None,
+  arg_required_else_help=true
 )]
 struct Cli {
     #[command(subcommand)]
