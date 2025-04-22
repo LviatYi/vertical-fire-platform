@@ -309,9 +309,9 @@ where
 
 //region Selection Options
 
-pub fn get_job_name_options(interest_job_name: &Option<String>) -> Vec<String> {
+pub fn get_job_name_options(last_used: &Option<String>) -> Vec<String> {
     let mut options = default_config::RECOMMEND_JOB_NAMES.to_vec();
-    if let Some(last_used) = interest_job_name.clone() {
+    if let Some(last_used) = last_used.clone() {
         if let Some(index) = options.iter_mut().position(|&mut v| v == last_used) {
             let mut origin_options = options.clone();
             options = origin_options.split_off(index);

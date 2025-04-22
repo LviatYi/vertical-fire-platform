@@ -15,6 +15,7 @@ use crate::interact::*;
 use crate::jenkins::query::{
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_cookie,
 };
+use crate::jenkins::watch::{watch, VfpWatchError};
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
@@ -22,10 +23,11 @@ use formatx::formatx;
 use inquire::Select;
 use jenkins_sdk::client::AsyncClient;
 use jenkins_sdk::JenkinsError;
-use std::ops::Add;
+use std::ops::{Add, Deref};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use strum_macros::Display;
+use win_toast_notify::WinToastNotify;
 
 #[derive(Parser)]
 #[command(name="Vertical Fire Platform", author, version, about(env!("CARGO_PKG_DESCRIPTION")), long_about=None,arg_required_else_help=true
@@ -133,6 +135,20 @@ enum Commands {
         /// Jenkins interested job name.
         #[arg(short, long)]
         job_name: Option<String>,
+    },
+    /// Watch a Jenkins build task.
+    Watch {
+        /// job name.
+        #[arg(short, long)]
+        job_name: Option<String>,
+
+        /// locator identity.
+        #[arg(short = '#', long)]
+        ci: Option<u32>,
+
+        /// automatically extract the package after success.
+        #[arg(short, long)]
+        extract: bool,
     },
     /// Clean cache.
     Clean,
@@ -421,6 +437,132 @@ async fn main() {
 
                         let err_msg = ERR_JENKINS_CLIENT_INVALID_SIMPLE.to_string().add(&err_msg);
                         println!("{}", err_msg)
+                    }
+                }
+            }
+            Commands::Watch {
+                job_name,
+                ci,
+                extract,
+            } => {
+                let db = get_db(None);
+                let client = db.try_get_jenkins_async_client(&mut stdout, true).await;
+                let mut success_build_number = None;
+                let mut used_job_name = None;
+
+                if let Ok(client) = client {
+                    let job_name = input_by_selection(
+                        job_name,
+                        db.interest_job_name.as_ref(),
+                        true,
+                        get_job_name_options(&db.interest_job_name),
+                        HINT_INPUT_JENKINS_JOB_NAME,
+                        default_config::RECOMMEND_JOB_NAMES
+                            .first()
+                            .map(|v| v.to_string())
+                            .as_ref(),
+                    );
+
+                    if job_name.is_err() {
+                        println!("{}", ERR_EMPTY_REPO);
+                        return;
+                    }
+                    used_job_name = Some(job_name.unwrap());
+
+                    match db.jenkins_username {
+                        Some(ref username) => {
+                            let result = watch(
+                                &mut stdout,
+                                client,
+                                username,
+                                &used_job_name.clone().unwrap(),
+                                ci,
+                            )
+                            .await;
+
+                            match result {
+                                Ok(build_number) => {
+                                    success_build_number = Some(build_number);
+                                    colored_println(
+                                        &mut stdout,
+                                        ThemeColor::Success,
+                                        &formatx!(
+                                            WATCHING_RUN_TASK_SUCCESS,
+                                            build_number,
+                                            used_job_name.as_ref().unwrap()
+                                        )
+                                        .unwrap_or_default(),
+                                    );
+                                    WinToastNotify::new()
+                                        .set_title("Vertical FP")
+                                        .set_messages(vec!["Run Task Completed with Success."])
+                                        .show()
+                                        .expect("Failed to show toast notification")
+                                }
+                                Err(e) => match e {
+                                    VfpWatchError::JenkinsError(_) => {
+                                        colored_println(
+                                            &mut stdout,
+                                            ThemeColor::Error,
+                                            ERR_NO_IN_PROGRESS_RUN_TASK,
+                                        );
+                                    }
+                                    VfpWatchError::NoValidRunTask => {
+                                        colored_println(
+                                            &mut stdout,
+                                            ThemeColor::Error,
+                                            ERR_NO_VALID_RUN_TASK,
+                                        );
+                                    }
+                                    VfpWatchError::WatchTaskFailed(build_number, log) => {
+                                        colored_println(
+                                            &mut stdout,
+                                            ThemeColor::Error,
+                                            &formatx!(
+                                                WATCHING_RUN_TASK_FAILURE,
+                                                build_number,
+                                                used_job_name.as_ref().unwrap()
+                                            )
+                                            .unwrap_or_default(),
+                                        );
+                                        colored_println(&mut stdout, ThemeColor::Main, &log);
+                                    }
+                                },
+                            }
+                        }
+                        None => {
+                            colored_println(
+                                &mut stdout,
+                                ThemeColor::Error,
+                                ERR_NEED_A_JENKINS_USERNAME,
+                            );
+                        }
+                    }
+                } else {
+                    colored_println(&mut stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
+                }
+
+                if extract {
+                    if let Some(build_number) = success_build_number {
+                        let job_name = used_job_name;
+                        let ci = Some(build_number);
+                        let count = db.last_player_count;
+                        let build_target_repo_template = db.extract_repo.clone();
+                        let main_locator_pattern = db.extract_locator_pattern.clone();
+                        let secondary_locator_template = db.extract_s_locator_template.clone();
+                        let dest = None;
+
+                        cli_do_extract(
+                            &mut stdout,
+                            job_name,
+                            ci,
+                            count,
+                            build_target_repo_template,
+                            main_locator_pattern,
+                            secondary_locator_template,
+                            dest,
+                        )
+                        .await;
                     }
                 }
             }

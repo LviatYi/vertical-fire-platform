@@ -17,6 +17,10 @@ by LviatYi
 
 Change Log:
 
+- UNRELEASE
+    - 添加 watch 功能。它会在 Jenkins 上有新包时，自动下载并解压。
+    - 修复 错误的 build number of last run checking。该错误导致查询用户上次解压包时，若该包不是最新包，则错误推断为不存在。
+    - 修复 在输入 job name 时，未根据上次输入对 Jenkins 进行排序。
 - v1.3.9
     - 提前存储成功登陆后的 Jenkins 信息。
     - 添加调试模式。
