@@ -7,9 +7,9 @@ use crate::pretty_log::{colored_println, toast, ThemeColor};
 use formatx::formatx;
 use std::io::Stdout;
 
-mod pwd_jenkins_async_client;
 pub mod jenkins_endpoint;
 mod jenkins_model;
+mod pwd_jenkins_async_client;
 pub mod query;
 pub mod watch;
 
@@ -26,9 +26,9 @@ pub async fn ci_do_watch(
     if let Ok(client) = client {
         let job_name = input_by_selection(
             job_name,
-            db.interest_job_name.as_ref(),
+            db.get_interest_job_name().as_ref(),
             true,
-            get_job_name_options(&db.interest_job_name),
+            get_job_name_options(&db.get_interest_job_name()),
             HINT_INPUT_JENKINS_JOB_NAME,
             default_config::RECOMMEND_JOB_NAMES
                 .first()
@@ -42,8 +42,8 @@ pub async fn ci_do_watch(
         }
         used_job_name = Some(job_name.unwrap());
 
-        match db.jenkins_username {
-            Some(ref username) => {
+        match db.get_jenkins_username() {
+            Some(username) => {
                 let result = watch(
                     stdout,
                     client,

@@ -5,7 +5,7 @@ use crate::constant::log::{
     HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX, HINT_NO_MY_LATEST_CI_SUFFIX, HINT_SELECT_CI,
     HINT_SET_CUSTOM_CI,
 };
-use crate::db::db_struct::LatestVersionData;
+use crate::db::db_data_proxy::DbDataProxy;
 use crate::default_config;
 use crate::extract::repo_decoration::{OrderedCiList, RepoDecoration};
 use crate::jenkins::query::query_user_latest_info;
@@ -19,8 +19,8 @@ use inquire::{InquireError, Password, PasswordDisplayMode, Select, Text};
 use std::io::Stdout;
 use std::ops::Deref;
 use std::path::PathBuf;
-//region parse directly
 
+//region parse directly
 /// # parse without input
 ///
 /// parse an existed value from the command line argument or the memory.
@@ -201,7 +201,7 @@ pub fn input_pwd(
         return Ok(val);
     }
 
-    let mut input = Password::from(hint);
+    let input = Password::from(hint);
 
     let err_msg = err_hint.unwrap_or(ERR_INPUT_INVALID).to_string();
     input
@@ -363,7 +363,7 @@ pub fn get_job_name_options(last_used: &Option<String>) -> Vec<String> {
 
 pub async fn input_ci(
     stdout: &mut Stdout,
-    db: &LatestVersionData,
+    db: &DbDataProxy,
     repo_decoration: &RepoDecoration,
     param_val: Option<u32>,
 ) -> Option<u32> {
@@ -372,7 +372,7 @@ pub async fn input_ci(
     }
 
     let latest = repo_decoration.get_sorted_ci_list().first().copied();
-    let last_used = db.last_inner_version;
+    let last_used = db.get_last_inner_version().clone();
 
     let mut options: Vec<String> = Vec::new();
 
@@ -382,7 +382,7 @@ pub async fn input_ci(
 
     //region latest mine ci
     let mut latest_mine_ci: Option<u32> = None;
-    if let Some(job_name) = db.interest_job_name.clone() {
+    if let Some(job_name) = db.get_interest_job_name().clone() {
         let mut jenkins_client_invalid = false;
         let client = db.try_get_jenkins_async_client(stdout, true).await;
 
@@ -397,7 +397,7 @@ pub async fn input_ci(
                 let user_latest_info_result = query_user_latest_info(
                     &client,
                     &job_name,
-                    &(db.jenkins_username.clone().unwrap()),
+                    &(db.get_jenkins_username().clone().unwrap()),
                     None,
                 )
                 .await;
@@ -409,7 +409,7 @@ pub async fn input_ci(
                             let mut opt_hint = latest_success.number.to_string()
                                 + formatx!(
                                     HINT_MY_LATEST_CI_SUFFIX,
-                                    db.jenkins_username.clone().unwrap_or_default()
+                                    db.get_jenkins_username().clone().unwrap_or_default()
                                 )
                                 .unwrap_or_default()
                                 .as_str();
@@ -435,7 +435,7 @@ pub async fn input_ci(
                         None => {
                             let mut opt_hint = formatx!(
                                 HINT_NO_MY_LATEST_CI_SUFFIX,
-                                db.jenkins_username.clone().unwrap_or_default()
+                                db.get_jenkins_username().clone().unwrap_or_default()
                             )
                             .unwrap_or_default();
                             if let Some(ref in_progress) = user_latest_info.in_progress {

@@ -204,7 +204,7 @@ async fn main() {
             } => {
                 let dest = input_path(
                     dest,
-                    get_db(None).blast_path.as_ref(),
+                    get_db(None).get_blast_path().as_ref(),
                     true,
                     HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH,
                     false,
@@ -301,25 +301,27 @@ async fn main() {
             } => {
                 let mut db = get_db(None);
 
-                db.jenkins_url = Some(input_directly_with_default(
+                db.set_jenkins_url(Some(input_directly_with_default(
                     url,
-                    db.jenkins_url.as_ref(),
+                    db.get_jenkins_url().as_ref(),
                     false,
                     HINT_INPUT_JENKINS_URL,
                     default_config::JENKINS_URL.to_string(),
                     Some(ERR_NEED_A_JENKINS_URL),
-                ));
+                )));
 
-                db.jenkins_username = input_directly(
-                    username,
-                    db.jenkins_username.as_ref(),
-                    false,
-                    HINT_INPUT_JENKINS_USERNAME,
-                    Some(ERR_NEED_A_JENKINS_USERNAME),
-                )
-                .ok();
+                db.set_jenkins_username(
+                    input_directly(
+                        username,
+                        db.get_jenkins_username().as_ref(),
+                        false,
+                        HINT_INPUT_JENKINS_USERNAME,
+                        Some(ERR_NEED_A_JENKINS_USERNAME),
+                    )
+                    .ok(),
+                );
 
-                if db.jenkins_username.is_none() {
+                if db.get_jenkins_username().is_none() {
                     println!("{}", formatx!(ERR_NEED_A_JENKINS_USERNAME).unwrap());
                     return;
                 }
@@ -339,37 +341,40 @@ async fn main() {
                     LoginMethod::ApiToken => {
                         let hint = formatx!(
                             HINT_INPUT_JENKINS_API_TOKEN,
-                            db.jenkins_url.clone().unwrap(),
-                            db.jenkins_username.clone().unwrap()
+                            db.get_jenkins_url().clone().unwrap(),
+                            db.get_jenkins_username().clone().unwrap()
                         )
                         .unwrap_or(HINT_JENKINS_API_TOKEN_DOC.to_string());
 
-                        db.jenkins_api_token = input_directly(
-                            api_token,
-                            db.jenkins_api_token.as_ref(),
-                            false,
-                            &hint,
-                            Some(ERR_NEED_A_JENKINS_API_TOKEN),
-                        )
-                        .ok();
+                        db.set_jenkins_api_token(
+                            input_directly(
+                                api_token,
+                                db.get_jenkins_api_token().as_ref(),
+                                false,
+                                &hint,
+                                Some(ERR_NEED_A_JENKINS_API_TOKEN),
+                            )
+                            .ok(),
+                        );
 
                         client = try_get_jenkins_async_client_by_api_token(
-                            &db.jenkins_url,
-                            &db.jenkins_username,
-                            &db.jenkins_api_token,
+                            &db.get_jenkins_url(),
+                            &db.get_jenkins_username(),
+                            &db.get_jenkins_api_token(),
                         )
                         .await
                         .map(|v| Box::new(v) as Box<dyn AsyncClient>);
                     }
                     LoginMethod::Pwd => {
-                        db.jenkins_pwd =
+                        db.set_jenkins_pwd(
                             input_pwd(pwd, HINT_INPUT_JENKINS_PWD, Some(ERR_NEED_A_JENKINS_PWD))
-                                .ok();
+                                .ok(),
+                        );
 
                         client = try_get_jenkins_async_client_by_pwd(
-                            &db.jenkins_url,
-                            &db.jenkins_username,
-                            &db.jenkins_pwd,
+                            &db.get_jenkins_url(),
+                            &db.get_jenkins_username(),
+                            &db.get_jenkins_pwd(),
                         )
                         .await
                         .map(|v| Box::new(v) as Box<dyn AsyncClient>);
@@ -391,10 +396,10 @@ async fn main() {
                             LoginMethod::ApiToken => {
                                 formatx!(
                                     ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID,
-                                    db.jenkins_url.clone().unwrap(),
-                                    db.jenkins_username.clone().unwrap(),
+                                    db.get_jenkins_url().clone().unwrap(),
+                                    db.get_jenkins_username().clone().unwrap(),
                                     get_hidden_sensitive_string(
-                                        &db.jenkins_api_token.clone().unwrap(),
+                                        &db.get_jenkins_api_token().clone().unwrap(),
                                         SensitiveMode::Normal(4)
                                     ),
                                     e.to_string()
@@ -403,9 +408,9 @@ async fn main() {
                             LoginMethod::Pwd => {
                                 formatx!(
                                     ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID,
-                                    db.jenkins_url.clone().unwrap(),
+                                    db.get_jenkins_url().clone().unwrap(),
                                     get_hidden_sensitive_string(
-                                        &db.jenkins_pwd.clone().unwrap(),
+                                        &db.get_jenkins_pwd().clone().unwrap(),
                                         SensitiveMode::Full
                                     ),
                                     e.to_string()
@@ -432,10 +437,10 @@ async fn main() {
                     if let Some(build_number) = success_build_number {
                         let job_name = used_job_name;
                         let ci = Some(build_number);
-                        let count = db.last_player_count;
-                        let build_target_repo_template = db.extract_repo.clone();
-                        let main_locator_pattern = db.extract_locator_pattern.clone();
-                        let secondary_locator_template = db.extract_s_locator_template.clone();
+                        let count = db.get_last_player_count().clone();
+                        let build_target_repo_template = db.get_extract_repo().clone();
+                        let main_locator_pattern = db.get_extract_locator_pattern().clone();
+                        let secondary_locator_template = db.get_extract_s_locator_template().clone();
                         let dest = None;
 
                         cli_do_extract(

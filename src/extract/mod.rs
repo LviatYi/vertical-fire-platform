@@ -46,42 +46,42 @@ pub async fn cli_do_extract(
         job_name,
         None,
         false,
-        crate::interact::get_job_name_options(&db.interest_job_name),
+        crate::interact::get_job_name_options(&db.get_interest_job_name()),
         HINT_JOB_NAME,
         default_config::RECOMMEND_JOB_NAMES
             .first()
             .map(|v| v.to_string())
             .as_ref(),
     ) {
-        db.interest_job_name = Some(val);
+        db.set_interest_job_name(Some(val));
     } else {
         println!("{}", ERR_EMPTY_REPO);
         return;
     }
 
-    db.extract_repo = Some(parse_without_input_with_default(
+    db.set_extract_repo(Some(parse_without_input_with_default(
         build_target_repo_template,
-        db.extract_repo.as_ref(),
+        db.get_extract_repo().as_ref(),
         default_config::REPO_TEMPLATE,
-    ));
+    )));
 
-    db.extract_locator_pattern = Some(parse_without_input_with_default(
+    db.set_extract_locator_pattern(Some(parse_without_input_with_default(
         main_locator_pattern,
-        db.extract_locator_pattern.as_ref(),
+        db.get_extract_locator_pattern().as_ref(),
         default_config::LOCATOR_PATTERN,
-    ));
+    )));
 
-    db.extract_s_locator_template = Some(parse_without_input_with_default(
+    db.set_extract_s_locator_template(Some(parse_without_input_with_default(
         secondary_locator_template,
-        db.extract_s_locator_template.as_ref(),
+        db.get_extract_s_locator_template().as_ref(),
         default_config::LOCATOR_TEMPLATE,
-    ));
+    )));
 
     let repo_decoration = RepoDecoration::new(
-        &db.extract_repo.clone().unwrap(),
-        &db.extract_locator_pattern.clone().unwrap(),
-        &db.extract_s_locator_template.clone().unwrap(),
-        &db.interest_job_name.clone().unwrap(),
+        &db.get_extract_repo().clone().unwrap(),
+        &db.get_extract_locator_pattern().clone().unwrap(),
+        &db.get_extract_s_locator_template().clone().unwrap(),
+        &db.get_interest_job_name().clone().unwrap(),
     );
 
     let ci_temp = input_ci(stdout, &db, &repo_decoration, ci).await;
@@ -92,27 +92,27 @@ pub async fn cli_do_extract(
     }
 
     let ci_temp = ci_temp.unwrap();
-    db.last_inner_version = ci_temp.into();
+    db.set_last_inner_version(ci_temp.into());
 
-    db.last_player_count = Some(input_directly_with_default(
+    db.set_last_player_count(Some(input_directly_with_default(
         count,
-        db.last_player_count.as_ref(),
+        db.get_last_player_count().as_ref(),
         false,
         HINT_PLAYER_COUNT,
         default_config::COUNT,
         Some(ERR_NEED_A_NUMBER),
-    ));
+    )));
 
     if let Ok(path) = input_path(
         dest,
-        db.blast_path.as_ref(),
+        db.get_blast_path().as_ref(),
         true,
         HINT_EXTRACT_TO,
         false,
         true,
         Some(ERR_INVALID_PATH),
     ) {
-        db.blast_path = Some(path);
+        db.set_blast_path(Some(path));
     } else {
         println!("{}", ERR_INPUT_INVALID);
         return;
@@ -122,7 +122,7 @@ pub async fn cli_do_extract(
 
     if let Some(path) = repo_decoration.get_full_path_by_ci(ci_temp) {
         if let Some(file_name) = path.file_stem().and_then(|v| v.to_str()) {
-            let count = db.last_player_count.unwrap();
+            let count = db.get_last_player_count().unwrap();
             let pty_logger = pretty_log::VfpPrettyLogger::apply_for(stdout, count);
 
             let mut working_status: Vec<ExtractOperationInfo> = (0..count)
@@ -135,7 +135,7 @@ pub async fn cli_do_extract(
             for i in 1..count + 1 {
                 let tx = tx.clone();
                 let dest_with_origin_name = db
-                    .blast_path
+                    .get_blast_path()
                     .clone()
                     .unwrap()
                     .as_path()

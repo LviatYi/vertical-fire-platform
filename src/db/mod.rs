@@ -1,11 +1,12 @@
-use crate::db::db_struct::LatestVersionData;
+use crate::db::db_data_proxy::DbDataProxy;
 use dirs::home_dir;
 use formatx::formatx;
 use std::fs::create_dir_all;
 use std::ops::Not;
 use std::path::{Path, PathBuf};
 
-pub mod db_struct;
+pub mod db_data_proxy;
+mod db_struct;
 
 pub const DB_FILE_NAME: &str = ".vf-extract-db.toml";
 
@@ -46,10 +47,11 @@ fn touch_default_db_file_path(path: &Path) -> PathBuf {
     path
 }
 
-pub fn get_db(path: Option<&Path>) -> LatestVersionData {
+pub fn get_db(path: Option<&Path>) -> DbDataProxy {
     get_default_db_file_path(&get_path_or_home_path(path))
-        .and_then(|item| LatestVersionData::get_from_path(&item))
+        .and_then(|item| DbDataProxy::get_from_path(&item))
         .unwrap_or_default()
+        .into()
 }
 
 pub fn delete_db_file(path: Option<&Path>) {
@@ -58,7 +60,7 @@ pub fn delete_db_file(path: Option<&Path>) {
     });
 }
 
-pub fn save_with_error_log(db: &LatestVersionData, path: Option<&Path>) {
+pub fn save_with_error_log(db: &DbDataProxy, path: Option<&Path>) {
     let path = touch_default_db_file_path(&get_path_or_home_path(path));
 
     if let Err(e) = db.save(&path) {
@@ -69,7 +71,7 @@ pub fn save_with_error_log(db: &LatestVersionData, path: Option<&Path>) {
     }
 }
 
-fn get_path_or_home_path(path: Option<&Path>) -> PathBuf {    
+fn get_path_or_home_path(path: Option<&Path>) -> PathBuf {
     path.unwrap_or(&home_dir().unwrap_or_default())
         .to_path_buf()
 }
@@ -78,19 +80,19 @@ fn get_path_or_home_path(path: Option<&Path>) -> PathBuf {
 mod tests {
     use super::*;
 
-    impl PartialEq for LatestVersionData {
+    impl PartialEq for DbDataProxy {
         fn eq(&self, other: &Self) -> bool {
-            self.last_inner_version == other.last_inner_version
-                && self.last_player_count == other.last_player_count
-                && self.interest_job_name == other.interest_job_name
-                && self.extract_repo == other.extract_repo
-                && self.extract_locator_pattern == other.extract_locator_pattern
-                && self.extract_s_locator_template == other.extract_s_locator_template
-                && self.blast_path == other.blast_path
-                && self.jenkins_url == other.jenkins_url
-                && self.jenkins_username == other.jenkins_username
-                && self.jenkins_api_token == other.jenkins_api_token
-                && self.jenkins_pwd == other.jenkins_pwd
+            self.get_last_inner_version() == other.get_last_inner_version()
+                && self.get_last_player_count() == other.get_last_player_count()
+                && self.get_interest_job_name() == other.get_interest_job_name()
+                && self.get_extract_repo() == other.get_extract_repo()
+                && self.get_extract_locator_pattern() == other.get_extract_locator_pattern()
+                && self.get_extract_s_locator_template() == other.get_extract_s_locator_template()
+                && self.get_blast_path() == other.get_blast_path()
+                && self.get_jenkins_url() == other.get_jenkins_url()
+                && self.get_jenkins_username() == other.get_jenkins_username()
+                && self.get_jenkins_api_token() == other.get_jenkins_api_token()
+                && self.get_jenkins_pwd() == other.get_jenkins_pwd()
         }
     }
 
@@ -98,17 +100,17 @@ mod tests {
     fn test_get_db_not_exist() {
         let path = PathBuf::from("non_existent_path");
         let db = get_db(Some(&path));
-        assert_eq!(db, LatestVersionData::default());
+        assert_eq!(db, DbDataProxy::default());
     }
 
     #[test]
     fn test_save() {
         let temp_file = tempfile::NamedTempFile::new().unwrap();
 
-        let mut db = LatestVersionData::default();
+        let mut db = DbDataProxy::default();
 
-        db.last_inner_version = Some(1);
-        db.last_player_count = Some(2);
+        db.set_last_inner_version(Some(1));
+        db.set_last_player_count(Some(2));
 
         db.save(temp_file.path()).unwrap();
 
@@ -132,7 +134,7 @@ last_player_count = 2
         let temp_file = tempfile::NamedTempFile::new().unwrap();
         let path = temp_file.path().to_path_buf();
 
-        let db = LatestVersionData::default();
+        let db = DbDataProxy::default();
         db.save(&path).unwrap();
 
         assert!(path.is_file());
