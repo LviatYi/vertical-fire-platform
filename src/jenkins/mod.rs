@@ -12,7 +12,6 @@ pub mod jenkins_endpoint;
 mod jenkins_model;
 pub mod query;
 pub mod watch;
-mod crumb_response;
 
 pub async fn ci_do_watch(
     stdout: &mut Stdout,

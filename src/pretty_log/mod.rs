@@ -189,7 +189,7 @@ pub fn clean_one_line(stdout: &mut Stdout) {
 pub fn toast(title: &str, msg: Vec<&str>) {
     WinToastNotify::new()
         .set_title(&format!(
-            "⠄⠄⠄V-F Platform {} ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼",
+            "V-F Platform | {}",
             title
         ))
         .set_messages(msg)
