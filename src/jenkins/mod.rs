@@ -27,7 +27,7 @@ pub async fn ci_do_watch(
         let job_name = input_by_selection(
             job_name,
             db.get_interest_job_name().as_ref(),
-            true,
+            false,
             get_job_name_options(&db.get_interest_job_name()),
             HINT_INPUT_JENKINS_JOB_NAME,
             default_config::RECOMMEND_JOB_NAMES

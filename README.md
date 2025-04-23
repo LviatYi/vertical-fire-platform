@@ -17,6 +17,8 @@ by LviatYi
 
 Change Log:
 
+- UNRELEASE
+    - 在 fp watch 时主动询问 Job Name。 
 - v1.3.11
     - 取消了 Cookie 登录的支持。添加了密码登录。 
 - v1.3.10
