@@ -7,11 +7,12 @@ use crate::pretty_log::{colored_println, toast, ThemeColor};
 use formatx::formatx;
 use std::io::Stdout;
 
-mod cookied_jenkins_async_client;
+mod pwd_jenkins_async_client;
 pub mod jenkins_endpoint;
 mod jenkins_model;
 pub mod query;
 pub mod watch;
+mod crumb_response;
 
 pub async fn ci_do_watch(
     stdout: &mut Stdout,
@@ -120,6 +121,7 @@ mod tests {
     const JOB_NAME: &str = "";
     const API_TOKEN: &str = "";
     const JENKINS_COOKIE: &str = "";
+    const JENKINS_PWD: &str = "";
 
     #[tokio::test]
     async fn jenkins_sdk_lab() {
@@ -253,8 +255,8 @@ mod tests {
     async fn test_get_client() {
         let client = try_get_jenkins_async_client(
             &Some(format!("{}/api/json?tree=ping", URL).to_string()),
-            &Some(JENKINS_COOKIE.to_string()),
             &None,
+            &Some(JENKINS_PWD.to_string()),
             &None,
         )
         .await;

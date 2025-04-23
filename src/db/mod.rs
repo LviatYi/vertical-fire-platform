@@ -90,7 +90,7 @@ mod tests {
                 && self.jenkins_url == other.jenkins_url
                 && self.jenkins_username == other.jenkins_username
                 && self.jenkins_api_token == other.jenkins_api_token
-                && self.jenkins_cookie == other.jenkins_cookie
+                && self.jenkins_pwd == other.jenkins_pwd
         }
     }
 

@@ -15,11 +15,10 @@ use formatx::formatx;
 use inquire::error::InquireResult;
 use inquire::validator::ErrorMessage::Custom;
 use inquire::validator::Validation;
-use inquire::{InquireError, Select, Text};
+use inquire::{InquireError, Password, PasswordDisplayMode, Select, Text};
 use std::io::Stdout;
 use std::ops::Deref;
 use std::path::PathBuf;
-
 //region parse directly
 
 /// # parse without input
@@ -180,6 +179,42 @@ where
         str.parse::<T>()
             .map_err(|_| InquireError::Custom(Box::from(ERR_INPUT_INVALID.to_string())))
     })
+}
+
+/// # input pwd
+///
+/// Input a password directly.
+///
+/// ### Arguments
+///
+/// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
+/// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
+/// * `db_val_usable`: Whether the value from the memory can be used directly.
+/// * `hint`: The hint for the selection.
+/// * `err_hint`: The hint for error occurs.
+pub fn input_pwd(
+    param_val: Option<String>,
+    hint: &str,
+    err_hint: Option<&str>,
+) -> InquireResult<String> {
+    if let Some(val) = param_val {
+        return Ok(val);
+    }
+
+    let mut input = Password::from(hint);
+
+    let err_msg = err_hint.unwrap_or(ERR_INPUT_INVALID).to_string();
+    input
+        .without_confirmation()
+        .with_display_mode(PasswordDisplayMode::Masked)
+        .with_validator(move |v: &str| {
+            if !v.is_empty() {
+                Ok(Validation::Valid)
+            } else {
+                Ok(Validation::Invalid(Custom(err_msg.clone())))
+            }
+        })
+        .prompt()
 }
 
 /// # input path

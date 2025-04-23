@@ -1,8 +1,9 @@
-use crate::constant::log::{LOGIN_SUCCESS_BY_API_TOKEN, LOGIN_SUCCESS_BY_COOKIE};
+use crate::constant::log::{LOGIN_SUCCESS_BY_API_TOKEN, LOGIN_SUCCESS_BY_PWD};
 use crate::db::db_struct::fp_db_v1::FpDbV1;
 use crate::db::db_struct::fp_db_v2::{FpDbV2, VERSION_FP_DB_V2};
 use crate::db::db_struct::fp_db_v3::{FpDbV3, VERSION_FP_DB_V3};
 use crate::db::db_struct::fp_db_v4::{FpDbV4, VERSION_FP_DB_V4};
+use crate::db::db_struct::fp_db_v5::{FpDbV5, VERSION_FP_DB_V5};
 use crate::db::db_struct::version_only::VersionOnly;
 use crate::db::db_struct::versioned_data::{UpgradeValue, VersionedData};
 use crate::jenkins::query::{try_get_jenkins_async_client, VfpJenkinsClient};
@@ -17,6 +18,7 @@ mod fp_db_v1;
 mod fp_db_v2;
 mod fp_db_v3;
 mod fp_db_v4;
+mod fp_db_v5;
 pub mod versioned_data;
 
 mod db_status;
@@ -24,7 +26,7 @@ mod define_versioned_data_type;
 mod version_field;
 mod version_only;
 
-pub type LatestVersionData = FpDbV4;
+pub type LatestVersionData = FpDbV5;
 
 /// # parse content with upgrade
 ///
@@ -56,6 +58,9 @@ fn parse_content_by_version(
     content: &str,
 ) -> Result<Box<dyn VersionedData>, toml::de::Error> {
     match version {
+        VERSION_FP_DB_V5 => {
+            FpDbV5::parse_from_string(content).map(|v| Box::new(v) as Box<dyn VersionedData>)
+        }
         VERSION_FP_DB_V4 => {
             FpDbV4::parse_from_string(content).map(|v| Box::new(v) as Box<dyn VersionedData>)
         }
@@ -95,8 +100,8 @@ impl LatestVersionData {
     ) -> Result<VfpJenkinsClient, JenkinsError> {
         let client = try_get_jenkins_async_client(
             &self.jenkins_url,
-            &self.jenkins_cookie,
             &self.jenkins_username,
+            &self.jenkins_pwd,
             &self.jenkins_api_token,
         )
             .await;
@@ -107,8 +112,8 @@ impl LatestVersionData {
                     VfpJenkinsClient::ApiTokenClient(_) => {
                         colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_API_TOKEN)
                     }
-                    VfpJenkinsClient::CookiedClient(_) => {
-                        colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_COOKIE)
+                    VfpJenkinsClient::PwdClient(_) => {
+                        colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_PWD)
                     }
                 }
             }

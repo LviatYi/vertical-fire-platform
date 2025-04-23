@@ -1,26 +1,30 @@
+use base64::Engine;
 use jenkins_sdk::client::AsyncClient;
 use jenkins_sdk::JenkinsError;
-use reqwest::header::COOKIE;
+use reqwest::header::AUTHORIZATION;
 use reqwest::Client;
 
 /// Asynchronous Jenkins API client.
-pub struct CookiedJenkinsAsyncClient {
+pub struct PwdJenkinsAsyncClient {
     url: String,
-    cookie: String,
+    username: String,
+    pwd: String,
     client: Client,
 }
 
-impl CookiedJenkinsAsyncClient {
-    /// Creates a new asynchronous Jenkins API client authentic by Cookie.
+impl PwdJenkinsAsyncClient {
+    /// Creates a new asynchronous Jenkins API client authentic by Password.
     ///
     /// # Arguments
     ///
     /// * `url` - Base URL of the Jenkins server.
-    /// * `cookie` - Cookie for authentication.
-    pub fn new(url: &str, cookie: &str) -> Self {
+    /// * `username` - Username for authentication.
+    /// * `pwd` - Password for authentication.
+    pub fn new(url: &str, username: &str, pwd: &str) -> Self {
         Self {
             url: url.into(),
-            cookie: cookie.into(),
+            username: username.into(),
+            pwd: pwd.into(),
             client: Client::builder()
                 .danger_accept_invalid_certs(true)
                 .no_proxy()
@@ -31,7 +35,7 @@ impl CookiedJenkinsAsyncClient {
 }
 
 #[async_trait::async_trait]
-impl AsyncClient for CookiedJenkinsAsyncClient {
+impl AsyncClient for PwdJenkinsAsyncClient {
     /// Sends an asynchronous HTTP request to the Jenkins server.
     async fn request(
         &self,
@@ -40,10 +44,16 @@ impl AsyncClient for CookiedJenkinsAsyncClient {
         params: Option<&[(&str, &str)]>,
     ) -> Result<String, JenkinsError> {
         let url = format!("{}/{}", self.url, endpoint);
+        let auth = format!(
+            "BASIC {}",
+            base64::prelude::BASE64_STANDARD
+                .encode(format!("{}:{}", self.username, self.pwd).as_bytes())
+        );
+
         let req = self
             .client
             .request(method.parse()?, url)
-            .header(COOKIE, &self.cookie)
+            .header(AUTHORIZATION, auth)
             .header("User-Agent", "jenkins-sdk-rust");
 
         let resp = if let Some(p) = params {

@@ -1,5 +1,4 @@
 use crate::constant::log::*;
-use crate::jenkins::cookied_jenkins_async_client::CookiedJenkinsAsyncClient;
 use crate::jenkins::jenkins_endpoint::job_info::JobInfo;
 use crate::jenkins::jenkins_endpoint::ping::{Ping, PingResult};
 use crate::jenkins::jenkins_endpoint::run_info::RunInfo;
@@ -7,12 +6,13 @@ use crate::jenkins::jenkins_endpoint::run_log::RunLog;
 use crate::jenkins::jenkins_model::run_status::RunStatus;
 use crate::jenkins::jenkins_model::workflow_builds::WorkflowBuilds;
 use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
+use crate::jenkins::pwd_jenkins_async_client::PwdJenkinsAsyncClient;
 use jenkins_sdk::client::AsyncClient;
 use jenkins_sdk::{AsyncQuery, JenkinsAsyncClient, JenkinsError};
 
 pub enum VfpJenkinsClient {
+    PwdClient(PwdJenkinsAsyncClient),
     ApiTokenClient(JenkinsAsyncClient),
-    CookiedClient(CookiedJenkinsAsyncClient),
 }
 
 #[async_trait::async_trait]
@@ -24,8 +24,8 @@ impl AsyncClient for VfpJenkinsClient {
         params: Option<&[(&str, &str)]>,
     ) -> Result<String, JenkinsError> {
         match self {
+            VfpJenkinsClient::PwdClient(c) => c.request(method, endpoint, params).await,
             VfpJenkinsClient::ApiTokenClient(c) => c.request(method, endpoint, params).await,
-            VfpJenkinsClient::CookiedClient(c) => c.request(method, endpoint, params).await,
         }
     }
 }
@@ -38,12 +38,12 @@ pub async fn ping_jenkins(client: &VfpJenkinsClient) -> Result<(), JenkinsError>
 
 pub async fn try_get_jenkins_async_client(
     url: &Option<String>,
-    cookie: &Option<String>,
     username: &Option<String>,
+    pwd: &Option<String>,
     api_token: &Option<String>,
 ) -> Result<VfpJenkinsClient, JenkinsError> {
-    if cookie.is_some() {
-        try_get_jenkins_async_client_by_cookie(url, cookie).await
+    if pwd.is_some() {
+        try_get_jenkins_async_client_by_pwd(url, username, pwd).await
     } else {
         try_get_jenkins_async_client_by_api_token(url, username, api_token).await
     }
@@ -72,18 +72,20 @@ pub async fn try_get_jenkins_async_client_by_api_token(
     }
 }
 
-pub async fn try_get_jenkins_async_client_by_cookie(
+pub async fn try_get_jenkins_async_client_by_pwd(
     url: &Option<String>,
-    cookie: &Option<String>,
+    username: &Option<String>,
+    pwd: &Option<String>,
 ) -> Result<VfpJenkinsClient, JenkinsError> {
-    if url.is_none() || cookie.is_none() {
+    if url.is_none() || username.is_none() || pwd.is_none() {
         return Err(JenkinsError::RequestError(
             ERR_JENKINS_CLIENT_INVALID_SIMPLE.to_string(),
         ));
     }
-    let client = VfpJenkinsClient::CookiedClient(CookiedJenkinsAsyncClient::new(
+    let client = VfpJenkinsClient::PwdClient(PwdJenkinsAsyncClient::new(
         url.as_deref().unwrap(),
-        cookie.as_deref().unwrap(),
+        username.as_deref().unwrap(),
+        pwd.as_deref().unwrap(),
     ));
     let result = ping_jenkins(&client).await;
 

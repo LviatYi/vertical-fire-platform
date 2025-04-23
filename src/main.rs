@@ -8,13 +8,13 @@ mod pretty_log;
 mod run;
 
 use crate::constant::log::*;
-use crate::constant::util::get_hidden_sensitive_string;
+use crate::constant::util::{get_hidden_sensitive_string, SensitiveMode};
 use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::extract::cli_do_extract;
 use crate::interact::*;
 use crate::jenkins::ci_do_watch;
 use crate::jenkins::query::{
-    try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_cookie,
+    try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
 };
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
@@ -23,7 +23,7 @@ use formatx::formatx;
 use inquire::Select;
 use jenkins_sdk::client::AsyncClient;
 use jenkins_sdk::JenkinsError;
-use std::ops::{Add, Deref};
+use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use strum_macros::Display;
@@ -131,10 +131,9 @@ enum Commands {
         #[arg(short, long)]
         api_token: Option<String>,
 
-        /// Cookie from Jenkins.
-        /// [Unsafe] You can get it by F12 in any jenkins web page.
+        /// Password of Jenkins.
         #[arg(short, long)]
-        cookie: Option<String>,
+        pwd: Option<String>,
     },
     /// Watch a Jenkins build task.
     Watch {
@@ -158,8 +157,8 @@ enum Commands {
 
 #[derive(Debug, Display)]
 enum LoginMethod {
+    Pwd,
     ApiToken,
-    Cookie,
 }
 
 #[tokio::main]
@@ -298,7 +297,7 @@ async fn main() {
                 url,
                 username,
                 api_token,
-                cookie,
+                pwd,
             } => {
                 let mut db = get_db(None);
 
@@ -325,9 +324,11 @@ async fn main() {
                     return;
                 }
 
+                save_with_error_log(&db, None);
+
                 let login_method = Select::new(
                     HINT_SELECT_LOGIN_METHOD,
-                    vec![LoginMethod::ApiToken, LoginMethod::Cookie],
+                    vec![LoginMethod::Pwd, LoginMethod::ApiToken],
                 )
                 .prompt()
                 .unwrap_or(LoginMethod::ApiToken);
@@ -360,19 +361,15 @@ async fn main() {
                         .await
                         .map(|v| Box::new(v) as Box<dyn AsyncClient>);
                     }
-                    LoginMethod::Cookie => {
-                        db.jenkins_cookie = input_directly(
-                            cookie,
-                            db.jenkins_cookie.as_ref(),
-                            false,
-                            HINT_INPUT_JENKINS_COOKIE,
-                            Some(ERR_NEED_A_JENKINS_COOKIE),
-                        )
-                        .ok();
+                    LoginMethod::Pwd => {
+                        db.jenkins_pwd =
+                            input_pwd(pwd, HINT_INPUT_JENKINS_PWD, Some(ERR_NEED_A_JENKINS_PWD))
+                                .ok();
 
-                        client = try_get_jenkins_async_client_by_cookie(
+                        client = try_get_jenkins_async_client_by_pwd(
                             &db.jenkins_url,
-                            &db.jenkins_cookie,
+                            &db.jenkins_username,
+                            &db.jenkins_pwd,
                         )
                         .await
                         .map(|v| Box::new(v) as Box<dyn AsyncClient>);
@@ -397,17 +394,19 @@ async fn main() {
                                     db.jenkins_url.clone().unwrap(),
                                     db.jenkins_username.clone().unwrap(),
                                     get_hidden_sensitive_string(
-                                        &db.jenkins_api_token.clone().unwrap()
+                                        &db.jenkins_api_token.clone().unwrap(),
+                                        SensitiveMode::Normal(4)
                                     ),
                                     e.to_string()
                                 )
                             }
-                            LoginMethod::Cookie => {
+                            LoginMethod::Pwd => {
                                 formatx!(
-                                    ERR_JENKINS_CLIENT_INVALID_MAY_BE_COOKIE_INVALID,
+                                    ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID,
                                     db.jenkins_url.clone().unwrap(),
                                     get_hidden_sensitive_string(
-                                        &db.jenkins_cookie.clone().unwrap()
+                                        &db.jenkins_pwd.clone().unwrap(),
+                                        SensitiveMode::Full
                                     ),
                                     e.to_string()
                                 )
