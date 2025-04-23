@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.3.10  
+v1.3.11  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -17,6 +17,8 @@ by LviatYi
 
 Change Log:
 
+- v1.3.11
+    - 取消了 Cookie 登录的支持。添加了密码登录。 
 - v1.3.10
     - 添加 watch 功能。它会在 Jenkins 上有新包时，自动下载并解压。
     - 取消 Login 命令时请求 job_name 的输入。现在流程上不再必要。
@@ -151,10 +153,10 @@ fp run
 
 ```shell
 // usage
-fp login --url https://your.jenkins.url -u your_username -a your_api_token
+fp login --url https://your.jenkins.url -u your_username -p your_password
 
 // or
-fp login --url https://your.jenkins.url -u your_username -c your_cookie
+fp login --url https://your.jenkins.url -u your_username -a your_api_token
 ```
 
 也可以这样使用：
@@ -165,9 +167,9 @@ fp login
 ```
 
 - **-u, --username <USERNAME>** 用户名 它可能是个邮箱账号，如 "somebody@email.com"
+- **-p, --pwd <PASSWORD>** Password。推荐使用，它比 Api Token 的访问更快。
 - **-a, --api-token <API_TOKEN>** API
   token。你可以在此处获得更多信息：https://www.jenkins.io/doc/book/using/remote-access-api/
-- **-c, --cookie <COOKIE>** Cookie。它不是很安全，但它在我的用例中更快。如果你不知道哪里可以找到 Cookie，请不要使用。
 
 ---
 
