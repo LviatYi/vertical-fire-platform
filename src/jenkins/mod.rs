@@ -7,6 +7,7 @@ use crate::pretty_log::{colored_println, toast, ThemeColor};
 use formatx::formatx;
 use std::io::Stdout;
 
+pub mod build;
 pub mod jenkins_endpoint;
 mod jenkins_model;
 mod pwd_jenkins_async_client;
@@ -105,6 +106,8 @@ pub async fn ci_do_watch(
 
 #[cfg(test)]
 mod tests {
+    use crate::jenkins::build::VfpJobBuildParam;
+    use crate::jenkins::jenkins_model::job_config::FlowDefinition;
     use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
     use crate::jenkins::query::*;
     use crate::jenkins::watch::watch;
@@ -405,5 +408,75 @@ mod tests {
                 println!("Error: {:#?}", e);
             }
         }
+    }
+
+    #[test]
+    fn test_vfp_job_build_param_from_xml_to_json() {
+        let xml_content = r#"<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>Changelist</name>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>EnableContentPreview</name>
+          <description>Enable Content Preview</description>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+    <jenkins.model.BuildDiscarderProperty>
+      <strategy class="hudson.tasks.LogRotator">
+        <daysToKeep>-1</daysToKeep>
+        <numToKeep>100</numToKeep>
+        <artifactDaysToKeep>-1</artifactDaysToKeep>
+        <artifactNumToKeep>-1</artifactNumToKeep>
+      </strategy>
+    </jenkins.model.BuildDiscarderProperty>
+  </properties>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
+"#;
+        let def = quick_xml::de::from_str::<FlowDefinition>(xml_content);
+
+        assert!(def.is_ok());
+        let def = def.unwrap();
+
+        let mut param = VfpJobBuildParam::from(def);
+        assert_eq!(
+            param.to_json_value(),
+            json!({
+                "Changelist": "",
+                "EnableContentPreview": true,
+                "SimulateAndroidGuestLogin": true,
+            })
+        );
+
+        param.set_change_list(1234);
+        assert_eq!(
+            param.to_json_value(),
+            json!({
+                "Changelist": "1234",
+                "EnableContentPreview": true,
+                "SimulateAndroidGuestLogin": true,
+            })
+        );
+
+        param.set_shelve_changes(vec![1230, 1231]);
+        assert_eq!(
+            param.to_json_value(),
+            json!({
+                "Changelist": "1234",
+                "EnableContentPreview": true,
+                "SimulateAndroidGuestLogin": true,
+                "ShelvedChange": "1230,1231",
+            })
+        );
     }
 }
