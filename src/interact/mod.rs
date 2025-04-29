@@ -1,9 +1,9 @@
 use crate::constant::log::{
     ERR_INPUT_INVALID, ERR_INVALID_PATH, ERR_INVALID_PATH_NOT_EXIST, ERR_JENKINS_CLIENT_INVALID,
-    ERR_NEED_A_NUMBER, ERR_NO_SPECIFIED_PACKAGE, HINT_CUSTOM, HINT_LAST_USED_CI_SUFFIX,
-    HINT_LATEST_CI_SUFFIX, HINT_MY_LATEST_CI_SUFFIX, HINT_MY_LATEST_FAIL_CI_SUFFIX,
-    HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX, HINT_NO_MY_LATEST_CI_SUFFIX, HINT_SELECT_CI,
-    HINT_SET_CUSTOM_CI,
+    ERR_NEED_A_NUMBER, ERR_NO_SPECIFIED_PACKAGE, HINT_CUSTOM, HINT_JOB_NAME,
+    HINT_LAST_USED_CI_SUFFIX, HINT_LATEST_CI_SUFFIX, HINT_MY_LATEST_CI_SUFFIX,
+    HINT_MY_LATEST_FAIL_CI_SUFFIX, HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX,
+    HINT_NO_MY_LATEST_CI_SUFFIX, HINT_SELECT_CI, HINT_SET_CUSTOM_CI,
 };
 use crate::db::db_data_proxy::DbDataProxy;
 use crate::default_config;
@@ -336,12 +336,11 @@ where
     }
 
     let mut options = options;
-    let custom_index;
     if custom {
         options.push(HINT_CUSTOM.to_string());
     }
 
-    custom_index = options.len() - 1;
+    let custom_index = options.len() - 1;
 
     let selection = Select::new(hint, options).raw_prompt();
     match selection {
@@ -566,4 +565,19 @@ pub async fn input_ci(
         }
         Err(_) => None,
     }
+}
+
+pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> InquireResult<String> {
+    input_by_selection(
+        param_val,
+        None,
+        false,
+        get_job_name_options(db_val),
+        HINT_JOB_NAME,
+        default_config::RECOMMEND_JOB_NAMES
+            .first()
+            .map(|v| v.to_string())
+            .as_ref(),
+        true,
+    )
 }

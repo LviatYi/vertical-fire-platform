@@ -1,7 +1,6 @@
 use crate::constant::log::{
     ERR_EMPTY_REPO, ERR_INPUT_INVALID, ERR_INVALID_PATH, ERR_NEED_A_NUMBER,
-    ERR_NO_SPECIFIED_PACKAGE, EXTRACT_TASK_COMPLETED, HINT_EXTRACT_TO, HINT_JOB_NAME,
-    HINT_PLAYER_COUNT,
+    ERR_NO_SPECIFIED_PACKAGE, EXTRACT_TASK_COMPLETED, HINT_EXTRACT_TO, HINT_PLAYER_COUNT,
 };
 use crate::db::{get_db, save_with_error_log};
 use crate::extract::extract_operation_info::{
@@ -10,7 +9,7 @@ use crate::extract::extract_operation_info::{
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::extract::repo_decoration::RepoDecoration;
 use crate::interact::{
-    input_by_selection, input_ci, input_directly_with_default, input_path,
+    input_ci, input_directly_with_default, input_job_name, input_path,
     parse_without_input_with_default,
 };
 use crate::pretty_log::toast;
@@ -42,18 +41,7 @@ pub async fn cli_do_extract(
 ) {
     let mut db = get_db(None);
 
-    if let Ok(val) = input_by_selection(
-        job_name,
-        None,
-        false,
-        crate::interact::get_job_name_options(&db.get_interest_job_name()),
-        HINT_JOB_NAME,
-        default_config::RECOMMEND_JOB_NAMES
-            .first()
-            .map(|v| v.to_string())
-            .as_ref(),
-        true,
-    ) {
+    if let Ok(val) = input_job_name(job_name, db.get_interest_job_name()) {
         db.set_interest_job_name(Some(val));
     } else {
         println!("{}", ERR_EMPTY_REPO);

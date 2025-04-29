@@ -1,7 +1,6 @@
 use crate::constant::log::*;
 use crate::db::get_db;
-use crate::default_config;
-use crate::interact::{get_job_name_options, input_by_selection};
+use crate::interact::input_job_name;
 use crate::jenkins::watch::{watch, VfpWatchError};
 use crate::pretty_log::{colored_println, toast, ThemeColor};
 use formatx::formatx;
@@ -25,18 +24,7 @@ pub async fn ci_do_watch(
     let client = db.try_get_jenkins_async_client(stdout, true).await;
 
     if let Ok(client) = client {
-        let job_name = input_by_selection(
-            job_name,
-            db.get_interest_job_name().as_ref(),
-            false,
-            get_job_name_options(&db.get_interest_job_name()),
-            HINT_INPUT_JENKINS_JOB_NAME,
-            default_config::RECOMMEND_JOB_NAMES
-                .first()
-                .map(|v| v.to_string())
-                .as_ref(),
-            true,
-        );
+        let job_name = input_job_name(job_name, db.get_interest_job_name());
 
         if job_name.is_err() {
             println!("{}", ERR_EMPTY_REPO);

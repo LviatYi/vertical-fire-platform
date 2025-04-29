@@ -2,6 +2,7 @@ pub const ERR_INPUT_INVALID: &str = "Invalid input.";
 pub const ERR_EMPTY_REPO: &str = "There is no any package in the repo.";
 pub const ERR_NO_SPECIFIED_PACKAGE: &str = "No package found.";
 pub const ERR_NEED_A_NUMBER: &str = "Need a number.";
+pub const ERR_NEED_A_JOB_NAME: &str = "Need a job name.";
 pub const ERR_INVALID_PATH: &str = "Invalid path.";
 pub const ERR_INVALID_PATH_NOT_EXIST: &str = "Invalid path: not exist.";
 pub const ERR_DIR_IN_USE: &str = "Maybe {} is in use. skip.";
@@ -29,9 +30,13 @@ pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID: &str =
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID: &str =
     "Url: {}.\nPassword: {}\nMaybe you should check your password.\nErr: {}";
 pub const ERR_NO_IN_PROGRESS_RUN_TASK: &str = "There is no in progress run task.";
-pub const ERR_NO_VALID_RUN_TASK: &str = "There is no valid run task (in progress, failure or success).";
+pub const ERR_NO_VALID_RUN_TASK: &str =
+    "There is no valid run task (in progress, failure or success).";
 pub const ERR_WATCH_RUN_TASK_FAILED: &str = "The watched run task failed.";
 pub const ERR_TOAST_SHOW_FAILED: &str = "Failed to show toast notification.";
+pub const ERR_NEED_EVEN_PARAM: &str = "You must provide sufficient parameters.";
+pub const ERR_QUERY_JOB_CONFIG: &str = "Failed to query job config. {}";
+pub const ERR_REQUEST_BUILD_FAILED: &str = "Failed to request a build task. {}";
 
 pub const HINT_JOB_NAME: &str = "use job:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
@@ -52,9 +57,7 @@ pub const HINT_SELECT_LOGIN_METHOD: &str = "choose your login method: ";
 pub const HINT_INPUT_JENKINS_USERNAME: &str = "input your jenkins username(somebody@email.com): ";
 pub const HINT_INPUT_JENKINS_API_TOKEN: &str =
     "get your jenkins api token at {}/user/{}/configure\ncopy to here:";
-pub const HINT_INPUT_JENKINS_PWD: &str =
-    "input your jenkins password: ";
-pub const HINT_INPUT_JENKINS_JOB_NAME: &str = "input the jenkins job name: ";
+pub const HINT_INPUT_JENKINS_PWD: &str = "input your jenkins password: ";
 pub const HINT_JENKINS_API_TOKEN_DOC: &str =
     "https://www.jenkins.io/doc/book/using/remote-access-api/";
 
@@ -75,11 +78,15 @@ pub const RESULT_RUN: &str = "Instance {} is created.";
 pub const OPERATION_KILL_AND_RETRY: &str = "Killing and retrying...";
 pub const JENKINS_LOGIN_RESULT: &str = "Jenkins login success!";
 pub const QUERYING_USER_LATEST_CI: &str = "Querying user latest ci (It might take some time)...";
-pub const WATCHING_RUN_TASK_IN_PROGRESS_PREPARE: &str = "Prepare to watching run task {} of {} in progress...";
-pub const WATCHING_RUN_TASK_IN_PROGRESS: &str = "Watching run task {} of {} in progress...(last check at {})";
+pub const WATCHING_RUN_TASK_IN_PROGRESS_PREPARE: &str =
+    "Prepare to watching run task {} of {} in progress...";
+pub const WATCHING_RUN_TASK_IN_PROGRESS: &str =
+    "Watching run task {} of {} in progress...(last check at {})";
 pub const WATCHING_RUN_TASK_SUCCESS: &str = "Run task {} of {} finished with SUCCESS.";
 pub const WATCHING_RUN_TASK_FAILURE: &str = "Run task {} of {} finished with FAILURE.";
 pub const RUN_TASK_COMPLETED: &str = "Run Task Completed with Success.";
 pub const EXTRACT_TASK_COMPLETED: &str = "All Extract Completed.";
+pub const REQUEST_BUILD_SUCCESS: &str = "Request build success.";
+pub const BUILD_USED_PARAMS: &str = "Build used params:";
 
 pub const CONFIG_APPEND_LINE: &str = "\neadpClientIndex={}\n";
