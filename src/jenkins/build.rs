@@ -1,10 +1,12 @@
 use crate::jenkins::jenkins_endpoint::job_config::JobConfig;
 use crate::jenkins::jenkins_model::job_config::{FlowDefinition, ParameterDefinition};
+use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::VfpJenkinsClient;
 use jenkins_sdk::{JenkinsError, TriggerBuild};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VfpJobBuildParam {
@@ -45,11 +47,11 @@ impl VfpJobBuildParam {
             .and_then(|s| s.parse::<u32>().ok())
     }
 
-    pub fn set_shelve_changes(&mut self, val: Vec<u32>) -> &mut Self {
+    pub fn set_shelve_changes(&mut self, val:Shelves) -> &mut Self {
         self.params.insert(
             Self::PARAM_NAME_SHELVED_CHANGE.to_string(),
             Value::String(
-                val.iter()
+                val.0.iter()
                     .map(|v| v.to_string())
                     .collect::<Vec<_>>()
                     .join(","),
@@ -58,11 +60,11 @@ impl VfpJobBuildParam {
         self
     }
 
-    pub fn get_shelve_changes(&self) -> Option<Vec<u32>> {
+    pub fn get_shelve_changes(&self) -> Option<Shelves> {
         self.params
             .get(Self::PARAM_NAME_SHELVED_CHANGE)
             .and_then(|v| v.as_str())
-            .map(|s| s.split(',').filter_map(|s| s.parse::<u32>().ok()).collect())
+            .and_then(|s| Shelves::from_str(s).ok())
     }
 
     pub fn set_enable_content_preview(&mut self, val: bool) -> &mut Self {
@@ -143,8 +145,6 @@ pub async fn request_build(
     .await
     {
         Ok(_) => Ok(()),
-        Err(e) => {
-            return Err(e);
-        }
+        Err(e) => Err(e),
     }
 }

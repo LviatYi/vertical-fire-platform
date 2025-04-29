@@ -1,24 +1,26 @@
 use crate::constant::log::{
     ERR_INPUT_INVALID, ERR_INVALID_PATH, ERR_INVALID_PATH_NOT_EXIST, ERR_JENKINS_CLIENT_INVALID,
-    ERR_NEED_A_NUMBER, ERR_NO_SPECIFIED_PACKAGE, HINT_CUSTOM, HINT_JOB_NAME,
-    HINT_LAST_USED_CI_SUFFIX, HINT_LATEST_CI_SUFFIX, HINT_MY_LATEST_CI_SUFFIX,
-    HINT_MY_LATEST_FAIL_CI_SUFFIX, HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX,
-    HINT_NO_MY_LATEST_CI_SUFFIX, HINT_SELECT_CI, HINT_SET_CUSTOM_CI,
+    ERR_NEED_A_NUMBER, ERR_NEED_SHELVED, ERR_NO_SPECIFIED_PACKAGE, HINT_CUSTOM, HINT_INPUT_CUSTOM,
+    HINT_JOB_NAME, HINT_LAST_USED_SUFFIX, HINT_LATEST_CI_SUFFIX, HINT_MY_LATEST_CI_SUFFIX,
+    HINT_MY_LATEST_FAIL_CI_SUFFIX, HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX, HINT_NOT_SET,
+    HINT_NO_MY_LATEST_CI_SUFFIX, HINT_SELECT_CI, HINT_SELECT_CL, HINT_SELECT_SL,
 };
 use crate::db::db_data_proxy::DbDataProxy;
 use crate::default_config;
 use crate::extract::repo_decoration::{OrderedCiList, RepoDecoration};
+use crate::interact::SelectionOptionVal::{Data, DataWithHintSuffix};
 use crate::jenkins::query::query_user_latest_info;
 use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
 use dirs::home_dir;
 use formatx::formatx;
 use inquire::error::InquireResult;
-use inquire::validator::ErrorMessage::Custom;
-use inquire::validator::Validation;
+use inquire::validator::{ErrorMessage, Validation};
 use inquire::{InquireError, Password, PasswordDisplayMode, Select, Text};
+use std::fmt::{Display, Formatter};
 use std::io::Stdout;
 use std::ops::Deref;
 use std::path::PathBuf;
+use crate::jenkins::jenkins_model::shelves::Shelves;
 
 //region parse directly
 /// # parse without input
@@ -115,7 +117,7 @@ where
             if v.parse::<T>().is_ok() {
                 Ok(Validation::Valid)
             } else {
-                Ok(Validation::Invalid(Custom(err_msg.clone())))
+                Ok(Validation::Invalid(ErrorMessage::Custom(err_msg.clone())))
             }
         })
         .prompt();
@@ -170,7 +172,7 @@ where
             if v.parse::<T>().is_ok() {
                 Ok(Validation::Valid)
             } else {
-                Ok(Validation::Invalid(Custom(err_msg.clone())))
+                Ok(Validation::Invalid(ErrorMessage::Custom(err_msg.clone())))
             }
         })
         .prompt();
@@ -211,7 +213,7 @@ pub fn input_pwd(
             if !v.is_empty() {
                 Ok(Validation::Valid)
             } else {
-                Ok(Validation::Invalid(Custom(err_msg.clone())))
+                Ok(Validation::Invalid(ErrorMessage::Custom(err_msg.clone())))
             }
         })
         .prompt()
@@ -271,18 +273,18 @@ pub fn input_path(
                         return if path.exists() {
                             Ok(Validation::Valid)
                         } else {
-                            Ok(Validation::Invalid(Custom(
+                            Ok(Validation::Invalid(ErrorMessage::Custom(
                                 ERR_INVALID_PATH_NOT_EXIST.to_string(),
                             )))
                         };
                     }
 
-                    Ok(Validation::Invalid(Custom(err_msg.clone())))
+                    Ok(Validation::Invalid(ErrorMessage::Custom(err_msg.clone())))
                 } else {
                     Ok(Validation::Valid)
                 }
             }
-            Err(_) => Ok(Validation::Invalid(Custom(err_msg.clone()))),
+            Err(_) => Ok(Validation::Invalid(ErrorMessage::Custom(err_msg.clone()))),
         })
         .prompt();
 
@@ -294,6 +296,86 @@ pub fn input_path(
 //endregion
 
 //region inquire::Selection
+
+pub enum SelectionOptionVal<T> {
+    Data(T),
+    DataWithHintSuffix(T, String),
+}
+
+impl<T> SelectionOptionVal<T> {
+    fn get_data(self) -> T {
+        match self {
+            Data(d) => d,
+            DataWithHintSuffix(d, _) => d,
+        }
+    }
+
+    fn from_with_hint(d: T, hint: &str) -> Self {
+        SelectionOptionVal::DataWithHintSuffix(d, hint.to_string())
+    }
+}
+
+impl<T> Display for SelectionOptionVal<T>
+where
+    T: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SelectionOptionVal::Data(d) => {
+                write!(f, "{}", d)
+            }
+            SelectionOptionVal::DataWithHintSuffix(d, hint) => {
+                write!(f, "{} {}", d, &hint)
+            }
+        }
+    }
+}
+
+impl<T> From<T> for SelectionOptionVal<T> {
+    fn from(value: T) -> Self {
+        SelectionOptionVal::Data(value)
+    }
+}
+
+pub enum SelectionCustomizableOptionVal<T> {
+    DataContain(SelectionOptionVal<T>),
+    Custom,
+    None,
+}
+
+impl<T> SelectionCustomizableOptionVal<T> {
+    fn from_with_hint(d: T, hint: &str) -> Self {
+        SelectionCustomizableOptionVal::DataContain(SelectionOptionVal::DataWithHintSuffix(
+            d,
+            hint.to_string(),
+        ))
+    }
+}
+
+impl<T> Display for SelectionCustomizableOptionVal<T>
+where
+    T: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SelectionCustomizableOptionVal::DataContain(d) => {
+                write!(f, "{}", d)
+            }
+            SelectionCustomizableOptionVal::Custom => {
+                write!(f, "{}", HINT_CUSTOM)
+            }
+            SelectionCustomizableOptionVal::None => {
+                write!(f, "{}", HINT_NOT_SET)
+            }
+        }
+    }
+}
+
+impl<T> From<T> for SelectionCustomizableOptionVal<T> {
+    fn from(value: T) -> Self {
+        SelectionCustomizableOptionVal::DataContain(SelectionOptionVal::Data(value))
+    }
+}
 
 /// # input by selection
 ///
@@ -316,13 +398,12 @@ pub fn input_by_selection<T, D>(
     param_val: Option<T>,
     db_val: Option<&T>,
     db_val_usable: bool,
-    options: Vec<String>,
+    options: Vec<T>,
     hint: &str,
     default: Option<D>,
-    custom: bool,
 ) -> InquireResult<T>
 where
-    T: Clone + From<String>,
+    T: Display + Clone,
     D: Into<T>,
 {
     if let Some(val) = param_val {
@@ -335,61 +416,57 @@ where
         }
     }
 
-    let mut options = options;
-    if custom {
-        options.push(HINT_CUSTOM.to_string());
-    }
-
-    let custom_index = options.len() - 1;
-
-    let selection = Select::new(hint, options).raw_prompt();
+    let selection = Select::new(hint, options).prompt();
     match selection {
-        Ok(choice) => {
-            if custom && choice.index.eq(&custom_index) {
-                let input = Text::from(HINT_SET_CUSTOM_CI).prompt();
-
-                match input {
-                    Ok(val) => Ok(val.into()),
-                    Err(e) => Err(e),
-                }
-            } else {
-                Ok(choice.to_string().into())
-            }
-        }
+        Ok(_) => selection,
         Err(e) => default.map(|v| v.into()).ok_or(e),
     }
 }
-//endregion
 
-//region Selection Options
-
-pub fn get_job_name_options(last_used: &Option<String>) -> Vec<String> {
-    let mut origin_options: Vec<String> = default_config::RECOMMEND_JOB_NAMES
-        .to_vec()
-        .iter()
-        .map(|v| v.to_string())
-        .collect();
-    let mut options: Vec<String>;
-    if let Some(last_used) = last_used.clone() {
-        if let Some(index) = origin_options.iter_mut().position(|v| (*v).eq(&last_used)) {
-            options = origin_options
-                .split_off(index)
-                .iter()
-                .map(|v| v.to_string())
-                .collect();
-            let mut follow = options.split_off(1);
-
-            options.append(&mut origin_options);
-            options.append(&mut follow);
-        } else {
-            options = vec![last_used];
-            options.append(&mut origin_options);
-        }
-    } else {
-        options = origin_options;
+/// # input by selection with custom
+///
+/// Select a value by selection. Allow input custom value.
+///
+/// ### Arguments
+///
+/// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
+/// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
+/// * `db_val_usable`: Whether the value from the memory can be used directly.
+/// * `options`: The options to select from SelectionOptionVal.
+/// * `hint`: The hint for the selection.
+/// * `default`: The default value to return if no selection is made.
+///
+/// ### Returns
+///
+/// * `Ok` The selected value.
+/// * `Err` No value is available.
+pub fn input_by_selection_various<T, D>(
+    param_val: Option<T>,
+    db_val: Option<&T>,
+    db_val_usable: bool,
+    options: Vec<SelectionCustomizableOptionVal<T>>,
+    hint: &str,
+    default: Option<D>,
+) -> InquireResult<SelectionCustomizableOptionVal<T>>
+where
+    T: Display + Clone + std::str::FromStr,
+    D: Into<T>,
+{
+    if let Some(val) = param_val {
+        return Ok(val.into());
     }
 
-    options.iter().map(|v| v.to_string()).collect()
+    if db_val_usable {
+        if let Some(val) = db_val {
+            return Ok(val.clone().into());
+        }
+    }
+
+    let selection = Select::new(hint, options).prompt();
+    match selection {
+        Ok(_) => selection,
+        Err(e) => default.map(|v| v.into().into()).ok_or(e),
+    }
 }
 //endregion
 
@@ -518,7 +595,7 @@ pub async fn input_ci(
     //region last used ci
     if let Some(ref last_used) = last_used {
         if exist_ci_list.deref().is_ci_exist(last_used) {
-            options.push(format!("{}{}", last_used, HINT_LAST_USED_CI_SUFFIX));
+            options.push(format!("{}{}", last_used, HINT_LAST_USED_SUFFIX));
             last_used_index = options.len() - 1;
         }
     }
@@ -544,18 +621,20 @@ pub async fn input_ci(
                 let exist_ci_list_for_inquire =
                     repo_decoration.get_sorted_ci_list().deref().clone();
 
-                let input = Text::from(HINT_SET_CUSTOM_CI)
+                let input = Text::from(HINT_INPUT_CUSTOM)
                     .with_validator(move |v: &str| {
                         if let Ok(ref ci) = v.parse::<u32>() {
                             if exist_ci_list_for_inquire.is_ci_exist(ci) {
                                 Ok(Validation::Valid)
                             } else {
-                                Ok(Validation::Invalid(Custom(
+                                Ok(Validation::Invalid(ErrorMessage::Custom(
                                     ERR_NO_SPECIFIED_PACKAGE.to_string(),
                                 )))
                             }
                         } else {
-                            Ok(Validation::Invalid(Custom(ERR_NEED_A_NUMBER.to_string())))
+                            Ok(Validation::Invalid(ErrorMessage::Custom(
+                                ERR_NEED_A_NUMBER.to_string(),
+                            )))
                         }
                     })
                     .prompt();
@@ -568,16 +647,172 @@ pub async fn input_ci(
 }
 
 pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> InquireResult<String> {
-    input_by_selection(
+    let mut origin_options: Vec<String> = default_config::RECOMMEND_JOB_NAMES
+        .to_vec()
+        .iter()
+        .map(|v| v.to_string())
+        .collect();
+    let mut options: Vec<SelectionCustomizableOptionVal<String>>;
+    if let Some(last_used) = db_val.clone() {
+        if let Some(index) = origin_options.iter_mut().position(|v| (*v).eq(&last_used)) {
+            options = origin_options
+                .split_off(index)
+                .iter()
+                .map(|v| SelectionCustomizableOptionVal::DataContain(Data(v.to_string())))
+                .collect();
+            let mut follow = origin_options.split_off(1);
+
+            options.append(
+                &mut origin_options
+                    .into_iter()
+                    .map(|v| {
+                        SelectionCustomizableOptionVal::DataContain(DataWithHintSuffix(
+                            v,
+                            HINT_LAST_USED_SUFFIX.to_string(),
+                        ))
+                    })
+                    .collect(),
+            );
+            options.append(
+                &mut follow
+                    .into_iter()
+                    .map(|v| SelectionCustomizableOptionVal::DataContain(Data(v)))
+                    .collect(),
+            );
+        } else {
+            options = vec![SelectionCustomizableOptionVal::DataContain(
+                DataWithHintSuffix(last_used, HINT_LAST_USED_SUFFIX.to_string()),
+            )];
+            options.append(
+                &mut origin_options
+                    .into_iter()
+                    .map(|v| SelectionCustomizableOptionVal::DataContain(Data(v)))
+                    .collect(),
+            );
+        }
+    } else {
+        options = origin_options
+            .into_iter()
+            .map(|v| SelectionCustomizableOptionVal::DataContain(Data(v)))
+            .collect();
+    }
+
+    match input_by_selection_various(
         param_val,
         None,
         false,
-        get_job_name_options(db_val),
+        options,
         HINT_JOB_NAME,
         default_config::RECOMMEND_JOB_NAMES
             .first()
             .map(|v| v.to_string())
             .as_ref(),
-        true,
+    ) {
+        Ok(SelectionCustomizableOptionVal::DataContain(d)) => Ok(d.get_data()),
+        Ok(SelectionCustomizableOptionVal::Custom) => Text::from(HINT_INPUT_CUSTOM).prompt(),
+        Ok(SelectionCustomizableOptionVal::None) => panic!("should not be possible"),
+        Err(e) => Err(e),
+    }
+}
+
+pub fn input_cl(param_val: Option<u32>, db_val: &Option<u32>) -> Option<u32> {
+    let options: Vec<SelectionCustomizableOptionVal<u32>> = if let Some(last_used) = *db_val {
+        vec![
+            SelectionCustomizableOptionVal::None,
+            SelectionCustomizableOptionVal::DataContain(SelectionOptionVal::DataWithHintSuffix(
+                last_used,
+                HINT_LAST_USED_SUFFIX.to_string(),
+            )),
+            SelectionCustomizableOptionVal::Custom,
+        ]
+    } else {
+        vec![
+            SelectionCustomizableOptionVal::None,
+            SelectionCustomizableOptionVal::Custom,
+        ]
+    };
+
+    match input_by_selection_various::<u32, u32>(
+        param_val,
+        None,
+        false,
+        options,
+        HINT_SELECT_CL,
+        None,
     )
+    .and_then(|v| match v {
+        SelectionCustomizableOptionVal::Custom => {
+            let input = Text::from(HINT_INPUT_CUSTOM)
+                .with_validator(|input: &str| {
+                    if let Ok(ref ci) = input.parse::<u32>() {
+                        Ok(Validation::Valid)
+                    } else {
+                        Ok(Validation::Invalid(ErrorMessage::Custom(
+                            ERR_NEED_A_NUMBER.to_string(),
+                        )))
+                    }
+                })
+                .prompt();
+
+            input.map(|v| v.parse::<u32>().unwrap().into())
+        }
+        other => Ok(other),
+    }) {
+        Ok(SelectionCustomizableOptionVal::DataContain(d)) => Some(d.get_data()),
+        Ok(SelectionCustomizableOptionVal::Custom) => None,
+        Ok(SelectionCustomizableOptionVal::None) => None,
+        Err(_) => None,
+    }
+}
+
+pub fn input_sl(param_val: Option<Shelves>, db_val: &Option<Shelves>) -> Option<Shelves> {
+    let options: Vec<SelectionCustomizableOptionVal<Shelves>> = if let Some(last_used) =
+        db_val.clone()
+    {
+        vec![
+            SelectionCustomizableOptionVal::None,
+            SelectionCustomizableOptionVal::DataContain(SelectionOptionVal::DataWithHintSuffix(
+                last_used,
+                HINT_LAST_USED_SUFFIX.to_string(),
+            )),
+            SelectionCustomizableOptionVal::Custom,
+        ]
+    } else {
+        vec![
+            SelectionCustomizableOptionVal::None,
+            SelectionCustomizableOptionVal::Custom,
+        ]
+    };
+
+    match input_by_selection_various::<Shelves, Shelves>(
+        param_val,
+        None,
+        false,
+        options,
+        HINT_SELECT_SL,
+        None,
+    )
+    .and_then(|v| match v {
+        SelectionCustomizableOptionVal::Custom => {
+            let input = Text::from(HINT_INPUT_CUSTOM)
+                .with_validator(|input: &str| {
+                    if let Ok(ref ci) = input.parse::<Shelves>() {
+                        Ok(Validation::Valid)
+                    } else {
+                        Ok(Validation::Invalid(ErrorMessage::Custom(
+                            ERR_NEED_SHELVED.to_string(),
+                        )))
+                    }
+                })
+                .prompt();
+
+            input.map(|v| v.parse::<Shelves>().unwrap().into())
+        }
+        other => Ok(other),
+    }) {
+        Ok(SelectionCustomizableOptionVal::DataContain(d)) => Some(d.get_data()),
+        Ok(SelectionCustomizableOptionVal::Custom) => None,
+        Ok(SelectionCustomizableOptionVal::None) => None,
+        Err(_) => None,
+    }
 }

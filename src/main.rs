@@ -14,6 +14,7 @@ use crate::extract::cli_do_extract;
 use crate::interact::*;
 use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
 use crate::jenkins::ci_do_watch;
+use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::{
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
 };
@@ -27,6 +28,7 @@ use jenkins_sdk::client::AsyncClient;
 use jenkins_sdk::JenkinsError;
 use std::ops::Add;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::time::Duration;
 use strum_macros::Display;
 
@@ -491,16 +493,25 @@ async fn main() {
                         Ok(recommend_params) => {
                             let mut params = VfpJobBuildParam::from(recommend_params);
 
-                            if let Some(val) = cl {
+                            if let Some(val) = input_cl(
+                                cl,
+                                &(db.get_jenkins_build_param()
+                                    .as_ref()
+                                    .and_then(|db| db.get_change_list())),
+                            ) {
                                 params.set_change_list(val);
                             }
 
-                            if let Some(val) = sl {
-                                let shelves =
-                                    val.split(',').flat_map(|v| v.parse::<u32>()).collect();
-                                params.set_shelve_changes(shelves);
+                            let sl = sl.and_then(|v| Shelves::from_str(&v).ok());
+                            if let Some(val) = input_sl(
+                                sl,
+                                &(db.get_jenkins_build_param()
+                                    .as_ref()
+                                    .and_then(|db| db.get_shelve_changes())),
+                            ) {
+                                params.set_shelve_changes(val);
                             }
-
+                            
                             param_pairs.into_iter().for_each(|(k, v)| {
                                 params.params.insert(k, v);
                             });

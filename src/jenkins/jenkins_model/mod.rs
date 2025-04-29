@@ -8,3 +8,4 @@ pub mod workflow_action;
 pub mod workflow_build;
 pub mod workflow_builds;
 pub mod workflow_run;
+pub mod shelves;

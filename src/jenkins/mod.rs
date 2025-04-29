@@ -8,10 +8,11 @@ use std::io::Stdout;
 
 pub mod build;
 pub mod jenkins_endpoint;
-mod jenkins_model;
+pub mod jenkins_model;
 mod pwd_jenkins_async_client;
 pub mod query;
 pub mod watch;
+
 
 pub async fn ci_do_watch(
     stdout: &mut Stdout,
@@ -457,7 +458,7 @@ mod tests {
             })
         );
 
-        param.set_shelve_changes(vec![1230, 1231]);
+        param.set_shelve_changes(vec![1230, 1231].into_iter().collect());
         assert_eq!(
             param.to_json_value(),
             json!({
