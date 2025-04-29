@@ -2,14 +2,24 @@ use crate::jenkins::jenkins_endpoint::job_config::JobConfig;
 use crate::jenkins::jenkins_model::job_config::{FlowDefinition, ParameterDefinition};
 use crate::jenkins::query::VfpJenkinsClient;
 use jenkins_sdk::{JenkinsError, TriggerBuild};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct VfpJobBuildParam {
     pub params: HashMap<String, Value>,
 }
 
 impl VfpJobBuildParam {
+    pub const PARAM_NAME_CHANGE_LIST: &'static str = "Changelist";
+
+    pub const PARAM_NAME_SHELVED_CHANGE: &'static str = "ShelvedChange";
+
+    pub const PARAM_NAME_ENABLE_CONTENT_PREVIEW: &'static str = "EnableContentPreview";
+
+    pub const PARAM_NAME_SIMULATE_ANDROID_GUEST_LOGIN: &'static str = "SimulateAndroidGuestLogin";
+
     pub fn override_recommend_param(&mut self) -> &mut Self {
         self.set_enable_content_preview(true);
         self.set_simulate_android_guest_login(true);
@@ -21,14 +31,23 @@ impl VfpJobBuildParam {
     }
 
     pub fn set_change_list(&mut self, val: u32) -> &mut Self {
-        self.params
-            .insert("Changelist".to_string(), Value::String(val.to_string()));
+        self.params.insert(
+            Self::PARAM_NAME_CHANGE_LIST.to_string(),
+            Value::String(val.to_string()),
+        );
         self
+    }
+
+    pub fn get_change_list(&self) -> Option<u32> {
+        self.params
+            .get(Self::PARAM_NAME_CHANGE_LIST)
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<u32>().ok())
     }
 
     pub fn set_shelve_changes(&mut self, val: Vec<u32>) -> &mut Self {
         self.params.insert(
-            "ShelvedChange".to_string(),
+            Self::PARAM_NAME_SHELVED_CHANGE.to_string(),
             Value::String(
                 val.iter()
                     .map(|v| v.to_string())
@@ -39,15 +58,26 @@ impl VfpJobBuildParam {
         self
     }
 
-    pub fn set_enable_content_preview(&mut self, val: bool) -> &mut Self {
+    pub fn get_shelve_changes(&self) -> Option<Vec<u32>> {
         self.params
-            .insert("EnableContentPreview".to_string(), Value::Bool(val));
+            .get(Self::PARAM_NAME_SHELVED_CHANGE)
+            .and_then(|v| v.as_str())
+            .map(|s| s.split(',').filter_map(|s| s.parse::<u32>().ok()).collect())
+    }
+
+    pub fn set_enable_content_preview(&mut self, val: bool) -> &mut Self {
+        self.params.insert(
+            Self::PARAM_NAME_ENABLE_CONTENT_PREVIEW.to_string(),
+            Value::Bool(val),
+        );
         self
     }
 
     pub fn set_simulate_android_guest_login(&mut self, val: bool) -> &mut Self {
-        self.params
-            .insert("SimulateAndroidGuestLogin".to_string(), Value::Bool(val));
+        self.params.insert(
+            Self::PARAM_NAME_SIMULATE_ANDROID_GUEST_LOGIN.to_string(),
+            Value::Bool(val),
+        );
         self
     }
 }

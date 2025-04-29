@@ -3,11 +3,11 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct FlowDefinition {
     #[serde(rename = "properties")]
-    pub properties: FlowDefinitionProperties,
+     properties: FlowDefinitionProperties,
 }
 
 #[derive(Debug, Deserialize)]
-struct FlowDefinitionProperties {
+ struct FlowDefinitionProperties {
     #[serde(rename = "hudson.model.ParametersDefinitionProperty")]
     pub parameters_definition_property: ParameterDefinitions,
 }

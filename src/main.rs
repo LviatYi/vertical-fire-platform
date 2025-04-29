@@ -12,12 +12,14 @@ use crate::constant::util::{get_hidden_sensitive_string, SensitiveMode};
 use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::extract::cli_do_extract;
 use crate::interact::*;
+use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
 use crate::jenkins::ci_do_watch;
 use crate::jenkins::query::{
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
 };
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
+use clap::builder::TypedValueParser;
 use clap::{Parser, Subcommand};
 use formatx::formatx;
 use inquire::Select;
@@ -134,6 +136,31 @@ enum Commands {
         /// Password of Jenkins.
         #[arg(short, long)]
         pwd: Option<String>,
+    },
+    /// Request start a Jenkins build task.
+    Build {
+        /// job name.
+        #[arg(short, long)]
+        job_name: Option<String>,
+
+        /// change list number.
+        #[arg(long)]
+        cl: Option<u32>,
+
+        /// shelved change list numbers.
+        /// separated by ,
+        #[arg(long)]
+        sl: Option<String>,
+
+        /// Custom build params.
+        /// Repeated input --param can accept multiple sets of parameters
+        /// like: --param "CustomServer" "http://127.0.0.1:8080"
+        #[arg(long = "param",
+            num_args = 2,
+            value_names = ["PARAM_NAME", "PARAM_VALUE"],
+            action = clap::ArgAction::Append
+        )]
+        params: Vec<String>,
     },
     /// Watch a Jenkins build task.
     Watch {
@@ -424,6 +451,109 @@ async fn main() {
                     }
                 }
             }
+            Commands::Build {
+                job_name,
+                cl,
+                sl,
+                params,
+            } => {
+                if params.len() % 2 != 0 {
+                    colored_println(&mut stdout, ThemeColor::Error, ERR_NEED_EVEN_PARAM);
+                    return;
+                }
+
+                let mut db = get_db(None);
+                if let Ok(val) = input_job_name(job_name, db.get_interest_job_name()) {
+                    db.set_interest_job_name(Some(val));
+                } else {
+                    println!("{}", ERR_NEED_A_JOB_NAME);
+                    return;
+                }
+
+                let param_pairs: Vec<(String, serde_json::Value)> = params
+                    .chunks(2)
+                    .map(|chunk| (chunk[0].clone(), chunk[1].clone()))
+                    .map(|(k, v)| {
+                        if v.eq("true") {
+                            (k, serde_json::Value::Bool(true))
+                        } else if v.eq("false") {
+                            (k, serde_json::Value::Bool(false))
+                        } else {
+                            (k, serde_json::Value::String(v))
+                        }
+                    })
+                    .collect();
+
+                let client = db.try_get_jenkins_async_client(&mut stdout, true).await;
+                if let Ok(client) = client {
+                    let job_name = db.get_interest_job_name().clone().unwrap();
+                    match query_job_config(&client, &job_name).await {
+                        Ok(recommend_params) => {
+                            let mut params = VfpJobBuildParam::from(recommend_params);
+
+                            if let Some(val) = cl {
+                                params.set_change_list(val);
+                            }
+
+                            if let Some(val) = sl {
+                                let shelves =
+                                    val.split(',').flat_map(|v| v.parse::<u32>()).collect();
+                                params.set_shelve_changes(shelves);
+                            }
+
+                            param_pairs.into_iter().for_each(|(k, v)| {
+                                params.params.insert(k, v);
+                            });
+
+                            match request_build(&client, &job_name, &params).await {
+                                Ok(_) => {
+                                    colored_println(
+                                        &mut stdout,
+                                        ThemeColor::Success,
+                                        REQUEST_BUILD_SUCCESS,
+                                    );
+
+                                    colored_println(
+                                        &mut stdout,
+                                        ThemeColor::Main,
+                                        BUILD_USED_PARAMS,
+                                    );
+
+                                    params.params.iter().for_each(|(k, v)| {
+                                        colored_println(
+                                            &mut stdout,
+                                            ThemeColor::Main,
+                                            &format!("{}: {}", k, v),
+                                        );
+                                    })
+                                }
+                                Err(e) => {
+                                    colored_println(
+                                        &mut stdout,
+                                        ThemeColor::Error,
+                                        &formatx!(ERR_REQUEST_BUILD_FAILED, e.to_string())
+                                            .unwrap_or_default(),
+                                    );
+                                    return;
+                                }
+                            };
+                        }
+                        Err(e) => {
+                            colored_println(
+                                &mut stdout,
+                                ThemeColor::Error,
+                                &formatx!(ERR_QUERY_JOB_CONFIG, e.to_string()).unwrap_or_default(),
+                            );
+                            return;
+                        }
+                    };
+
+                    //TODO_LviatYi 后续操作：-w -e
+                } else {
+                    colored_println(&mut stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
+                    return;
+                }
+            }
             Commands::Watch {
                 job_name,
                 ci,
@@ -433,14 +563,15 @@ async fn main() {
                     ci_do_watch(&mut stdout, job_name, ci).await;
 
                 if extract {
-                    let db = get_db(None);
                     if let Some(build_number) = success_build_number {
+                        let db = get_db(None);
                         let job_name = used_job_name;
                         let ci = Some(build_number);
-                        let count = db.get_last_player_count().clone();
+                        let count = *db.get_last_player_count();
                         let build_target_repo_template = db.get_extract_repo().clone();
                         let main_locator_pattern = db.get_extract_locator_pattern().clone();
-                        let secondary_locator_template = db.get_extract_s_locator_template().clone();
+                        let secondary_locator_template =
+                            db.get_extract_s_locator_template().clone();
                         let dest = None;
 
                         cli_do_extract(
