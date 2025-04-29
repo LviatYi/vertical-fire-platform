@@ -345,16 +345,21 @@ where
 //region Selection Options
 
 pub fn get_job_name_options(last_used: &Option<String>) -> Vec<String> {
-    let mut options = default_config::RECOMMEND_JOB_NAMES.to_vec();
+    let mut origin_options: Vec<String> = default_config::RECOMMEND_JOB_NAMES.to_vec().iter().map(|v| v.to_string()).collect();
+    let mut options: Vec<String>;
     if let Some(last_used) = last_used.clone() {
-        if let Some(index) = options.iter_mut().position(|&mut v| v == last_used) {
-            let mut origin_options = options.clone();
-            options = origin_options.split_off(index);
+        if let Some(index) = origin_options.iter_mut().position(|v| (*v).eq(&last_used)) {
+            options = origin_options.split_off(index).iter().map(|v| v.to_string()).collect();
             let mut follow = options.split_off(1);
 
             options.append(&mut origin_options);
             options.append(&mut follow);
+        } else {
+            options = vec![last_used];
+            options.append(&mut origin_options);
         }
+    } else {
+        options = origin_options;
     }
 
     options.iter().map(|v| v.to_string()).collect()
