@@ -2,6 +2,7 @@ use crate::constant::log::{LOGIN_SUCCESS_BY_API_TOKEN, LOGIN_SUCCESS_BY_PWD};
 use crate::db::db_struct::db_status::DBStatus;
 use crate::db::db_struct::version_only::VersionOnly;
 use crate::db::db_struct::{parse_content_with_upgrade, LatestVersionData};
+use crate::jenkins::build::VfpJobBuildParam;
 use crate::jenkins::query::{try_get_jenkins_async_client, VfpJenkinsClient};
 use crate::pretty_log::{colored_println, ThemeColor};
 use base64::Engine;
@@ -76,7 +77,7 @@ impl DbDataProxy {
         &self.data.last_inner_version
     }
 
-    pub fn set_last_inner_version(&mut self, val: Option<u32>) -> &Self {
+    pub fn set_last_inner_version(&mut self, val: Option<u32>) -> &mut Self {
         self.data.last_inner_version = val;
         self
     }
@@ -85,7 +86,7 @@ impl DbDataProxy {
         &self.data.last_player_count
     }
 
-    pub fn set_last_player_count(&mut self, val: Option<u32>) -> &Self {
+    pub fn set_last_player_count(&mut self, val: Option<u32>) -> &mut Self {
         self.data.last_player_count = val;
         self
     }
@@ -94,7 +95,7 @@ impl DbDataProxy {
         &self.data.interest_job_name
     }
 
-    pub fn set_interest_job_name(&mut self, val: Option<String>) -> &Self {
+    pub fn set_interest_job_name(&mut self, val: Option<String>) -> &mut Self {
         self.data.interest_job_name = val;
         self
     }
@@ -103,7 +104,7 @@ impl DbDataProxy {
         &self.data.extract_repo
     }
 
-    pub fn set_extract_repo(&mut self, val: Option<String>) -> &Self {
+    pub fn set_extract_repo(&mut self, val: Option<String>) -> &mut Self {
         self.data.extract_repo = val;
         self
     }
@@ -112,7 +113,7 @@ impl DbDataProxy {
         &self.data.extract_locator_pattern
     }
 
-    pub fn set_extract_locator_pattern(&mut self, val: Option<String>) -> &Self {
+    pub fn set_extract_locator_pattern(&mut self, val: Option<String>) -> &mut Self {
         self.data.extract_locator_pattern = val;
         self
     }
@@ -121,7 +122,7 @@ impl DbDataProxy {
         &self.data.extract_s_locator_template
     }
 
-    pub fn set_extract_s_locator_template(&mut self, val: Option<String>) -> &Self {
+    pub fn set_extract_s_locator_template(&mut self, val: Option<String>) -> &mut Self {
         self.data.extract_s_locator_template = val;
         self
     }
@@ -130,7 +131,7 @@ impl DbDataProxy {
         &self.data.blast_path
     }
 
-    pub fn set_blast_path(&mut self, val: Option<PathBuf>) -> &Self {
+    pub fn set_blast_path(&mut self, val: Option<PathBuf>) -> &mut Self {
         self.data.blast_path = val;
         self
     }
@@ -139,7 +140,7 @@ impl DbDataProxy {
         &self.data.jenkins_url
     }
 
-    pub fn set_jenkins_url(&mut self, val: Option<String>) -> &Self {
+    pub fn set_jenkins_url(&mut self, val: Option<String>) -> &mut Self {
         self.data.jenkins_url = val;
         self
     }
@@ -148,7 +149,7 @@ impl DbDataProxy {
         &self.data.jenkins_username
     }
 
-    pub fn set_jenkins_username(&mut self, val: Option<String>) -> &Self {
+    pub fn set_jenkins_username(&mut self, val: Option<String>) -> &mut Self {
         self.data.jenkins_username = val;
         self
     }
@@ -157,7 +158,7 @@ impl DbDataProxy {
         &self.data.jenkins_api_token
     }
 
-    pub fn set_jenkins_api_token(&mut self, val: Option<String>) -> &Self {
+    pub fn set_jenkins_api_token(&mut self, val: Option<String>) -> &mut Self {
         self.data.jenkins_api_token = val;
         self
     }
@@ -171,8 +172,17 @@ impl DbDataProxy {
         })
     }
 
-    pub fn set_jenkins_pwd(&mut self, val: Option<String>) -> &Self {
+    pub fn set_jenkins_pwd(&mut self, val: Option<String>) -> &mut Self {
         self.data.jenkins_pwd = val.map(|v| base64::prelude::BASE64_STANDARD.encode(v));
+        self
+    }
+
+    pub fn get_jenkins_build_param(&self) -> &Option<VfpJobBuildParam> {
+        &self.data.jenkins_build_params
+    }
+
+    pub fn set_jenkins_build_param(&mut self, val: Option<VfpJobBuildParam>) -> &mut Self {
+        self.data.jenkins_build_params = val;
         self
     }
 

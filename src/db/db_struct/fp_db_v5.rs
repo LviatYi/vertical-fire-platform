@@ -1,3 +1,4 @@
+use crate::db::db_struct::fp_db_v6::FpDbV6;
 use crate::db::db_struct::versioned_data::{UpgradeValue, VersionedData};
 use crate::define_versioned_data_type;
 use serde::{Deserialize, Serialize, Serializer};
@@ -22,6 +23,19 @@ define_versioned_data_type!(FpDbV5, VERSION_FP_DB_V5, {
 
 impl VersionedData for FpDbV5 {
     fn parse_next_version(self: Box<Self>) -> UpgradeValue {
-        UpgradeValue::Latest(*self)
+        let mut upg = FpDbV6::default();
+        upg.last_inner_version = self.last_inner_version;
+        upg.last_player_count = self.last_player_count;
+        upg.interest_job_name = self.interest_job_name;
+        upg.extract_repo = self.extract_repo;
+        upg.extract_locator_pattern = self.extract_locator_pattern;
+        upg.extract_s_locator_template = self.extract_s_locator_template;
+        upg.blast_path = self.blast_path;
+        upg.jenkins_url = self.jenkins_url;
+        upg.jenkins_username = self.jenkins_username;
+        upg.jenkins_api_token = self.jenkins_api_token;
+        upg.jenkins_pwd = None;
+
+        UpgradeValue::Upgraded(Box::new(upg))
     }
 }
