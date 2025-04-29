@@ -52,6 +52,7 @@ pub async fn cli_do_extract(
             .first()
             .map(|v| v.to_string())
             .as_ref(),
+        true,
     ) {
         db.set_interest_job_name(Some(val));
     } else {

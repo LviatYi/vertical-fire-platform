@@ -319,6 +319,7 @@ pub fn input_by_selection<T, D>(
     options: Vec<String>,
     hint: &str,
     default: Option<D>,
+    custom: bool,
 ) -> InquireResult<T>
 where
     T: Clone + From<String>,
@@ -334,9 +335,28 @@ where
         }
     }
 
-    let selection = Select::new(hint, options).prompt();
+    let mut options = options;
+    let custom_index;
+    if custom {
+        options.push(HINT_CUSTOM.to_string());
+    }
+
+    custom_index = options.len() - 1;
+
+    let selection = Select::new(hint, options).raw_prompt();
     match selection {
-        Ok(choice) => Ok(choice.to_string().into()),
+        Ok(choice) => {
+            if custom && choice.index.eq(&custom_index) {
+                let input = Text::from(HINT_SET_CUSTOM_CI).prompt();
+
+                match input {
+                    Ok(val) => Ok(val.into()),
+                    Err(e) => Err(e),
+                }
+            } else {
+                Ok(choice.to_string().into())
+            }
+        }
         Err(e) => default.map(|v| v.into()).ok_or(e),
     }
 }
@@ -345,11 +365,19 @@ where
 //region Selection Options
 
 pub fn get_job_name_options(last_used: &Option<String>) -> Vec<String> {
-    let mut origin_options: Vec<String> = default_config::RECOMMEND_JOB_NAMES.to_vec().iter().map(|v| v.to_string()).collect();
+    let mut origin_options: Vec<String> = default_config::RECOMMEND_JOB_NAMES
+        .to_vec()
+        .iter()
+        .map(|v| v.to_string())
+        .collect();
     let mut options: Vec<String>;
     if let Some(last_used) = last_used.clone() {
         if let Some(index) = origin_options.iter_mut().position(|v| (*v).eq(&last_used)) {
-            options = origin_options.split_off(index).iter().map(|v| v.to_string()).collect();
+            options = origin_options
+                .split_off(index)
+                .iter()
+                .map(|v| v.to_string())
+                .collect();
             let mut follow = options.split_off(1);
 
             options.append(&mut origin_options);

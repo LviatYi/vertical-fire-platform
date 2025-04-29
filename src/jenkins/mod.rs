@@ -35,6 +35,7 @@ pub async fn ci_do_watch(
                 .first()
                 .map(|v| v.to_string())
                 .as_ref(),
+            true,
         );
 
         if job_name.is_err() {
