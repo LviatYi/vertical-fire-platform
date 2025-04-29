@@ -395,9 +395,9 @@ pub fn get_job_name_options(last_used: &Option<String>) -> Vec<String> {
 
 pub async fn input_ci(
     stdout: &mut Stdout,
+    param_val: Option<u32>,
     db: &DbDataProxy,
     repo_decoration: &RepoDecoration,
-    param_val: Option<u32>,
 ) -> Option<u32> {
     if param_val.is_some() {
         return param_val;

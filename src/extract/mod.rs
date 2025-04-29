@@ -73,7 +73,7 @@ pub async fn cli_do_extract(
         &db.get_interest_job_name().clone().unwrap(),
     );
 
-    let ci_temp = input_ci(stdout, &db, &repo_decoration, ci).await;
+    let ci_temp = input_ci(stdout, ci, &db, &repo_decoration).await;
 
     if ci_temp.is_none() {
         println!("{}", ERR_EMPTY_REPO);
