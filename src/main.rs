@@ -16,7 +16,8 @@ use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
 use crate::jenkins::ci_do_watch;
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::{
-    try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
+    query_user_latest_info, try_get_jenkins_async_client_by_api_token,
+    try_get_jenkins_async_client_by_pwd,
 };
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
@@ -154,8 +155,8 @@ enum Commands {
         #[arg(long)]
         sl: Option<String>,
 
-        /// Custom build params.
-        /// Repeated input --param can accept multiple sets of parameters
+        /// custom build params.
+        /// pepeated input --param can accept multiple sets of parameters
         /// like: --param "CustomServer" "http://127.0.0.1:8080"
         #[arg(long = "param",
             num_args = 2,
@@ -163,6 +164,14 @@ enum Commands {
             action = clap::ArgAction::Append
         )]
         params: Vec<String>,
+
+        /// do not automatically watch and extract the package after success.
+        #[arg(long)]
+        no_watch_and_extract: bool,
+
+        /// do not automatically extract the package after success.
+        #[arg(long)]
+        no_extract: bool,
     },
     /// Watch a Jenkins build task.
     Watch {
@@ -174,9 +183,9 @@ enum Commands {
         #[arg(short = '#', long)]
         ci: Option<u32>,
 
-        /// automatically extract the package after success.
-        #[arg(short, long)]
-        extract: bool,
+        /// do not automatically extract the package after success.
+        #[arg(long)]
+        no_extract: bool,
     },
     /// Clean cache.
     Clean,
@@ -458,6 +467,8 @@ async fn main() {
                 cl,
                 sl,
                 params,
+                no_extract,
+                no_watch_and_extract,
             } => {
                 if params.len() % 2 != 0 {
                     colored_println(&mut stdout, ThemeColor::Error, ERR_NEED_EVEN_PARAM);
@@ -511,10 +522,13 @@ async fn main() {
                             ) {
                                 params.set_shelve_changes(val);
                             }
-                            
+
                             param_pairs.into_iter().for_each(|(k, v)| {
                                 params.params.insert(k, v);
                             });
+
+                            db.set_jenkins_build_param(Some(params.clone()));
+                            save_with_error_log(&db, None);
 
                             match request_build(&client, &job_name, &params).await {
                                 Ok(_) => {
@@ -559,7 +573,59 @@ async fn main() {
                         }
                     };
 
-                    //TODO_LviatYi 后续操作：-w -e
+                    if let Ok(user_latest_info) = query_user_latest_info(
+                        &client,
+                        &job_name,
+                        &(db.get_jenkins_username().clone().unwrap()),
+                        None,
+                    )
+                    .await
+                    {
+                        if let Some(user_latest_info) = user_latest_info.get_any_latest() {
+                            //TODO_LviatYi:
+                            println!(
+                                "[LVIAT] NOTICE HERE!!!: User latest info: {:#?}",
+                                user_latest_info
+                            );
+                        }
+                    } else {
+                        colored_println(&mut stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
+                        return;
+                    }
+
+                    if no_watch_and_extract {
+                        return;
+                    }
+
+                    let (used_job_name, success_build_number) =
+                        ci_do_watch(&mut stdout, Some(job_name), None).await;
+
+                    if no_extract {
+                        return;
+                    }
+
+                    if let Some(build_number) = success_build_number {
+                        let job_name = used_job_name;
+                        let ci = Some(build_number);
+                        let count = *db.get_last_player_count();
+                        let build_target_repo_template = db.get_extract_repo().clone();
+                        let main_locator_pattern = db.get_extract_locator_pattern().clone();
+                        let secondary_locator_template =
+                            db.get_extract_s_locator_template().clone();
+                        let dest = None;
+
+                        cli_do_extract(
+                            &mut stdout,
+                            job_name,
+                            ci,
+                            count,
+                            build_target_repo_template,
+                            main_locator_pattern,
+                            secondary_locator_template,
+                            dest,
+                        )
+                        .await;
+                    }
                 } else {
                     colored_println(&mut stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
                     return;
@@ -568,12 +634,12 @@ async fn main() {
             Commands::Watch {
                 job_name,
                 ci,
-                extract,
+                no_extract,
             } => {
                 let (used_job_name, success_build_number) =
                     ci_do_watch(&mut stdout, job_name, ci).await;
 
-                if extract {
+                if !no_extract {
                     if let Some(build_number) = success_build_number {
                         let db = get_db(None);
                         let job_name = used_job_name;

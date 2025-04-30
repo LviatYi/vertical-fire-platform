@@ -8,7 +8,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VfpJobBuildParam {
     pub params: HashMap<String, Value>,
 }

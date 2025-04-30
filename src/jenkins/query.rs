@@ -133,6 +133,26 @@ pub struct UserLatestWorkflowInfo {
     pub failed: Option<WorkflowRun>,
 }
 
+impl UserLatestWorkflowInfo {
+    pub fn get_any_latest(&self) -> Option<&WorkflowRun> {
+        if self.in_progress.is_some() && self.failed.is_some() {
+            if self.in_progress.as_ref().unwrap().number > self.failed.as_ref().unwrap().number {
+                self.in_progress.as_ref()
+            } else {
+                self.failed.as_ref()
+            }
+        } else if self.in_progress.is_some() {
+            self.in_progress.as_ref()
+        } else if self.failed.is_some() {
+            self.failed.as_ref()
+        } else if self.latest_success.is_some() {
+            self.latest_success.as_ref()
+        } else {
+            None
+        }
+    }
+}
+
 pub async fn query_user_latest_info(
     client: &VfpJenkinsClient,
     job_name: &str,

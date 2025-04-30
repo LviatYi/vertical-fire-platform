@@ -9,6 +9,7 @@ use crate::db::db_data_proxy::DbDataProxy;
 use crate::default_config;
 use crate::extract::repo_decoration::{OrderedCiList, RepoDecoration};
 use crate::interact::SelectionOptionVal::{Data, DataWithHintSuffix};
+use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::query_user_latest_info;
 use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
 use dirs::home_dir;
@@ -20,7 +21,6 @@ use std::fmt::{Display, Formatter};
 use std::io::Stdout;
 use std::ops::Deref;
 use std::path::PathBuf;
-use crate::jenkins::jenkins_model::shelves::Shelves;
 
 //region parse directly
 /// # parse without input
@@ -655,30 +655,31 @@ pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> Inq
     let mut options: Vec<SelectionCustomizableOptionVal<String>>;
     if let Some(last_used) = db_val.clone() {
         if let Some(index) = origin_options.iter_mut().position(|v| (*v).eq(&last_used)) {
-            options = origin_options
-                .split_off(index)
+            let mut cut_off_at_index: Vec<String> = origin_options.split_off(index);
+            let mut cut_off_back: Vec<SelectionCustomizableOptionVal<String>> = cut_off_at_index
+                .split_off(1)
                 .iter()
                 .map(|v| SelectionCustomizableOptionVal::DataContain(Data(v.to_string())))
                 .collect();
-            let mut follow = origin_options.split_off(1);
+
+            options = cut_off_at_index
+                .into_iter()
+                .map(|v| {
+                    SelectionCustomizableOptionVal::DataContain(DataWithHintSuffix(
+                        v,
+                        HINT_LAST_USED_SUFFIX.to_string(),
+                    ))
+                })
+                .collect();
 
             options.append(
                 &mut origin_options
                     .into_iter()
-                    .map(|v| {
-                        SelectionCustomizableOptionVal::DataContain(DataWithHintSuffix(
-                            v,
-                            HINT_LAST_USED_SUFFIX.to_string(),
-                        ))
-                    })
+                    .map(|v| SelectionCustomizableOptionVal::DataContain(Data(v.to_string())))
                     .collect(),
             );
-            options.append(
-                &mut follow
-                    .into_iter()
-                    .map(|v| SelectionCustomizableOptionVal::DataContain(Data(v)))
-                    .collect(),
-            );
+
+            options.append(&mut cut_off_back);
         } else {
             options = vec![SelectionCustomizableOptionVal::DataContain(
                 DataWithHintSuffix(last_used, HINT_LAST_USED_SUFFIX.to_string()),
@@ -744,7 +745,7 @@ pub fn input_cl(param_val: Option<u32>, db_val: &Option<u32>) -> Option<u32> {
         SelectionCustomizableOptionVal::Custom => {
             let input = Text::from(HINT_INPUT_CUSTOM)
                 .with_validator(|input: &str| {
-                    if let Ok(ref ci) = input.parse::<u32>() {
+                    if let Ok(_) = input.parse::<u32>() {
                         Ok(Validation::Valid)
                     } else {
                         Ok(Validation::Invalid(ErrorMessage::Custom(
@@ -796,7 +797,7 @@ pub fn input_sl(param_val: Option<Shelves>, db_val: &Option<Shelves>) -> Option<
         SelectionCustomizableOptionVal::Custom => {
             let input = Text::from(HINT_INPUT_CUSTOM)
                 .with_validator(|input: &str| {
-                    if let Ok(ref ci) = input.parse::<Shelves>() {
+                    if input.parse::<Shelves>().is_ok() {
                         Ok(Validation::Valid)
                     } else {
                         Ok(Validation::Invalid(ErrorMessage::Custom(
