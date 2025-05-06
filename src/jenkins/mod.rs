@@ -1,6 +1,7 @@
 use crate::constant::log::*;
 use crate::db::get_db;
 use crate::interact::input_job_name;
+use crate::jenkins::util::get_jenkins_workflow_run_url;
 use crate::jenkins::watch::{watch, VfpWatchError};
 use crate::pretty_log::{colored_println, toast, ThemeColor};
 use formatx::formatx;
@@ -11,6 +12,7 @@ pub mod jenkins_endpoint;
 pub mod jenkins_model;
 mod pwd_jenkins_async_client;
 pub mod query;
+mod util;
 pub mod watch;
 
 pub async fn ci_do_watch(
@@ -67,13 +69,19 @@ pub async fn ci_do_watch(
                             colored_println(stdout, ThemeColor::Error, ERR_NO_VALID_RUN_TASK);
                         }
                         VfpWatchError::WatchTaskFailed(build_number, log) => {
+                            let default_url = "".to_string();
                             colored_println(
                                 stdout,
                                 ThemeColor::Error,
                                 &formatx!(
                                     WATCHING_RUN_TASK_FAILURE,
                                     build_number,
-                                    used_job_name.as_ref().unwrap()
+                                    used_job_name.as_ref().unwrap(),
+                                    get_jenkins_workflow_run_url(
+                                        db.get_jenkins_url().as_ref().unwrap_or(&default_url),
+                                        used_job_name.as_ref().unwrap(),
+                                        build_number
+                                    )
                                 )
                                 .unwrap_or_default(),
                             );

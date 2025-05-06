@@ -89,7 +89,7 @@ pub const WATCHING_RUN_TASK_IN_PROGRESS_PREPARE: &str =
 pub const WATCHING_RUN_TASK_IN_PROGRESS: &str =
     "Watching run task {} of {} in progress...(last check at {})";
 pub const WATCHING_RUN_TASK_SUCCESS: &str = "Run task {} of {} finished with SUCCESS.";
-pub const WATCHING_RUN_TASK_FAILURE: &str = "Run task {} of {} finished with FAILURE.";
+pub const WATCHING_RUN_TASK_FAILURE: &str = "Run task {} of {} finished with FAILURE. Original Url: {}";
 pub const RUN_TASK_COMPLETED: &str = "Run Task Completed with Success.";
 pub const EXTRACT_TASK_COMPLETED: &str = "All Extract Completed.";
 pub const REQUEST_BUILD_SUCCESS: &str = "Request build success.";
