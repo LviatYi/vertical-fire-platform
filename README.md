@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.3.11  
+v1.4.0  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -17,10 +17,12 @@ by LviatYi
 
 Change Log:
 
-- UNRELEASE
-    - 在 fp watch 时主动询问 Job Name。 
+- v1.4.0
+    - 追加 Build 功能。一键发起 Jenkins Build，包含自动查询默认参数、填充推荐参数、智能记忆以及操作链。
+    - 在 fp watch 时主动询问 Job Name。
+    - 支持自定义 Job Name.
 - v1.3.11
-    - 取消了 Cookie 登录的支持。添加了密码登录。 
+    - 取消了 Cookie 登录的支持。添加了密码登录。
 - v1.3.10
     - 添加 watch 功能。它会在 Jenkins 上有新包时，自动下载并解压。
     - 取消 Login 命令时请求 job_name 的输入。现在流程上不再必要。
@@ -60,8 +62,7 @@ Change Log:
 
 Road Map:
 
-- 添加 Rebuild 功能。
-- 添加使用密码而非手动复制 Cookie 进行登录的方式。
+- [ ] 优化代码结构。
 
 ## Functional ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
 
@@ -90,7 +91,7 @@ setx path "%path%;PATH_TO_FP_ROOT_DIR"
 
 ### Extract
 
-解压包。
+解压包。登录后获得更好的体验。
 
 可以这样使用：
 
@@ -175,27 +176,53 @@ fp login
 
 ---
 
-### Watch
+### Build
 
-监控 Jenkins 平台的 Run task 完成状态，以自动进行进一步操作。
+**[需要登录]** 向 Jenkins 发起一次构建任务。
 
 可以这样使用：
 
 ```shell
 // usage
-fp watch -j your_interested_job_name -ci 1111 -e
+fp build -j your_interested_job_name --cl 321 --sl 123,456,789
+```
+
+也可以这样使用：
+
+```shell
+fp build
+```
+
+- **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
+- **--cl <CL>** change list。
+- **--sl <SL>** shelved change list。用任何非空格字符隔开，推荐 `,`。
+- **--param <PARAM_NAME> <PARAM_VALUE>** 参数。使用键值对的方式传入。你可以使用多次。
+- **--no-watch-and-extract** 在所需的操作成功后，不要执行监视与自动解压。
+- **--no-extract** 在所需的操作成功后，不要执行自动解压。
+
+---
+
+### Watch
+
+**[需要登录]** 监控 Jenkins 平台的 Run task 完成状态，以自动进行进一步操作。
+
+可以这样使用：
+
+```shell
+// usage
+fp watch -j your_interested_job_name --ci 1111
 ```
 
 也可以这样使用：
 
 ```shell
 // usage
-fp watch -e
+fp watch
 ```
 
 - **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
 - **-#, --ci <CI>** 包 ID。用于定位包。
-- **-e** 在所需的操作成功后自动解压。
+- **--no-extract** 在所需的操作成功后，不要执行自动解压。
 
 ---
 
