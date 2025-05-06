@@ -172,14 +172,20 @@ pub async fn query_user_latest_info(
             if run_info.is_mine(user_id) {
                 match run_info.result {
                     RunStatus::Success => {
-                        ret.latest_success = Some(run_info);
+                        if ret.latest_success.is_none() {
+                            ret.latest_success = Some(run_info);
+                        }
                         break;
                     }
                     RunStatus::Failure => {
-                        ret.failed = Some(run_info);
+                        if ret.failed.is_none() {
+                            ret.failed = Some(run_info);
+                        }
                     }
                     RunStatus::Processing => {
-                        ret.in_progress = Some(run_info);
+                        if ret.in_progress.is_none() {
+                            ret.in_progress = Some(run_info);
+                        }
                     }
                 }
             }
