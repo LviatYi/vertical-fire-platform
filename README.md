@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.4.0  
+v1.4.1  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -17,6 +17,9 @@ by LviatYi
 
 Change Log:
 
+- v1.4.1
+    - 修复当多个重复状态的 Run Task 时，无法正确获取最新包的问题。
+    - 在构建错误并输出日志前，展示 url 供直接跳转。
 - v1.4.0
     - 追加 Build 功能。一键发起 Jenkins Build，包含自动查询默认参数、填充推荐参数、智能记忆以及操作链。
     - 在 fp watch 时主动询问 Job Name。
