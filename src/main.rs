@@ -17,7 +17,7 @@ use crate::jenkins::ci_do_watch;
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::{
     query_user_latest_info, try_get_jenkins_async_client_by_api_token,
-    try_get_jenkins_async_client_by_pwd,
+    try_get_jenkins_async_client_by_pwd, VfpJenkinsClient,
 };
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
@@ -476,31 +476,45 @@ async fn main() {
                 }
 
                 let mut db = get_db(None);
-                if let Ok(val) = input_job_name(job_name, db.get_interest_job_name()) {
-                    db.set_interest_job_name(Some(val));
-                } else {
-                    println!("{}", ERR_NEED_A_JOB_NAME);
-                    return;
-                }
 
-                let param_pairs: Vec<(String, serde_json::Value)> = params
-                    .chunks(2)
-                    .map(|chunk| (chunk[0].clone(), chunk[1].clone()))
-                    .map(|(k, v)| {
-                        if v.eq("true") {
-                            (k, serde_json::Value::Bool(true))
-                        } else if v.eq("false") {
-                            (k, serde_json::Value::Bool(false))
-                        } else {
-                            (k, serde_json::Value::String(v))
+                let mut client = db.try_get_jenkins_async_client(&mut stdout, true).await;
+                if let Ok(ref mut client) = client {
+                    if let VfpJenkinsClient::PwdClient(ref mut client) = client {
+                        match client.attach_crumb().await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                colored_println(
+                                    &mut stdout,
+                                    ThemeColor::Error,
+                                    &formatx!(ERR_JENKINS_CLIENT_GET_CRUMB_FAILED, e.to_string())
+                                        .unwrap_or_default(),
+                                );
+                                return;
+                            }
                         }
-                    })
-                    .collect();
+                    }
 
-                let client = db.try_get_jenkins_async_client(&mut stdout, true).await;
-                if let Ok(client) = client {
+                    if let Ok(val) = input_job_name(job_name, db.get_interest_job_name()) {
+                        db.set_interest_job_name(Some(val));
+                    } else {
+                        println!("{}", ERR_NEED_A_JOB_NAME);
+                        return;
+                    }
+
+                    let param_pairs: Vec<(String, serde_json::Value)> = params
+                        .chunks(2)
+                        .map(|chunk| (chunk[0].clone(), chunk[1].clone()))
+                        .map(|(k, v)| {
+                            if let Ok(val) = v.parse::<bool>() {
+                                (k, serde_json::Value::Bool(val))
+                            } else {
+                                (k, serde_json::Value::String(v))
+                            }
+                        })
+                        .collect();
+
                     let job_name = db.get_interest_job_name().clone().unwrap();
-                    match query_job_config(&client, &job_name).await {
+                    match query_job_config(client, &job_name).await {
                         Ok(recommend_params) => {
                             let mut params = VfpJobBuildParam::from(recommend_params);
 
@@ -513,7 +527,9 @@ async fn main() {
                                 params.set_change_list(val);
                             }
 
-                            let sl = sl.and_then(|v| Shelves::from_str(&v).ok());
+                            let sl = sl
+                                .filter(|str| !str.is_empty())
+                                .and_then(|v| Shelves::from_str(&v).ok());
                             if let Some(val) = input_sl(
                                 sl,
                                 &(db.get_jenkins_build_param()
@@ -530,7 +546,7 @@ async fn main() {
                             db.set_jenkins_build_param(Some(params.clone()));
                             save_with_error_log(&db, None);
 
-                            match request_build(&client, &job_name, &params).await {
+                            match request_build(client, &job_name, &params).await {
                                 Ok(_) => {
                                     colored_println(
                                         &mut stdout,
@@ -574,7 +590,7 @@ async fn main() {
                     };
 
                     if let Ok(user_latest_info) = query_user_latest_info(
-                        &client,
+                        client,
                         &job_name,
                         &(db.get_jenkins_username().clone().unwrap()),
                         None,
@@ -582,11 +598,9 @@ async fn main() {
                     .await
                     {
                         if let Some(user_latest_info) = user_latest_info.get_any_latest() {
-                            //TODO_LviatYi:
-                            println!(
-                                "[LVIAT] NOTICE HERE!!!: User latest info: {:#?}",
-                                user_latest_info
-                            );
+                            let params = db.get_mut_jenkins_build_param().unwrap();
+                            params.set_change_list(user_latest_info.number);
+                            save_with_error_log(&db, None);
                         }
                     } else {
                         colored_println(&mut stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);

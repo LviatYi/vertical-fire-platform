@@ -155,7 +155,7 @@ pub enum ThemeColor {
 impl ThemeColor {
     pub fn to_color(&self) -> Color {
         match self {
-            ThemeColor::Main => Color::Grey,
+            ThemeColor::Main => Color::White,
             ThemeColor::Second => Color::DarkGrey,
             ThemeColor::Success => Color::Green,
             ThemeColor::Warn => Color::Yellow,

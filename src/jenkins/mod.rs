@@ -13,7 +13,6 @@ mod pwd_jenkins_async_client;
 pub mod query;
 pub mod watch;
 
-
 pub async fn ci_do_watch(
     stdout: &mut Stdout,
     job_name: Option<String>,
@@ -97,8 +96,11 @@ pub async fn ci_do_watch(
 #[cfg(test)]
 mod tests {
     use crate::jenkins::build::VfpJobBuildParam;
+    use crate::jenkins::jenkins_endpoint::get_crumb::GetCrumb;
+    use crate::jenkins::jenkins_model::crumb::Crumb;
     use crate::jenkins::jenkins_model::job_config::FlowDefinition;
     use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
+    use crate::jenkins::pwd_jenkins_async_client::PwdJenkinsAsyncClient;
     use crate::jenkins::query::*;
     use crate::jenkins::watch::watch;
     use jenkins_sdk::{AsyncQuery, AsyncRawQuery, JenkinsAsyncClient, JobsInfo, TriggerBuild};
@@ -129,30 +131,30 @@ mod tests {
         let client = JenkinsAsyncClient::new(URL, USERNAME, API_TOKEN);
 
         let params = json!({
-            "Changelist": "516882",
+            "Changelist": "",
             "CustomServer": "",
             "HygeiaLogServer": "",
             "HygeiaServer": "",
             "ShelvedChange": "",
-            "BackenDetailedProfile": false,
-            "DisablePTUpdate": false,
-            "EnableAudioAudition": false,
-            "EnableBuildInPackageMetaScript": true,
-            "EnableContentPreview": true,
-            "EnableGPDebug": true,
-            "EnableGameTalk": false,
-            "Esports": false,
-            "ForceSyncProjectBranch": false,
-            "GPBECORE": false,
-            "LoggingInFinal": false,
-            "Pioneer": false,
-            "SimulateAndroidGuestLogin": true,
-            "UseICETool": false,
-            "Clean": false,
-            "SetCustomServer": true,
-            "GenSLN": true,
-            "Compile": true,
-            "Publish_Blast": true
+            "BackenDetailedProfile": "false",
+            "DisablePTUpdate": "false",
+            "EnableAudioAudition": "false",
+            "EnableBuildInPackageMetaScript": "true",
+            "EnableContentPreview": "true",
+            "EnableGPDebug": "true",
+            "EnableGameTalk": "false",
+            "Esports": "false",
+            "ForceSyncProjectBranch": "false",
+            "GPBECORE": "false",
+            "LoggingInFinal": "false",
+            "Pioneer": "false",
+            "SimulateAndroidGuestLogin": "true",
+            "UseICETool": "false",
+            "Clean": "false",
+            "SetCustomServer": "true",
+            "GenSLN": "true",
+            "Compile": "true",
+            "Publish_Blast": "true"
         });
 
         match (&TriggerBuild {
@@ -468,5 +470,20 @@ mod tests {
                 "ShelvedChange": "1230,1231",
             })
         );
+    }
+
+    #[tokio::test]
+    async fn test_get_crumb() {
+        let client =
+            VfpJenkinsClient::PwdClient(PwdJenkinsAsyncClient::new(URL, USERNAME, JENKINS_PWD));
+
+        match AsyncQuery::<Crumb>::query(&GetCrumb, &client).await {
+            Ok(resp) => {
+                println!("Crumb: {:#?}", resp);
+            }
+            Err(e) => {
+                println!("Err occur when get crumb: {:#?}", e);
+            }
+        }
     }
 }

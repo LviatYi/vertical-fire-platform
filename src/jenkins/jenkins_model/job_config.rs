@@ -3,11 +3,11 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct FlowDefinition {
     #[serde(rename = "properties")]
-     properties: FlowDefinitionProperties,
+    properties: FlowDefinitionProperties,
 }
 
 #[derive(Debug, Deserialize)]
- struct FlowDefinitionProperties {
+struct FlowDefinitionProperties {
     #[serde(rename = "hudson.model.ParametersDefinitionProperty")]
     pub parameters_definition_property: ParameterDefinitions,
 }
@@ -31,13 +31,15 @@ pub enum ParameterDefinition {
         name: String,
         description: Option<String>,
         trim: Option<bool>,
+        #[serde(rename = "defaultValue")]
         default_value: Option<String>,
     },
     #[serde(rename = "hudson.model.BooleanParameterDefinition")]
     BoolParam {
         name: String,
         description: Option<String>,
-        default_value: Option<bool>,
+        #[serde(default, rename = "defaultValue")]
+        default_value: bool,
     },
 }
 

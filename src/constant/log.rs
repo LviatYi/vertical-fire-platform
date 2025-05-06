@@ -28,6 +28,7 @@ pub const ERR_JENKINS_CLIENT_INVALID: &str =
 pub const ERR_JENKINS_CLIENT_INVALID_SIMPLE: &str = "Cannot connect to jenkins.";
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID: &str =
     "Url: {}.\nUsername: {}\nApi-Token: {}\nMaybe you should check your api token.\nErr: {}";
+pub const ERR_JENKINS_CLIENT_GET_CRUMB_FAILED: &str = "Failed to get crumb. {}";
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID: &str =
     "Url: {}.\nPassword: {}\nMaybe you should check your password.\nErr: {}";
 pub const ERR_NO_IN_PROGRESS_RUN_TASK: &str = "There is no in progress run task.";

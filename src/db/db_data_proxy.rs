@@ -181,6 +181,10 @@ impl DbDataProxy {
         &self.data.jenkins_build_params
     }
 
+    pub fn get_mut_jenkins_build_param(&mut self) -> Option<&mut VfpJobBuildParam> {
+        self.data.jenkins_build_params.as_mut()
+    }
+
     pub fn set_jenkins_build_param(&mut self, val: Option<VfpJobBuildParam>) -> &mut Self {
         self.data.jenkins_build_params = val;
         self

@@ -1,14 +1,8 @@
-use crate::constant::log::{
-    ERR_INPUT_INVALID, ERR_INVALID_PATH, ERR_INVALID_PATH_NOT_EXIST, ERR_JENKINS_CLIENT_INVALID,
-    ERR_NEED_A_NUMBER, ERR_NEED_SHELVED, ERR_NO_SPECIFIED_PACKAGE, HINT_CUSTOM, HINT_INPUT_CUSTOM,
-    HINT_JOB_NAME, HINT_LAST_USED_SUFFIX, HINT_LATEST_CI_SUFFIX, HINT_MY_LATEST_CI_SUFFIX,
-    HINT_MY_LATEST_FAIL_CI_SUFFIX, HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX, HINT_NOT_SET,
-    HINT_NO_MY_LATEST_CI_SUFFIX, HINT_SELECT_CI, HINT_SELECT_CL, HINT_SELECT_SL,
-};
+use crate::constant::log::*;
 use crate::db::db_data_proxy::DbDataProxy;
 use crate::default_config;
 use crate::extract::repo_decoration::{OrderedCiList, RepoDecoration};
-use crate::interact::SelectionOptionVal::{Data, DataWithHintSuffix};
+use crate::interact::SelectionOptionVal::Data;
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::query_user_latest_info;
 use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
@@ -306,7 +300,7 @@ impl<T> SelectionOptionVal<T> {
     fn get_data(self) -> T {
         match self {
             Data(d) => d,
-            DataWithHintSuffix(d, _) => d,
+            SelectionOptionVal::DataWithHintSuffix(d, _) => d,
         }
     }
 
@@ -423,9 +417,9 @@ where
     }
 }
 
-/// # input by selection with custom
+/// # input by selection various
 ///
-/// Select a value by selection. Allow input custom value.
+/// Select a value by selection. Allow various options.
 ///
 /// ### Arguments
 ///
@@ -665,10 +659,12 @@ pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> Inq
             options = cut_off_at_index
                 .into_iter()
                 .map(|v| {
-                    SelectionCustomizableOptionVal::DataContain(DataWithHintSuffix(
-                        v,
-                        HINT_LAST_USED_SUFFIX.to_string(),
-                    ))
+                    SelectionCustomizableOptionVal::DataContain(
+                        SelectionOptionVal::DataWithHintSuffix(
+                            v,
+                            HINT_LAST_USED_SUFFIX.to_string(),
+                        ),
+                    )
                 })
                 .collect();
 
@@ -682,7 +678,10 @@ pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> Inq
             options.append(&mut cut_off_back);
         } else {
             options = vec![SelectionCustomizableOptionVal::DataContain(
-                DataWithHintSuffix(last_used, HINT_LAST_USED_SUFFIX.to_string()),
+                SelectionOptionVal::DataWithHintSuffix(
+                    last_used,
+                    HINT_LAST_USED_SUFFIX.to_string(),
+                ),
             )];
             options.append(
                 &mut origin_options
@@ -697,6 +696,8 @@ pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> Inq
             .map(|v| SelectionCustomizableOptionVal::DataContain(Data(v)))
             .collect();
     }
+
+    options.push(SelectionCustomizableOptionVal::Custom);
 
     match input_by_selection_various(
         param_val,

@@ -29,7 +29,23 @@ impl VfpJobBuildParam {
     }
 
     pub fn to_json_value(&self) -> Value {
-        serde_json::to_value(&self.params).unwrap_or_default()
+        serde_json::to_value(
+            self.params
+                .clone()
+                .into_iter()
+                .map(|(k, v)| {
+                    (
+                        k,
+                        match v {
+                            Value::String(s) => Value::String(s),
+                            Value::Bool(b) => Value::String(b.to_string()),
+                            _ => v,
+                        },
+                    )
+                })
+                .collect::<HashMap<String, Value>>(),
+        )
+        .unwrap_or_default()
     }
 
     pub fn set_change_list(&mut self, val: u32) -> &mut Self {
@@ -47,11 +63,12 @@ impl VfpJobBuildParam {
             .and_then(|s| s.parse::<u32>().ok())
     }
 
-    pub fn set_shelve_changes(&mut self, val:Shelves) -> &mut Self {
+    pub fn set_shelve_changes(&mut self, val: Shelves) -> &mut Self {
         self.params.insert(
             Self::PARAM_NAME_SHELVED_CHANGE.to_string(),
             Value::String(
-                val.0.iter()
+                val.0
+                    .iter()
                     .map(|v| v.to_string())
                     .collect::<Vec<_>>()
                     .join(","),
@@ -64,6 +81,7 @@ impl VfpJobBuildParam {
         self.params
             .get(Self::PARAM_NAME_SHELVED_CHANGE)
             .and_then(|v| v.as_str())
+            .filter(|str| !str.is_empty())
             .and_then(|s| Shelves::from_str(s).ok())
     }
 
@@ -102,7 +120,7 @@ impl From<FlowDefinition> for VfpJobBuildParam {
                     name,
                     default_value,
                     ..
-                } => (name.clone(), Value::Bool(default_value.unwrap_or_default())),
+                } => (name.clone(), Value::Bool(*default_value)),
             })
             .collect();
 
@@ -135,16 +153,14 @@ pub async fn request_build(
     job_name: &str,
     param: &VfpJobBuildParam,
 ) -> Result<(), JenkinsError> {
-    match jenkins_sdk::AsyncQuery::<()>::query(
+    let _ = jenkins_sdk::AsyncRawQuery::raw_query(
         &TriggerBuild {
             job_name,
             params: &param.to_json_value(),
         },
         client,
     )
-    .await
-    {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e),
-    }
+    .await?;
+
+    Ok(())
 }
