@@ -29,7 +29,9 @@ pub enum ParameterDefinition {
     #[serde(rename = "hudson.model.StringParameterDefinition")]
     StringParam {
         name: String,
+        #[allow(dead_code)]
         description: Option<String>,
+        #[allow(dead_code)]
         trim: Option<bool>,
         #[serde(rename = "defaultValue")]
         default_value: Option<String>,
@@ -37,6 +39,7 @@ pub enum ParameterDefinition {
     #[serde(rename = "hudson.model.BooleanParameterDefinition")]
     BoolParam {
         name: String,
+        #[allow(dead_code)]
         description: Option<String>,
         #[serde(default, rename = "defaultValue")]
         default_value: bool,
@@ -54,6 +57,7 @@ impl FlowDefinition {
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
 mod tests {
     use crate::jenkins::jenkins_model::job_config::FlowDefinition;
     use serde::Deserialize;

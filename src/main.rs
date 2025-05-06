@@ -21,7 +21,6 @@ use crate::jenkins::query::{
 };
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
-use clap::builder::TypedValueParser;
 use clap::{Parser, Subcommand};
 use formatx::formatx;
 use inquire::Select;
@@ -313,7 +312,7 @@ async fn main() {
                                 &dest,
                                 &package_file_name,
                                 i,
-                                &default_config::MENDING_FILE_PATH,
+                                default_config::MENDING_FILE_PATH,
                                 &server,
                             ) {
                                 println!("{}", e);

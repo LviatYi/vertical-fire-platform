@@ -1,4 +1,3 @@
-use crate::jenkins::build::VfpJobBuildParam;
 use crate::jenkins::jenkins_model::cause::Cause;
 use crate::jenkins::jenkins_model::run_status::RunStatus;
 use crate::jenkins::jenkins_model::workflow_action::{MaybeWorkflowAction, WorkflowAction};

@@ -48,7 +48,6 @@ pub const HINT_NO_MY_LATEST_CI_SUFFIX: &str = "there is no success run task in {
 pub const HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX: &str = "({} in progress)";
 pub const HINT_MY_LATEST_FAIL_CI_SUFFIX: &str = "({} failed)";
 pub const HINT_LAST_USED_SUFFIX: &str = "(last used)";
-pub const HINT_LATEST_SUFFIX: &str = "(latest)";
 pub const HINT_CUSTOM: &str = "Custom";
 pub const HINT_NOT_SET: &str = "Do not set";
 pub const HINT_SELECT_CI: &str = "use ci:";

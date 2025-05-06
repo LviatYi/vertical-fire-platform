@@ -5,6 +5,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "_class")]
+#[allow(dead_code)]
 pub enum WorkflowAction {
     #[serde(rename = "hudson.model.ParametersAction")]
     Parameters { parameters: Vec<ParametersAction> },
