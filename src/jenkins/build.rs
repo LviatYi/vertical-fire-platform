@@ -151,12 +151,12 @@ pub async fn query_job_config(
 pub async fn request_build(
     client: &VfpJenkinsClient,
     job_name: &str,
-    param: &VfpJobBuildParam,
+    build_param: &VfpJobBuildParam,
 ) -> Result<(), JenkinsError> {
     let _ = jenkins_sdk::AsyncRawQuery::raw_query(
         &TriggerBuild {
             job_name,
-            params: &param.to_json_value(),
+            params: &build_param.to_json_value(),
         },
         client,
     )

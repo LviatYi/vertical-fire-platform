@@ -516,7 +516,7 @@ async fn main() {
                     let job_name = db.get_interest_job_name().clone().unwrap();
                     match query_job_config(client, &job_name).await {
                         Ok(recommend_params) => {
-                            let mut params = VfpJobBuildParam::from(recommend_params);
+                            let mut build_params = VfpJobBuildParam::from(recommend_params);
 
                             if let Some(val) = input_cl(
                                 cl,
@@ -524,7 +524,7 @@ async fn main() {
                                     .as_ref()
                                     .and_then(|db| db.get_change_list())),
                             ) {
-                                params.set_change_list(val);
+                                build_params.set_change_list(val);
                             }
 
                             let sl = sl
@@ -536,17 +536,17 @@ async fn main() {
                                     .as_ref()
                                     .and_then(|db| db.get_shelve_changes())),
                             ) {
-                                params.set_shelve_changes(val);
+                                build_params.set_shelve_changes(val);
                             }
 
                             param_pairs.into_iter().for_each(|(k, v)| {
-                                params.params.insert(k, v);
+                                build_params.params.insert(k, v);
                             });
 
-                            db.set_jenkins_build_param(Some(params.clone()));
+                            db.set_jenkins_build_param(Some(build_params.clone()));
                             save_with_error_log(&db, None);
 
-                            match request_build(client, &job_name, &params).await {
+                            match request_build(client, &job_name, &build_params).await {
                                 Ok(_) => {
                                     colored_println(
                                         &mut stdout,
@@ -560,7 +560,30 @@ async fn main() {
                                         BUILD_USED_PARAMS,
                                     );
 
-                                    params.params.iter().for_each(|(k, v)| {
+                                    let mut sorted_params_for_show: Vec<(
+                                        &String,
+                                        &serde_json::Value,
+                                    )> = build_params.params.iter().collect();
+
+                                    sorted_params_for_show.sort_by(|&(lk, lv), &(rk, rv)| {
+                                        if (lv.is_string() && rv.is_string())
+                                            || (lv.is_boolean() && rv.is_boolean())
+                                        {
+                                            lk.cmp(rk)
+                                        } else if lv.is_string() {
+                                            std::cmp::Ordering::Less
+                                        } else if rv.is_string() {
+                                            std::cmp::Ordering::Greater
+                                        } else if lv.is_boolean() {
+                                            std::cmp::Ordering::Less
+                                        } else if rv.is_boolean() {
+                                            std::cmp::Ordering::Greater
+                                        } else {
+                                            lk.cmp(rk)
+                                        }
+                                    });
+
+                                    sorted_params_for_show.iter().for_each(|(k, v)| {
                                         colored_println(
                                             &mut stdout,
                                             ThemeColor::Main,
@@ -598,9 +621,13 @@ async fn main() {
                     .await
                     {
                         if let Some(user_latest_info) = user_latest_info.get_any_latest() {
-                            let params = db.get_mut_jenkins_build_param().unwrap();
-                            params.set_change_list(user_latest_info.number);
-                            save_with_error_log(&db, None);
+                            if let Some(changelist) =
+                                user_latest_info.get_change_list_in_build_meta_data()
+                            {
+                                let params = db.get_mut_jenkins_build_param().unwrap();
+                                params.set_change_list(changelist);
+                                save_with_error_log(&db, None);
+                            }
                         }
                     } else {
                         colored_println(&mut stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);

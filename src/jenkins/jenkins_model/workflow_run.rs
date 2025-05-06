@@ -1,6 +1,8 @@
+use crate::jenkins::build::VfpJobBuildParam;
 use crate::jenkins::jenkins_model::cause::Cause;
 use crate::jenkins::jenkins_model::run_status::RunStatus;
 use crate::jenkins::jenkins_model::workflow_action::{MaybeWorkflowAction, WorkflowAction};
+use crate::jenkins::jenkins_model::workflow_build_metadata::WorkflowBuildMetadata::StringBuildMetadata;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -39,5 +41,116 @@ impl WorkflowRun {
         }
 
         false
+    }
+
+    pub fn get_change_list_in_build_meta_data(&self) -> Option<u32> {
+        for action in &self.actions {
+            if let MaybeWorkflowAction::WorkflowAction(WorkflowAction::BuildMetadata {
+                build_metadata: metadata_list,
+            }) = action
+            {
+                for data in metadata_list {
+                    match data {
+                        StringBuildMetadata(data) => {
+                            if data.name == "P4CL" {
+                                return data.value.parse::<u32>().ok();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deserialize_workflow_run() {
+        //region content
+        let content = r###"{
+  "_class": "org.jenkinsci.plugins.workflow.job.WorkflowRun",
+  "actions": [
+    {
+      "_class": "hudson.model.ParametersAction",
+      "parameters": [
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "Changelist",
+          "value": ""
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "CustomServer",
+          "value": ""
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "ShelvedChange",
+          "value": ""
+        },
+        {
+          "_class": "hudson.model.BooleanParameterValue",
+          "name": "Clean",
+          "value": false
+        },
+      ]
+    },
+    {
+      "_class": "hudson.model.CauseAction",
+      "causes": [
+        {
+          "_class": "hudson.model.Cause$UserIdCause",
+          "shortDescription": "Started by user Yi, Jiajun",
+          "userId": "LviatYi@foxmail.com",
+          "userName": "Yi, Jiajun"
+        }
+      ]
+    },
+    {
+      "_class": "org.jenkinsci.plugins.buildmetadata.plugin.action.BuildMetadataAction",
+      "buildMetadata": [
+        {
+          "_class": "org.jenkinsci.plugins.buildmetadata.plugin.StringBuildMetadata",
+          "description": null,
+          "name": "P4CL",
+          "stringValue": "529731",
+          "type": "StringBuildMetadata"
+        },
+        {
+          "_class": "org.jenkinsci.plugins.buildmetadata.plugin.StringBuildMetadata",
+          "description": null,
+          "name": "P4ShelvedCL",
+          "stringValue": "",
+          "type": "StringBuildMetadata"
+        },
+        {
+          "_class": "org.jenkinsci.plugins.buildmetadata.plugin.StringBuildMetadata",
+          "description": null,
+          "name": "CustomServer",
+          "stringValue": "",
+          "type": "StringBuildMetadata"
+        },
+      ]
+    },
+  ],
+  "number": 812,
+  "result": "SUCCESS",
+}
+"###;
+        //endregion
+
+        match serde_json::from_str::<WorkflowRun>(content) {
+            Ok(workflow_run) => {
+                println!("{:#?}", workflow_run);
+            }
+            Err(e) => {
+                println!("Error: {}", e);
+            }
+        }
     }
 }

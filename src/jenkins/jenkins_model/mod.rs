@@ -10,3 +10,4 @@ pub mod workflow_builds;
 pub mod workflow_run;
 pub mod shelves;
 pub mod crumb;
+mod workflow_build_metadata;
