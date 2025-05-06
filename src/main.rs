@@ -156,7 +156,7 @@ enum Commands {
         sl: Option<String>,
 
         /// custom build params.
-        /// pepeated input --param can accept multiple sets of parameters
+        /// repeated input --param can accept multiple sets of parameters
         /// like: --param "CustomServer" "http://127.0.0.1:8080"
         #[arg(long = "param",
             num_args = 2,
