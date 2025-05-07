@@ -1,3 +1,4 @@
+mod cli;
 mod constant;
 mod db;
 mod default_config;
@@ -10,10 +11,8 @@ mod run;
 use crate::constant::log::*;
 use crate::constant::util::{get_hidden_sensitive_string, SensitiveMode};
 use crate::db::{delete_db_file, get_db, save_with_error_log};
-use crate::extract::cli_do_extract;
 use crate::interact::*;
 use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
-use crate::jenkins::ci_do_watch;
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::{
     query_user_latest_info, try_get_jenkins_async_client_by_api_token,
@@ -217,7 +216,7 @@ async fn main() {
                 secondary_locator_template,
                 dest,
             } => {
-                cli_do_extract(
+                cli::cli_do_extract(
                     &mut stdout,
                     job_name,
                     ci,
@@ -372,9 +371,7 @@ async fn main() {
                 .prompt()
                 .unwrap_or(LoginMethod::ApiToken);
 
-                let client: Result<Box<dyn AsyncClient>, JenkinsError>;
-
-                match login_method {
+                let client: Result<Box<dyn AsyncClient>, JenkinsError> = match login_method {
                     LoginMethod::ApiToken => {
                         let hint = formatx!(
                             HINT_INPUT_JENKINS_API_TOKEN,
@@ -394,13 +391,13 @@ async fn main() {
                             .ok(),
                         );
 
-                        client = try_get_jenkins_async_client_by_api_token(
+                        try_get_jenkins_async_client_by_api_token(
                             &db.get_jenkins_url(),
                             &db.get_jenkins_username(),
                             &db.get_jenkins_api_token(),
                         )
                         .await
-                        .map(|v| Box::new(v) as Box<dyn AsyncClient>);
+                        .map(|v| Box::new(v) as Box<dyn AsyncClient>)
                     }
                     LoginMethod::Pwd => {
                         db.set_jenkins_pwd(
@@ -408,15 +405,15 @@ async fn main() {
                                 .ok(),
                         );
 
-                        client = try_get_jenkins_async_client_by_pwd(
-                            &db.get_jenkins_url(),
-                            &db.get_jenkins_username(),
+                        try_get_jenkins_async_client_by_pwd(
+                            db.get_jenkins_url(),
+                            db.get_jenkins_username(),
                             &db.get_jenkins_pwd(),
                         )
                         .await
-                        .map(|v| Box::new(v) as Box<dyn AsyncClient>);
+                        .map(|v| Box::new(v) as Box<dyn AsyncClient>)
                     }
-                }
+                };
 
                 match client {
                     Ok(_) => {
@@ -638,7 +635,7 @@ async fn main() {
                     }
 
                     let (used_job_name, success_build_number) =
-                        ci_do_watch(&mut stdout, Some(job_name), None).await;
+                        cli::cli_do_watch(&mut stdout, Some(job_name), None).await;
 
                     if no_extract {
                         return;
@@ -654,7 +651,7 @@ async fn main() {
                             db.get_extract_s_locator_template().clone();
                         let dest = None;
 
-                        cli_do_extract(
+                        cli::cli_do_extract(
                             &mut stdout,
                             job_name,
                             ci,
@@ -677,7 +674,7 @@ async fn main() {
                 no_extract,
             } => {
                 let (used_job_name, success_build_number) =
-                    ci_do_watch(&mut stdout, job_name, ci).await;
+                    cli::cli_do_watch(&mut stdout, job_name, ci).await;
 
                 if !no_extract {
                     if let Some(build_number) = success_build_number {
@@ -691,7 +688,7 @@ async fn main() {
                             db.get_extract_s_locator_template().clone();
                         let dest = None;
 
-                        cli_do_extract(
+                        cli::cli_do_extract(
                             &mut stdout,
                             job_name,
                             ci,

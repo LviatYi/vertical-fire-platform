@@ -68,14 +68,14 @@ where
 ///
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
 /// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
-/// * `db_val_usable`: Whether the value from the memory can be used directly.
+/// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `hint`: The hint for the selection.
 /// * `default`: The default value to return if no selection is made.
 /// * `err_hint`: The hint for error occurs.
 pub fn input_directly_with_default<T, D>(
     param_val: Option<T>,
     db_val: Option<&T>,
-    db_val_usable: bool,
+    db_val_directly_usable: bool,
     hint: &str,
     default: D,
     err_hint: Option<&str>,
@@ -88,7 +88,7 @@ where
         return val;
     }
 
-    if db_val_usable {
+    if db_val_directly_usable {
         if let Some(val) = db_val {
             return val.clone();
         }
@@ -129,13 +129,13 @@ where
 ///
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
 /// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
-/// * `db_val_usable`: Whether the value from the memory can be used directly.
+/// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `hint`: The hint for the selection.
 /// * `err_hint`: The hint for error occurs.
 pub fn input_directly<T>(
     param_val: Option<T>,
     db_val: Option<&T>,
-    db_val_usable: bool,
+    db_val_directly_usable: bool,
     hint: &str,
     err_hint: Option<&str>,
 ) -> InquireResult<T>
@@ -146,7 +146,7 @@ where
         return Ok(val);
     }
 
-    if db_val_usable {
+    if db_val_directly_usable {
         if let Some(val) = db_val {
             return Ok(val.clone());
         }
@@ -184,7 +184,7 @@ where
 ///
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
 /// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
-/// * `db_val_usable`: Whether the value from the memory can be used directly.
+/// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `hint`: The hint for the selection.
 /// * `err_hint`: The hint for error occurs.
 pub fn input_pwd(
@@ -219,8 +219,8 @@ pub fn input_pwd(
 /// ### Arguments
 ///
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
-/// * `db_val`: The value from the memory. If defined and `db_val_usable` is true, return this value directly (priority in order of definition).
-/// * `db_val_usable`: Whether the value from the memory can be used directly.
+/// * `db_val`: The value from the memory. If defined and `db_val_directly_usable` is true, return this value directly (priority in order of definition).
+/// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `hint`: The hint for the input.
 /// * `existing_inquire`: Whether the input path should exist.
 /// * `use_home_dir`: Whether to use the home directory as the default value.
@@ -228,7 +228,7 @@ pub fn input_pwd(
 pub fn input_path(
     param_val: Option<PathBuf>,
     db_val: Option<&PathBuf>,
-    db_val_usable: bool,
+    db_val_directly_usable: bool,
     hint: &str,
     existing_inquire: bool,
     use_home_dir: bool,
@@ -238,7 +238,7 @@ pub fn input_path(
         return Ok(val);
     }
 
-    if db_val_usable {
+    if db_val_directly_usable {
         if let Some(val) = db_val {
             return Ok(val.clone());
         }
@@ -378,7 +378,7 @@ impl<T> From<T> for SelectionCustomizableOptionVal<T> {
 ///
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
 /// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
-/// * `db_val_usable`: Whether the value from the memory can be used directly.
+/// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `options`: The options to select from.
 /// * `hint`: The hint for the selection.
 /// * `default`: The default value to return if no selection is made.
@@ -390,7 +390,7 @@ impl<T> From<T> for SelectionCustomizableOptionVal<T> {
 pub fn input_by_selection<T, D>(
     param_val: Option<T>,
     db_val: Option<&T>,
-    db_val_usable: bool,
+    db_val_directly_usable: bool,
     options: Vec<T>,
     hint: &str,
     default: Option<D>,
@@ -403,7 +403,7 @@ where
         return Ok(val);
     }
 
-    if db_val_usable {
+    if db_val_directly_usable {
         if let Some(val) = db_val {
             return Ok(val.clone());
         }
@@ -424,7 +424,7 @@ where
 ///
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
 /// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
-/// * `db_val_usable`: Whether the value from the memory can be used directly.
+/// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `options`: The options to select from SelectionOptionVal.
 /// * `hint`: The hint for the selection.
 /// * `default`: The default value to return if no selection is made.
@@ -436,7 +436,7 @@ where
 pub fn input_by_selection_various<T, D>(
     param_val: Option<T>,
     db_val: Option<&T>,
-    db_val_usable: bool,
+    db_val_directly_usable: bool,
     options: Vec<SelectionCustomizableOptionVal<T>>,
     hint: &str,
     default: Option<D>,
@@ -449,7 +449,7 @@ where
         return Ok(val.into());
     }
 
-    if db_val_usable {
+    if db_val_directly_usable {
         if let Some(val) = db_val {
             return Ok(val.clone().into());
         }

@@ -1,105 +1,10 @@
-use crate::constant::log::*;
-use crate::db::get_db;
-use crate::interact::input_job_name;
-use crate::jenkins::util::get_jenkins_workflow_run_url;
-use crate::jenkins::watch::{watch, VfpWatchError};
-use crate::pretty_log::{colored_println, toast, ThemeColor};
-use formatx::formatx;
-use std::io::Stdout;
-
 pub mod build;
 pub mod jenkins_endpoint;
 pub mod jenkins_model;
 mod pwd_jenkins_async_client;
 pub mod query;
-mod util;
+pub mod util;
 pub mod watch;
-
-pub async fn ci_do_watch(
-    stdout: &mut Stdout,
-    job_name: Option<String>,
-    ci: Option<u32>,
-) -> (Option<String>, Option<u32>) {
-    let mut success_build_number = None;
-    let mut used_job_name = None;
-    let db = get_db(None);
-    let client = db.try_get_jenkins_async_client(stdout, true).await;
-
-    if let Ok(client) = client {
-        let job_name = input_job_name(job_name, db.get_interest_job_name());
-
-        if job_name.is_err() {
-            println!("{}", ERR_EMPTY_REPO);
-            return (used_job_name, success_build_number);
-        }
-        used_job_name = Some(job_name.unwrap());
-
-        match db.get_jenkins_username() {
-            Some(username) => {
-                let result = watch(
-                    stdout,
-                    client,
-                    username,
-                    &used_job_name.clone().unwrap(),
-                    ci,
-                )
-                .await;
-
-                match result {
-                    Ok(build_number) => {
-                        success_build_number = Some(build_number);
-                        colored_println(
-                            stdout,
-                            ThemeColor::Success,
-                            &formatx!(
-                                WATCHING_RUN_TASK_SUCCESS,
-                                build_number,
-                                used_job_name.as_ref().unwrap()
-                            )
-                            .unwrap_or_default(),
-                        );
-
-                        toast("Watch", vec![RUN_TASK_COMPLETED]);
-                    }
-                    Err(e) => match e {
-                        VfpWatchError::JenkinsError(_) => {
-                            colored_println(stdout, ThemeColor::Error, ERR_NO_IN_PROGRESS_RUN_TASK);
-                        }
-                        VfpWatchError::NoValidRunTask => {
-                            colored_println(stdout, ThemeColor::Error, ERR_NO_VALID_RUN_TASK);
-                        }
-                        VfpWatchError::WatchTaskFailed(build_number, log) => {
-                            let default_url = "".to_string();
-                            colored_println(
-                                stdout,
-                                ThemeColor::Error,
-                                &formatx!(
-                                    WATCHING_RUN_TASK_FAILURE,
-                                    build_number,
-                                    used_job_name.as_ref().unwrap(),
-                                    get_jenkins_workflow_run_url(
-                                        db.get_jenkins_url().as_ref().unwrap_or(&default_url),
-                                        used_job_name.as_ref().unwrap(),
-                                        build_number
-                                    )
-                                )
-                                .unwrap_or_default(),
-                            );
-                            colored_println(stdout, ThemeColor::Main, &log);
-                        }
-                    },
-                }
-            }
-            None => {
-                colored_println(stdout, ThemeColor::Error, ERR_NEED_A_JENKINS_USERNAME);
-            }
-        }
-    } else {
-        colored_println(stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
-    }
-
-    (used_job_name, success_build_number)
-}
 
 #[cfg(test)]
 mod tests {
