@@ -358,7 +358,7 @@ async fn main() {
                 );
 
                 if db.get_jenkins_username().is_none() {
-                    println!("{}", formatx!(ERR_NEED_A_JENKINS_USERNAME).unwrap());
+                    println!("{}", ERR_NEED_A_JENKINS_USERNAME);
                     return;
                 }
 

@@ -370,52 +370,6 @@ impl<T> From<T> for SelectionCustomizableOptionVal<T> {
     }
 }
 
-/// # input by selection
-///
-/// Select a value by selection.
-///
-/// ### Arguments
-///
-/// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
-/// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
-/// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
-/// * `options`: The options to select from.
-/// * `hint`: The hint for the selection.
-/// * `default`: The default value to return if no selection is made.
-///
-/// ### Returns
-///
-/// * `Ok` The selected value.
-/// * `Err` No value is available.
-pub fn input_by_selection<T, D>(
-    param_val: Option<T>,
-    db_val: Option<&T>,
-    db_val_directly_usable: bool,
-    options: Vec<T>,
-    hint: &str,
-    default: Option<D>,
-) -> InquireResult<T>
-where
-    T: Display + Clone,
-    D: Into<T>,
-{
-    if let Some(val) = param_val {
-        return Ok(val);
-    }
-
-    if db_val_directly_usable {
-        if let Some(val) = db_val {
-            return Ok(val.clone());
-        }
-    }
-
-    let selection = Select::new(hint, options).prompt();
-    match selection {
-        Ok(_) => selection,
-        Err(e) => default.map(|v| v.into()).ok_or(e),
-    }
-}
-
 /// # input by selection various
 ///
 /// Select a value by selection. Allow various options.
@@ -433,17 +387,16 @@ where
 ///
 /// * `Ok` The selected value.
 /// * `Err` No value is available.
-pub fn input_by_selection_various<T, D>(
+pub fn input_by_selection_various<T>(
     param_val: Option<T>,
     db_val: Option<&T>,
     db_val_directly_usable: bool,
     options: Vec<SelectionCustomizableOptionVal<T>>,
     hint: &str,
-    default: Option<D>,
+    default: Option<impl Into<T>>,
 ) -> InquireResult<SelectionCustomizableOptionVal<T>>
 where
     T: Display + Clone + std::str::FromStr,
-    D: Into<T>,
 {
     if let Some(val) = param_val {
         return Ok(val.into());
@@ -455,10 +408,9 @@ where
         }
     }
 
-    let selection = Select::new(hint, options).prompt();
-    match selection {
-        Ok(_) => selection,
+    match Select::new(hint, options).prompt() {
         Err(e) => default.map(|v| v.into().into()).ok_or(e),
+        res => res,
     }
 }
 //endregion
@@ -719,13 +671,13 @@ pub fn input_cl(param_val: Option<u32>, db_val: &Option<u32>) -> Option<u32> {
         ]
     };
 
-    match input_by_selection_various::<u32, u32>(
+    match input_by_selection_various::<u32>(
         param_val,
         None,
         false,
         options,
         HINT_SELECT_CL,
-        None,
+        None::<u32>,
     )
     .and_then(|v| match v {
         SelectionCustomizableOptionVal::Custom => {
@@ -767,13 +719,13 @@ pub fn input_sl(param_val: Option<Shelves>, db_val: &Option<Shelves>) -> Option<
             ]
         };
 
-    match input_by_selection_various::<Shelves, Shelves>(
+    match input_by_selection_various::<Shelves>(
         param_val,
         None,
         false,
         options,
         HINT_SELECT_SL,
-        None,
+        None::<Shelves>,
     )
     .and_then(|v| match v {
         SelectionCustomizableOptionVal::Custom => {
