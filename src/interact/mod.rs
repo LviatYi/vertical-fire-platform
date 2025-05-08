@@ -60,6 +60,32 @@ where
 
 //region inquire::Text
 
+fn prompt_input_with_parse_validator<T>(
+    input: Text,
+    not_empty: bool,
+    err_msg: &str,
+) -> InquireResult<String>
+where
+    T: std::str::FromStr,
+{
+    let err_msg = err_msg.to_string();
+    input
+        .with_validator(move |v: &str| {
+            if not_empty && v.is_empty() {
+                return Ok(Validation::Invalid(ErrorMessage::Custom(
+                    ERR_INPUT_INVALID_SHOULD_NOT_BE_EMPTY.to_string(),
+                )));
+            }
+
+            if v.parse::<T>().is_ok() {
+                Ok(Validation::Valid)
+            } else {
+                Ok(Validation::Invalid(ErrorMessage::Custom(err_msg.clone())))
+            }
+        })
+        .prompt()
+}
+
 /// # input directly with default
 ///
 /// Input a value directly with default value as fallback.
@@ -69,15 +95,17 @@ where
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
 /// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
 /// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
-/// * `hint`: The hint for the selection.
 /// * `default`: The default value to return if no selection is made.
+/// * `not_empty`: The input should not be empty.
+/// * `hint`: The hint for the selection.
 /// * `err_hint`: The hint for error occurs.
 pub fn input_directly_with_default<T, D>(
     param_val: Option<T>,
     db_val: Option<&T>,
     db_val_directly_usable: bool,
-    hint: &str,
     default: D,
+    not_empty: bool,
+    hint: &str,
     err_hint: Option<&str>,
 ) -> T
 where
@@ -88,10 +116,8 @@ where
         return val;
     }
 
-    if db_val_directly_usable {
-        if let Some(val) = db_val {
-            return val.clone();
-        }
+    if let (true, Some(val)) = (db_val_directly_usable, db_val) {
+        return val.clone();
     }
 
     let mut input = Text::from(hint);
@@ -104,21 +130,14 @@ where
         input = input.with_default(default.as_ref());
     }
 
-    let err_msg = err_hint.unwrap_or(ERR_INPUT_INVALID).to_string();
-    let input = input
-        .with_validator(move |v: &str| {
-            if v.parse::<T>().is_ok() {
-                Ok(Validation::Valid)
-            } else {
-                Ok(Validation::Invalid(ErrorMessage::Custom(err_msg.clone())))
-            }
-        })
-        .prompt();
-
-    input
-        .ok()
-        .and_then(|str| str.parse::<T>().ok())
-        .unwrap_or_else(|| default.into())
+    prompt_input_with_parse_validator::<String>(
+        input,
+        not_empty,
+        err_hint.unwrap_or(ERR_INPUT_INVALID),
+    )
+    .ok()
+    .and_then(|str| str.parse::<T>().ok())
+    .unwrap_or_else(|| default.into())
 }
 
 /// # input directly
@@ -130,12 +149,14 @@ where
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
 /// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
 /// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
+/// * `not_empty`: The input should not be empty.
 /// * `hint`: The hint for the selection.
 /// * `err_hint`: The hint for error occurs.
 pub fn input_directly<T>(
     param_val: Option<T>,
     db_val: Option<&T>,
     db_val_directly_usable: bool,
+    not_empty: bool,
     hint: &str,
     err_hint: Option<&str>,
 ) -> InquireResult<T>
@@ -159,18 +180,12 @@ where
         input = input.with_default(default.as_ref());
     }
 
-    let err_msg = err_hint.unwrap_or(ERR_INPUT_INVALID).to_string();
-    let input = input
-        .with_validator(move |v: &str| {
-            if v.parse::<T>().is_ok() {
-                Ok(Validation::Valid)
-            } else {
-                Ok(Validation::Invalid(ErrorMessage::Custom(err_msg.clone())))
-            }
-        })
-        .prompt();
-
-    input.and_then(|str| {
+    prompt_input_with_parse_validator::<String>(
+        input,
+        not_empty,
+        err_hint.unwrap_or(ERR_INPUT_INVALID),
+    )
+    .and_then(|str| {
         str.parse::<T>()
             .map_err(|_| InquireError::Custom(Box::from(ERR_INPUT_INVALID.to_string())))
     })

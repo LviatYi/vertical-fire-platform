@@ -51,7 +51,7 @@ impl DbDataProxy {
 
         client
     }
-
+    
     pub fn get_from_path(path: &Path) -> Option<Self> {
         match VersionOnly::get_state_from_path(path) {
             DBStatus::Exist(version) => {

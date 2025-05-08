@@ -164,6 +164,28 @@ impl ThemeColor {
     }
 }
 
+pub fn try_colored_println(stdout: Option<&mut Stdout>, color: ThemeColor, content: &str) {
+    if let Some(stdout) = stdout {
+        let _ = execute!(
+            stdout,
+            SetForegroundColor(color.to_color()),
+            Print(format!("{}\n", content)),
+            ResetColor,
+        );
+    }
+}
+
+pub fn try_colored_print(stdout: Option<&mut Stdout>, color: Color, content: &str) {
+    if let Some(stdout) = stdout {
+        let _ = execute!(
+            stdout,
+            SetForegroundColor(color),
+            Print(content),
+            ResetColor,
+        );
+    }
+}
+
 pub fn colored_print(stdout: &mut Stdout, color: ThemeColor, content: &str) {
     let _ = execute!(
         stdout,
@@ -188,10 +210,7 @@ pub fn clean_one_line(stdout: &mut Stdout) {
 
 pub fn toast(title: &str, msg: Vec<&str>) {
     WinToastNotify::new()
-        .set_title(&format!(
-            "V-F Platform | {}",
-            title
-        ))
+        .set_title(&format!("V-F Platform | {}", title))
         .set_messages(msg)
         .show()
         .expect(ERR_TOAST_SHOW_FAILED)

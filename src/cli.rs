@@ -1,5 +1,4 @@
 use crate::constant::log::*;
-use crate::constant::util::get_hidden_sensitive_string;
 use crate::db::{get_db, save_with_error_log};
 use crate::extract::extract_operation_info::{
     ExtractOperationInfo, OperationStatus, OperationStepType,
@@ -12,18 +11,17 @@ use crate::interact::{
 };
 use crate::jenkins::query::{
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
+    VfpJenkinsClient,
 };
 use crate::jenkins::util::get_jenkins_workflow_run_url;
 use crate::jenkins::watch::{watch, VfpWatchError};
 use crate::pretty_log::{colored_println, toast, ThemeColor};
+use crate::vfp_error::VfpError;
 use crate::{default_config, pretty_log};
 use crossterm::execute;
 use crossterm::style::Color;
 use formatx::formatx;
-use jenkins_sdk::client::AsyncClient;
-use jenkins_sdk::JenkinsError;
 use std::io::Stdout;
-use std::ops::Add;
 use std::path::PathBuf;
 
 /// # cli do extract
@@ -89,8 +87,9 @@ pub async fn cli_do_extract(
         count,
         db.get_last_player_count().as_ref(),
         false,
-        HINT_PLAYER_COUNT,
         default_config::COUNT,
+        false,
+        HINT_PLAYER_COUNT,
         Some(ERR_NEED_A_NUMBER),
     )));
 
@@ -248,43 +247,47 @@ pub async fn cli_do_extract(
 }
 
 /// # cli do login
-/// 
-/// Login to Jenkins server. 
+///
+/// Login to Jenkins server.
 ///
 /// Contains Inquire(input requests) and console output.
+///
+/// ### Arguments
+///
+/// * `simplified`: When simplifying, only re-enter the login key (password api-token etc.).
+/// * `url`: jenkins url root from cli param.
+/// * `username`: jenkins username from cli param.
+/// * `api_token`: jenkins api token from cli param.
+/// * `pwd`: jenkins password from cli param.
 pub async fn cli_do_login(
-    stdout: &mut Stdout,
+    simplified: bool,
     url: Option<impl AsRef<str>>,
     username: Option<impl AsRef<str>>,
     api_token: Option<impl AsRef<str>>,
     pwd: Option<impl AsRef<str>>,
-) {
+) -> Result<VfpJenkinsClient, VfpError> {
     let mut db = get_db(None);
 
     db.set_jenkins_url(Some(input_directly_with_default(
         url.map(|v| v.as_ref().to_string()),
         db.get_jenkins_url().as_ref(),
-        false,
-        HINT_INPUT_JENKINS_URL,
+        simplified,
         default_config::JENKINS_URL.to_string(),
+        true,
+        HINT_INPUT_JENKINS_URL,
         Some(ERR_NEED_A_JENKINS_URL),
     )));
 
-    db.set_jenkins_username(
-        crate::interact::input_directly(
-            username.map(|v| v.as_ref().to_string()),
-            db.get_jenkins_username().as_ref(),
-            false,
-            HINT_INPUT_JENKINS_USERNAME,
-            Some(ERR_NEED_A_JENKINS_USERNAME),
-        )
-        .ok(),
-    );
+    let username = crate::interact::input_directly(
+        username.map(|v| v.as_ref().to_string()),
+        db.get_jenkins_username().as_ref(),
+        simplified,
+        true,
+        HINT_INPUT_JENKINS_USERNAME,
+        Some(ERR_NEED_A_JENKINS_USERNAME),
+    )?;
 
-    if db.get_jenkins_username().is_none() {
-        println!("{}", formatx!(ERR_NEED_A_JENKINS_USERNAME).unwrap());
-        return;
-    }
+    db.set_jenkins_username(Some(username));
 
     save_with_error_log(&db, None);
 
@@ -295,7 +298,7 @@ pub async fn cli_do_login(
     .prompt()
     .unwrap_or(crate::LoginMethod::ApiToken);
 
-    let client: Result<Box<dyn AsyncClient>, JenkinsError> = match login_method {
+    let client = match login_method {
         crate::LoginMethod::ApiToken => {
             let hint = formatx!(
                 HINT_INPUT_JENKINS_API_TOKEN,
@@ -304,24 +307,21 @@ pub async fn cli_do_login(
             )
             .unwrap_or(HINT_JENKINS_API_TOKEN_DOC.to_string());
 
-            db.set_jenkins_api_token(
-                crate::interact::input_directly(
-                    api_token.map(|v| v.as_ref().to_string()),
-                    db.get_jenkins_api_token().as_ref(),
-                    false,
-                    &hint,
-                    Some(ERR_NEED_A_JENKINS_API_TOKEN),
-                )
-                .ok(),
-            );
+            db.set_jenkins_api_token(Some(crate::interact::input_directly(
+                api_token.map(|v| v.as_ref().to_string()),
+                db.get_jenkins_api_token().as_ref(),
+                false,
+                true,
+                &hint,
+                Some(ERR_NEED_A_JENKINS_API_TOKEN),
+            )?));
 
             try_get_jenkins_async_client_by_api_token(
-                &db.get_jenkins_url(),
-                &db.get_jenkins_username(),
-                &db.get_jenkins_api_token(),
+                db.get_jenkins_url(),
+                db.get_jenkins_username(),
+                db.get_jenkins_api_token(),
             )
             .await
-            .map(|v| Box::new(v) as Box<dyn AsyncClient>)
         }
         crate::LoginMethod::Pwd => {
             db.set_jenkins_pwd(
@@ -339,50 +339,27 @@ pub async fn cli_do_login(
                 &db.get_jenkins_pwd(),
             )
             .await
-            .map(|v| Box::new(v) as Box<dyn AsyncClient>)
         }
     };
 
     match client {
-        Ok(_) => {
-            colored_println(
-                stdout,
-                ThemeColor::Success,
-                format!("{}", JENKINS_LOGIN_RESULT).as_str(),
-            );
-
+        Ok(client) => {
             save_with_error_log(&db, None);
+            Ok(client)
         }
         Err(e) => {
-            let err_msg = match login_method {
-                crate::LoginMethod::ApiToken => {
-                    formatx!(
-                        ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID,
-                        db.get_jenkins_url().clone().unwrap(),
-                        db.get_jenkins_username().clone().unwrap(),
-                        get_hidden_sensitive_string(
-                            &db.get_jenkins_api_token().clone().unwrap(),
-                            crate::constant::util::SensitiveMode::Normal(4)
-                        ),
-                        e.to_string()
-                    )
-                }
-                crate::LoginMethod::Pwd => {
-                    formatx!(
-                        ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID,
-                        db.get_jenkins_url().clone().unwrap(),
-                        get_hidden_sensitive_string(
-                            &db.get_jenkins_pwd().clone().unwrap(),
-                            crate::constant::util::SensitiveMode::Full
-                        ),
-                        e.to_string()
-                    )
-                }
-            }
-            .unwrap_or_default();
+            let key = match login_method {
+                crate::LoginMethod::ApiToken => db.get_jenkins_api_token().clone().unwrap(),
+                crate::LoginMethod::Pwd => db.get_jenkins_pwd().clone().unwrap(),
+            };
 
-            let err_msg = ERR_JENKINS_CLIENT_INVALID_SIMPLE.to_string().add(&err_msg);
-            println!("{}", err_msg)
+            Err(VfpError::JenkinsLoginError {
+                method: login_method,
+                url: db.get_jenkins_url().clone().unwrap(),
+                username: db.get_jenkins_username().clone().unwrap(),
+                key,
+                e,
+            })
         }
     }
 }

@@ -1,4 +1,5 @@
 pub const ERR_INPUT_INVALID: &str = "Invalid input.";
+pub const ERR_INPUT_INVALID_SHOULD_NOT_BE_EMPTY: &str = "Invalid input. Should not be empty.";
 pub const ERR_EMPTY_REPO: &str = "There is no any package in the repo.";
 pub const ERR_NO_SPECIFIED_PACKAGE: &str = "No package found.";
 pub const ERR_NEED_A_NUMBER: &str = "Need a number.";
@@ -28,9 +29,9 @@ pub const ERR_JENKINS_CLIENT_INVALID: &str =
 pub const ERR_JENKINS_CLIENT_INVALID_SIMPLE: &str = "Cannot connect to jenkins.";
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID: &str =
     "Url: {}.\nUsername: {}\nApi-Token: {}\nMaybe you should check your api token.\nErr: {}";
-pub const ERR_JENKINS_CLIENT_GET_CRUMB_FAILED: &str = "Failed to get crumb. {}";
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID: &str =
-    "Url: {}.\nPassword: {}\nMaybe you should check your password.\nErr: {}";
+    "Url: {}.\nUsername: {}\nPassword: {}\nMaybe you should check your password.\nErr: {}";
+pub const ERR_JENKINS_CLIENT_GET_CRUMB_FAILED: &str = "Failed to get crumb. {}";
 pub const ERR_NO_IN_PROGRESS_RUN_TASK: &str = "There is no in progress run task.";
 pub const ERR_NO_VALID_RUN_TASK: &str =
     "There is no valid run task (in progress, failure or success).";

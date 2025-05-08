@@ -7,24 +7,21 @@ mod interact;
 mod jenkins;
 mod pretty_log;
 mod run;
+mod vfp_error;
 
+use crate::cli::cli_do_login;
 use crate::constant::log::*;
-use crate::constant::util::{get_hidden_sensitive_string, SensitiveMode};
 use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::interact::*;
 use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
 use crate::jenkins::jenkins_model::shelves::Shelves;
-use crate::jenkins::query::{
-    query_user_latest_info, try_get_jenkins_async_client_by_api_token,
-    try_get_jenkins_async_client_by_pwd, VfpJenkinsClient,
-};
+use crate::jenkins::query::{query_user_latest_info, VfpJenkinsClient};
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
 use formatx::formatx;
-use inquire::Select;
 use jenkins_sdk::client::AsyncClient;
-use jenkins_sdk::JenkinsError;
+use std::fmt::Display;
 use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -191,10 +188,19 @@ enum Commands {
     Debug,
 }
 
-#[derive(Debug, Display)]
+#[derive(Debug)]
 enum LoginMethod {
     Pwd,
     ApiToken,
+}
+
+impl Display for LoginMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LoginMethod::Pwd => write!(f, "Password"),
+            LoginMethod::ApiToken => write!(f, "API Token"),
+        }
+    }
 }
 
 #[tokio::main]
@@ -261,8 +267,9 @@ async fn main() {
                         None,
                         None,
                         false,
-                        HINT_RUN_COUNT,
                         default_config::RUN_COUNT,
+                        false,
+                        HINT_RUN_COUNT,
                         Some(ERR_NEED_A_NUMBER),
                     )
                 });
@@ -334,130 +341,10 @@ async fn main() {
                 username,
                 api_token,
                 pwd,
-            } => {
-                let mut db = get_db(None);
-
-                db.set_jenkins_url(Some(input_directly_with_default(
-                    url,
-                    db.get_jenkins_url().as_ref(),
-                    false,
-                    HINT_INPUT_JENKINS_URL,
-                    default_config::JENKINS_URL.to_string(),
-                    Some(ERR_NEED_A_JENKINS_URL),
-                )));
-
-                db.set_jenkins_username(
-                    input_directly(
-                        username,
-                        db.get_jenkins_username().as_ref(),
-                        false,
-                        HINT_INPUT_JENKINS_USERNAME,
-                        Some(ERR_NEED_A_JENKINS_USERNAME),
-                    )
-                    .ok(),
-                );
-
-                if db.get_jenkins_username().is_none() {
-                    println!("{}", ERR_NEED_A_JENKINS_USERNAME);
-                    return;
-                }
-
-                save_with_error_log(&db, None);
-
-                let login_method = Select::new(
-                    HINT_SELECT_LOGIN_METHOD,
-                    vec![LoginMethod::Pwd, LoginMethod::ApiToken],
-                )
-                .prompt()
-                .unwrap_or(LoginMethod::ApiToken);
-
-                let client: Result<Box<dyn AsyncClient>, JenkinsError> = match login_method {
-                    LoginMethod::ApiToken => {
-                        let hint = formatx!(
-                            HINT_INPUT_JENKINS_API_TOKEN,
-                            db.get_jenkins_url().clone().unwrap(),
-                            db.get_jenkins_username().clone().unwrap()
-                        )
-                        .unwrap_or(HINT_JENKINS_API_TOKEN_DOC.to_string());
-
-                        db.set_jenkins_api_token(
-                            input_directly(
-                                api_token,
-                                db.get_jenkins_api_token().as_ref(),
-                                false,
-                                &hint,
-                                Some(ERR_NEED_A_JENKINS_API_TOKEN),
-                            )
-                            .ok(),
-                        );
-
-                        try_get_jenkins_async_client_by_api_token(
-                            &db.get_jenkins_url(),
-                            &db.get_jenkins_username(),
-                            &db.get_jenkins_api_token(),
-                        )
-                        .await
-                        .map(|v| Box::new(v) as Box<dyn AsyncClient>)
-                    }
-                    LoginMethod::Pwd => {
-                        db.set_jenkins_pwd(
-                            input_pwd(pwd, HINT_INPUT_JENKINS_PWD, Some(ERR_NEED_A_JENKINS_PWD))
-                                .ok(),
-                        );
-
-                        try_get_jenkins_async_client_by_pwd(
-                            db.get_jenkins_url(),
-                            db.get_jenkins_username(),
-                            &db.get_jenkins_pwd(),
-                        )
-                        .await
-                        .map(|v| Box::new(v) as Box<dyn AsyncClient>)
-                    }
-                };
-
-                match client {
-                    Ok(_) => {
-                        colored_println(
-                            &mut stdout,
-                            ThemeColor::Success,
-                            format!("{}", JENKINS_LOGIN_RESULT).as_str(),
-                        );
-
-                        save_with_error_log(&db, None);
-                    }
-                    Err(e) => {
-                        let err_msg = match login_method {
-                            LoginMethod::ApiToken => {
-                                formatx!(
-                                    ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID,
-                                    db.get_jenkins_url().clone().unwrap(),
-                                    db.get_jenkins_username().clone().unwrap(),
-                                    get_hidden_sensitive_string(
-                                        &db.get_jenkins_api_token().clone().unwrap(),
-                                        SensitiveMode::Normal(4)
-                                    ),
-                                    e.to_string()
-                                )
-                            }
-                            LoginMethod::Pwd => {
-                                formatx!(
-                                    ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID,
-                                    db.get_jenkins_url().clone().unwrap(),
-                                    get_hidden_sensitive_string(
-                                        &db.get_jenkins_pwd().clone().unwrap(),
-                                        SensitiveMode::Full
-                                    ),
-                                    e.to_string()
-                                )
-                            }
-                        }
-                        .unwrap_or_default();
-
-                        let err_msg = ERR_JENKINS_CLIENT_INVALID_SIMPLE.to_string().add(&err_msg);
-                        println!("{}", err_msg)
-                    }
-                }
-            }
+            } => match cli_do_login(false, url, username, api_token, pwd).await {
+                Ok(_) => colored_println(&mut stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT),
+                Err(e) => colored_println(&mut stdout, ThemeColor::Error, e.to_string().as_str()),
+            },
             Commands::Build {
                 job_name,
                 cl,
