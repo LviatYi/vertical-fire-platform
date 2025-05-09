@@ -1,4 +1,5 @@
 use crate::constant::log::*;
+use crate::db::db_data_proxy::DbDataProxy;
 use crate::db::{get_db, save_with_error_log};
 use crate::extract::extract_operation_info::{
     ExtractOperationInfo, OperationStatus, OperationStepType,
@@ -254,20 +255,20 @@ pub async fn cli_do_extract(
 ///
 /// ### Arguments
 ///
+/// * `db`: db file.
 /// * `simplified`: When simplifying, only re-enter the login key (password api-token etc.).
 /// * `url`: jenkins url root from cli param.
 /// * `username`: jenkins username from cli param.
 /// * `api_token`: jenkins api token from cli param.
 /// * `pwd`: jenkins password from cli param.
 pub async fn cli_do_login(
+    db: &mut DbDataProxy,
     simplified: bool,
     url: Option<impl AsRef<str>>,
     username: Option<impl AsRef<str>>,
     api_token: Option<impl AsRef<str>>,
     pwd: Option<impl AsRef<str>>,
 ) -> Result<VfpJenkinsClient, VfpError> {
-    let mut db = get_db(None);
-
     db.set_jenkins_url(Some(input_directly_with_default(
         url.map(|v| v.as_ref().to_string()),
         db.get_jenkins_url().as_ref(),
@@ -453,4 +454,34 @@ pub async fn cli_do_watch(
     }
 
     (used_job_name, success_build_number)
+}
+
+pub async fn cli_try_first_login(db: &mut DbDataProxy, stdout: Option<&mut Stdout>) -> bool {
+    if db.user_never_login() {
+        match cli_do_login(
+            db,
+            false,
+            None::<String>,
+            None::<String>,
+            None::<String>,
+            None::<String>,
+        )
+        .await
+        {
+            Ok(_) => {
+                if let Some(stdout) = stdout {
+                    colored_println(stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT);
+                }
+                true
+            }
+            Err(e) => {
+                if let Some(stdout) = stdout {
+                    colored_println(stdout, ThemeColor::Error, e.to_string().as_str());
+                }
+                false
+            }
+        }
+    } else {
+        true
+    }
 }

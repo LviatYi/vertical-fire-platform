@@ -9,8 +9,9 @@ mod pretty_log;
 mod run;
 mod vfp_error;
 
-use crate::cli::cli_do_login;
+use crate::cli::{cli_do_login, cli_try_first_login};
 use crate::constant::log::*;
+use crate::db::db_data_proxy::DbDataProxy;
 use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::interact::*;
 use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
@@ -339,9 +340,12 @@ async fn main() {
                 username,
                 api_token,
                 pwd,
-            } => match cli_do_login(false, url, username, api_token, pwd).await {
-                Ok(_) => colored_println(&mut stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT),
-                Err(e) => colored_println(&mut stdout, ThemeColor::Error, e.to_string().as_str()),
+            } => {
+                let mut db: DbDataProxy = get_db(None);
+                match cli_do_login(&mut db, false, url, username, api_token, pwd).await {
+                    Ok(_) => colored_println(&mut stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT),
+                    Err(e) => colored_println(&mut stdout, ThemeColor::Error, e.to_string().as_str()),
+                }
             },
             Commands::Build {
                 job_name,
@@ -357,6 +361,10 @@ async fn main() {
                 }
 
                 let mut db = get_db(None);
+
+                if !cli_try_first_login(&mut db, Some(&mut stdout)).await {
+                    return;
+                }
 
                 let mut client = db.try_get_jenkins_async_client(&mut stdout, true).await;
                 if let Ok(ref mut client) = client {
@@ -577,6 +585,10 @@ async fn main() {
                 ci,
                 no_extract,
             } => {
+                if !cli_try_first_login(&mut get_db(None), Some(&mut stdout)).await {
+                    return;
+                }
+
                 let (used_job_name, success_build_number) =
                     cli::cli_do_watch(&mut stdout, job_name, ci).await;
 

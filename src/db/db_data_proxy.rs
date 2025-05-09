@@ -51,7 +51,7 @@ impl DbDataProxy {
 
         client
     }
-    
+
     pub fn get_from_path(path: &Path) -> Option<Self> {
         match VersionOnly::get_state_from_path(path) {
             DBStatus::Exist(version) => {
@@ -70,6 +70,11 @@ impl DbDataProxy {
             .map_err(|e| e.to_string())?
             .write_all(str.as_bytes())
             .map_err(|e| e.to_string())
+    }
+
+    pub fn user_never_login(&self) -> bool {
+        self.data.jenkins_username.is_none()
+            || (self.data.jenkins_api_token.is_none() && self.data.jenkins_pwd.is_none())
     }
 
     //region getter & setter
