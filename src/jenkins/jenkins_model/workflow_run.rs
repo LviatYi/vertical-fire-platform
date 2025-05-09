@@ -84,19 +84,14 @@ mod tests {
         },
         {
           "_class": "hudson.model.StringParameterValue",
-          "name": "CustomServer",
-          "value": ""
-        },
-        {
-          "_class": "hudson.model.StringParameterValue",
           "name": "ShelvedChange",
           "value": ""
         },
         {
           "_class": "hudson.model.BooleanParameterValue",
-          "name": "Clean",
-          "value": false
-        },
+          "name": "Publish_Blast",
+          "value": true
+        }
       ]
     },
     {
@@ -104,11 +99,24 @@ mod tests {
       "causes": [
         {
           "_class": "hudson.model.Cause$UserIdCause",
-          "shortDescription": "Started by user Yi, Jiajun",
+          "shortDescription": "Started by user LviatYi",
           "userId": "LviatYi@foxmail.com",
-          "userName": "Yi, Jiajun"
+          "userName": "LviatYi"
         }
       ]
+    },
+    {
+      "_class": "jenkins.metrics.impl.TimeInQueueAction",
+      "blockedDurationMillis": 0,
+      "blockedTimeMillis": 0,
+      "buildableDurationMillis": 0,
+      "buildableTimeMillis": 4,
+      "buildingDurationMillis": 519510,
+      "executingTimeMillis": 517166,
+      "executorUtilization": 1,
+      "subTaskCount": 2,
+      "waitingDurationMillis": 0,
+      "waitingTimeMillis": 1
     },
     {
       "_class": "org.jenkinsci.plugins.buildmetadata.plugin.action.BuildMetadataAction",
@@ -117,7 +125,7 @@ mod tests {
           "_class": "org.jenkinsci.plugins.buildmetadata.plugin.StringBuildMetadata",
           "description": null,
           "name": "P4CL",
-          "stringValue": "529731",
+          "stringValue": "532097",
           "type": "StringBuildMetadata"
         },
         {
@@ -130,15 +138,52 @@ mod tests {
         {
           "_class": "org.jenkinsci.plugins.buildmetadata.plugin.StringBuildMetadata",
           "description": null,
+          "name": "NodeName",
+          "stringValue": "eamc-dre-wb036",
+          "type": "StringBuildMetadata"
+        },
+        {
+          "_class": "org.jenkinsci.plugins.buildmetadata.plugin.StringBuildMetadata",
+          "description": null,
           "name": "CustomServer",
           "stringValue": "",
           "type": "StringBuildMetadata"
         },
+        {
+          "_class": "org.jenkinsci.plugins.buildmetadata.plugin.StringBuildMetadata",
+          "description": null,
+          "name": "HygeiaServer",
+          "stringValue": "",
+          "type": "StringBuildMetadata"
+        },
+        {
+          "_class": "org.jenkinsci.plugins.buildmetadata.plugin.StringBuildMetadata",
+          "description": null,
+          "name": "FileShare",
+          "stringValue": "\\\\eamc-sha-filer1.eamobile.ad.ea.com\\DREBuilds\\fifamobile\\builds\\eamc-fcmobile\\FCM.EAMC.FCM-Stage.Client.Blast.Opt\\851-CL.532097\\pc64-vc-opt",
+          "type": "StringBuildMetadata"
+        },
+        {
+          "_class": "org.jenkinsci.plugins.buildmetadata.plugin.StringBuildMetadata",
+          "description": null,
+          "name": "OTA",
+          "stringValue": "https://eamc-ota.ad.ea.com/#/Home/FIFAMobile/Builds/eamc-fcmobile/FCM.EAMC.FCM-Stage.Client.Blast.Opt/851-CL.532097/pc64-vc-opt/",
+          "type": "StringBuildMetadata"
+        }
       ]
     },
+    {
+      "_class": "org.jenkinsci.plugins.workflow.job.views.FlowGraphAction"
+    }
   ],
-  "number": 812,
+  "building": false,
+  "fullDisplayName": "FCM.EAMC.FCM-Stage.Client.Blast.Opt #851-CL532097-CustomServer",
+  "id": "851",
+  "number": 851,
   "result": "SUCCESS",
+  "timestamp": 1746759736434,
+  "url": "https://eamc-fcmobile.eamobile.ad.ea.com/job/FCM.EAMC.FCM-Stage.Client.Blast.Opt/851/",
+  "inProgress": false
 }
 "###;
         //endregion
