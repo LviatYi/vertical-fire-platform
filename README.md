@@ -17,6 +17,8 @@ by LviatYi
 
 Change Log:
 
+- Unrelease
+  - 修复了 `fp extract` 时错误的文件生成路径。该问题曾导致在 fp 的工作目录生成了一些空文件夹。 
 - v1.4.3
   - 在需要 Login 的命令中，添加首次登录检查，以直接跳转至登录流程。
 - v1.4.2

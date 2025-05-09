@@ -129,7 +129,7 @@ pub fn extract_zip_file(from: &Path, dest: &Path) -> Result<u128, String> {
             } else {
                 if let Some(p) = out_path.parent() {
                     if !p.exists() {
-                        fs::create_dir_all(p).unwrap();
+                        fs::create_dir_all(dest.join(p)).unwrap();
                     }
                 }
 
