@@ -22,9 +22,40 @@ impl VfpJobBuildParam {
 
     pub const PARAM_NAME_SIMULATE_ANDROID_GUEST_LOGIN: &'static str = "SimulateAndroidGuestLogin";
 
-    pub fn override_recommend_param(&mut self) -> &mut Self {
+    fn override_recommend_param(&mut self) -> &mut Self {
         self.set_enable_content_preview(true);
         self.set_simulate_android_guest_login(true);
+        self
+    }
+
+    /// # exclusive merge from
+    ///
+    /// merge the params from the other instance into self,
+    /// but only if the key is already present in self.
+    ///
+    /// ## Return
+    ///
+    /// A vector of tuples containing the keys and values that were not present in self.
+    pub fn exclusive_merge_from(&mut self, other: &Self) -> Vec<(String, Value)> {
+        let mut excluded = Vec::new();
+        for (k, v) in other.params.iter() {
+            if self.params.contains_key(k) {
+                self.params.insert(k.clone(), v.clone());
+            } else {
+                excluded.push((k.clone(), v.clone()));
+            }
+        }
+
+        excluded
+    }
+
+    /// # retain differing params
+    ///
+    /// retain the params from self that are not present in the template,
+    /// or are present in the template but have different values.
+    pub fn retain_differing_params(&mut self, template: &Self) -> &mut Self {
+        self.params
+            .retain(|k, v| template.params.get(k).is_none_or(|rv| rv != v));
         self
     }
 
@@ -48,10 +79,11 @@ impl VfpJobBuildParam {
         .unwrap_or_default()
     }
 
-    pub fn set_change_list(&mut self, val: u32) -> &mut Self {
+    //region getter & setter
+    pub fn set_change_list(&mut self, val: Option<u32>) -> &mut Self {
         self.params.insert(
             Self::PARAM_NAME_CHANGE_LIST.to_string(),
-            Value::String(val.to_string()),
+            Value::String(val.map(|v|v.to_string()).unwrap_or_default()),
         );
         self
     }
@@ -63,11 +95,11 @@ impl VfpJobBuildParam {
             .and_then(|s| s.parse::<u32>().ok())
     }
 
-    pub fn set_shelve_changes(&mut self, val: Shelves) -> &mut Self {
+    pub fn set_shelve_changes(&mut self, val: Option<Shelves>) -> &mut Self {
         self.params.insert(
             Self::PARAM_NAME_SHELVED_CHANGE.to_string(),
             Value::String(
-                val.0
+                val.unwrap_or_default().0
                     .iter()
                     .map(|v| v.to_string())
                     .collect::<Vec<_>>()
@@ -100,6 +132,7 @@ impl VfpJobBuildParam {
         );
         self
     }
+    //endregion ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
 }
 
 impl From<FlowDefinition> for VfpJobBuildParam {

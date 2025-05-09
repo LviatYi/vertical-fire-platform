@@ -15,14 +15,12 @@ use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::interact::*;
 use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
 use crate::jenkins::jenkins_model::shelves::Shelves;
-use crate::jenkins::query::{query_user_latest_info, VfpJenkinsClient};
+use crate::jenkins::query::{query_run_info, VfpJenkinsClient};
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
 use formatx::formatx;
-use jenkins_sdk::client::AsyncClient;
 use std::fmt::Display;
-use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
@@ -396,38 +394,59 @@ async fn main() {
                         })
                         .collect();
 
+                    let mut need_query_used_cl = false;
                     let job_name = db.get_interest_job_name().clone().unwrap();
                     match query_job_config(client, &job_name).await {
-                        Ok(recommend_params) => {
-                            let mut build_params = VfpJobBuildParam::from(recommend_params);
+                        Ok(config_params) => {
+                            let build_params_template = VfpJobBuildParam::from(config_params);
+                            let mut build_params = build_params_template.clone();
 
-                            if let Some(val) = input_cl(
+                            if let Some(ref db_params) = db.get_jenkins_build_param() {
+                                let excluded = build_params.exclusive_merge_from(db_params);
+                                if !excluded.is_empty() {
+                                    colored_println(
+                                        &mut stdout,
+                                        ThemeColor::Warn,
+                                        DB_BUILD_PARAM_NOT_IN_USED,
+                                    );
+
+                                    excluded.iter().for_each(|(k, v)| {
+                                        colored_println(
+                                            &mut stdout,
+                                            ThemeColor::Second,
+                                            &format!("{}: {}", k, v),
+                                        )
+                                    })
+                                }
+                            }
+
+                            build_params.set_change_list(input_cl(
                                 cl,
                                 &(db.get_jenkins_build_param()
                                     .as_ref()
                                     .and_then(|db| db.get_change_list())),
-                            ) {
-                                build_params.set_change_list(val);
-                            }
+                            ));
 
                             let sl = sl
                                 .filter(|str| !str.is_empty())
                                 .and_then(|v| Shelves::from_str(&v).ok());
-                            if let Some(val) = input_sl(
+                            build_params.set_shelve_changes(input_sl(
                                 sl,
                                 &(db.get_jenkins_build_param()
                                     .as_ref()
                                     .and_then(|db| db.get_shelve_changes())),
-                            ) {
-                                build_params.set_shelve_changes(val);
-                            }
+                            ));
 
                             param_pairs.into_iter().for_each(|(k, v)| {
                                 build_params.params.insert(k, v);
                             });
 
-                            db.set_jenkins_build_param(Some(build_params.clone()));
+                            let mut build_params_to_save = build_params.clone();
+                            build_params_to_save.retain_differing_params(&build_params_template);
+                            db.set_jenkins_build_param(Some(build_params_to_save));
                             save_with_error_log(&db, None);
+
+                            need_query_used_cl = build_params.get_shelve_changes().is_none();
 
                             match request_build(client, &job_name, &build_params).await {
                                 Ok(_) => {
@@ -495,34 +514,32 @@ async fn main() {
                         }
                     };
 
-                    if let Ok(user_latest_info) = query_user_latest_info(
-                        client,
-                        &job_name,
-                        &(db.get_jenkins_username().clone().unwrap()),
-                        None,
-                    )
-                    .await
-                    {
-                        if let Some(user_latest_info) = user_latest_info.get_any_latest() {
-                            if let Some(changelist) =
-                                user_latest_info.get_change_list_in_build_meta_data()
-                            {
-                                let params = db.get_mut_jenkins_build_param().unwrap();
-                                params.set_change_list(changelist);
-                                save_with_error_log(&db, None);
-                            }
-                        }
-                    } else {
-                        colored_println(&mut stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
-                        return;
-                    }
-
                     if no_watch_and_extract {
                         return;
                     }
 
                     let (used_job_name, success_build_number) =
-                        cli::cli_do_watch(&mut stdout, Some(job_name), None).await;
+                        cli::cli_do_watch(&mut stdout, Some(job_name.clone()), None).await;
+
+                    if let (true, Some(build_number)) = (need_query_used_cl, success_build_number) {
+                        if let Ok(workflow_run) =
+                            query_run_info(client, &job_name, build_number).await
+                        {
+                            if let Some(changelist) =
+                                workflow_run.get_change_list_in_build_meta_data()
+                            {
+                                let params = db.get_mut_jenkins_build_param().unwrap();
+                                colored_println(
+                                    &mut stdout,
+                                    ThemeColor::Second,
+                                    &formatx!(AUTO_FETCH_LATEST_USED_CL, changelist)
+                                        .unwrap_or_default(),
+                                );
+                                params.set_change_list(Some(changelist));
+                                save_with_error_log(&db, None);
+                            }
+                        }
+                    }
 
                     if no_extract {
                         return;

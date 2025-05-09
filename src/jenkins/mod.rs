@@ -10,6 +10,7 @@ pub mod watch;
 mod tests {
     use crate::jenkins::build::VfpJobBuildParam;
     use crate::jenkins::jenkins_endpoint::get_crumb::GetCrumb;
+    use crate::jenkins::jenkins_endpoint::run_info::RunInfo;
     use crate::jenkins::jenkins_model::crumb::Crumb;
     use crate::jenkins::jenkins_model::job_config::FlowDefinition;
     use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
@@ -231,13 +232,28 @@ mod tests {
 
     #[tokio::test]
     async fn test_query_run_info() {
-        let my_user_id = USERNAME;
         let client =
-            VfpJenkinsClient::ApiTokenClient(JenkinsAsyncClient::new(URL, my_user_id, API_TOKEN));
+            VfpJenkinsClient::ApiTokenClient(JenkinsAsyncClient::new(URL, USERNAME, API_TOKEN));
         let job_name = JOB_NAME.to_string();
-        let run_number = 2182;
-        let run_info = query_run_info(&client, &job_name, run_number).await;
+        let run_number = 851;
 
+        let raw_content = AsyncRawQuery::raw_query(
+            &RunInfo {
+                job_name: job_name.clone(),
+                build_number: run_number,
+            },
+            &client,
+        )
+        .await;
+
+        println!("Raw query: {:#?}", raw_content);
+
+        if let Ok(raw_content) = raw_content {
+            let der = serde_json::from_str::<WorkflowRun>(&raw_content);
+            println!("Parsed RunInfo: {:#?}", der);
+        }
+
+        let run_info = query_run_info(&client, &job_name, run_number).await;
         println!("RunInfo: {:#?}", run_info);
     }
 
@@ -363,7 +379,7 @@ mod tests {
             })
         );
 
-        param.set_change_list(1234);
+        param.set_change_list(Some(1234));
         assert_eq!(
             param.to_json_value(),
             json!({
@@ -373,7 +389,7 @@ mod tests {
             })
         );
 
-        param.set_shelve_changes(vec![1230, 1231].into_iter().collect());
+        param.set_shelve_changes(Some(vec![1230, 1231].into_iter().collect()));
         assert_eq!(
             param.to_json_value(),
             json!({

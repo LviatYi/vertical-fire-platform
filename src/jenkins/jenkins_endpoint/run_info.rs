@@ -15,6 +15,6 @@ impl jenkins_sdk::Endpoint for RunInfo {
 
     /// API path for retrieving job information.
     fn endpoint(&self) -> String {
-        format!("job/{}/{}/api/json?tree=number,actions[causes[userId],parameters[name,value]],result", self.job_name, self.build_number)
+        format!("job/{}/{}/api/json?tree=number,actions[causes[userId],parameters[name,value],buildMetadata[description,name,stringValue,type]],result", self.job_name, self.build_number)
     }
 }

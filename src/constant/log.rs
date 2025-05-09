@@ -92,7 +92,9 @@ pub const WATCHING_RUN_TASK_SUCCESS: &str = "Run task {} of {} finished with SUC
 pub const WATCHING_RUN_TASK_FAILURE: &str = "Run task {} of {} finished with FAILURE. Original Url: {}";
 pub const RUN_TASK_COMPLETED: &str = "Run Task Completed with Success.";
 pub const EXTRACT_TASK_COMPLETED: &str = "All Extract Completed.";
+pub const DB_BUILD_PARAM_NOT_IN_USED: &str = "Some build param from memery not in used.";
 pub const REQUEST_BUILD_SUCCESS: &str = "Request build success.";
 pub const BUILD_USED_PARAMS: &str = "Build used params:";
+pub const AUTO_FETCH_LATEST_USED_CL: &str = "Auto fetch your latest used CL: {}";
 
 pub const CONFIG_APPEND_LINE: &str = "\neadpClientIndex={}\n";
