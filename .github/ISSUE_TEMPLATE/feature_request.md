@@ -9,6 +9,9 @@ labels: enhancement
 
 - [ ] Extract `fp extract`
 - [ ] Run `fp run`
+- [ ] Login `fp login`
+- [ ] Watch `fp watch`
+- [ ] Build `fp build`
 - [ ] Other:  
 
 ###### Description | 描述
