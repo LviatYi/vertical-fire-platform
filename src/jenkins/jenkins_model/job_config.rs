@@ -148,6 +148,66 @@ mod tests {
             }
             Err(e) => {
                 println!("Error: {:?}", e);
+                assert!(false);
+            }
+        }
+    }
+
+    #[test]
+    fn test_deserialize_config_xml_with_unknown_param_def() {
+        let content = r#"<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>Changelist</name>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CustomServer</name>
+          <description>Custom Server</description>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>ECP</name>
+          <description>description of ECP</description>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>SAG</name>
+          <description>description of SAG</description>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>TestType</name>
+          <description><span style='color:red'> Please select TestType before build.</span></description>
+        </hudson.model.ChoiceParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+    <jenkins.model.BuildDiscarderProperty>
+      <strategy class="hudson.tasks.LogRotator">
+        <daysToKeep>-1</daysToKeep>
+        <numToKeep>100</numToKeep>
+        <artifactDaysToKeep>-1</artifactDaysToKeep>
+        <artifactNumToKeep>-1</artifactNumToKeep>
+      </strategy>
+    </jenkins.model.BuildDiscarderProperty>
+  </properties>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
+"#;
+
+        match quick_xml::de::from_str::<FlowDefinition>(content) {
+            Ok(result) => {
+                println!("{:#?}", result);
+            }
+            Err(e) => {
+                println!("Error: {:?}", e);
+                assert!(false);
             }
         }
     }
