@@ -1,4 +1,5 @@
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
+use std::fmt::Display;
 
 #[derive(Debug, Deserialize)]
 pub struct FlowDefinition {
@@ -25,25 +26,85 @@ struct ParameterDefinitionsWrapper {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub enum ParameterDefinition {
     #[serde(rename = "hudson.model.StringParameterDefinition")]
-    StringParam {
+    String {
         name: String,
-        #[allow(dead_code)]
-        description: Option<String>,
+        description: Option<XmlRichText>,
         #[allow(dead_code)]
         trim: Option<bool>,
         #[serde(rename = "defaultValue")]
         default_value: Option<String>,
     },
     #[serde(rename = "hudson.model.BooleanParameterDefinition")]
-    BoolParam {
+    Bool {
         name: String,
-        #[allow(dead_code)]
-        description: Option<String>,
+        description: Option<XmlRichText>,
         #[serde(default, rename = "defaultValue")]
         default_value: bool,
     },
+    #[serde(rename = "hudson.model.ChoiceParameterDefinition")]
+    Choice {
+        name: String,
+        description: Option<XmlRichText>,
+        #[serde(default)]
+        choices: Vec<String>,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+struct XmlRichText {
+    #[serde(rename = "$value")]
+    content: Vec<XmlRichTextElem>,
+}
+
+impl Display for XmlRichText {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            XmlRichText { content } => {
+                for i in 0..content.len() {
+                    write!(f, "{}", content[i])?;
+                    if i < content.len() - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+
+                Ok(())
+            }
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+enum XmlRichTextElem {
+    #[serde(rename = "$text")]
+    Content(String),
+    #[serde(rename = "span")]
+    Span {
+        style: Option<String>,
+        #[serde(rename = "$text")]
+        content: Option<String>,
+    },
+}
+
+impl Display for XmlRichTextElem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            XmlRichTextElem::Content(text) => write!(f, "{}", text),
+            XmlRichTextElem::Span { style, content } => {
+                if let Some(ref content) = content {
+                    if let Some(ref style) = style {
+                        write!(f, "<span style='{}'>{}</span>", style, content)
+                    } else {
+                        write!(f, "<span>{}</span>", content)
+                    }
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
 }
 
 impl FlowDefinition {

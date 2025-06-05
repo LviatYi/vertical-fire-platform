@@ -83,7 +83,7 @@ impl VfpJobBuildParam {
     pub fn set_change_list(&mut self, val: Option<u32>) -> &mut Self {
         self.params.insert(
             Self::PARAM_NAME_CHANGE_LIST.to_string(),
-            Value::String(val.map(|v|v.to_string()).unwrap_or_default()),
+            Value::String(val.map(|v| v.to_string()).unwrap_or_default()),
         );
         self
     }
@@ -99,7 +99,8 @@ impl VfpJobBuildParam {
         self.params.insert(
             Self::PARAM_NAME_SHELVED_CHANGE.to_string(),
             Value::String(
-                val.unwrap_or_default().0
+                val.unwrap_or_default()
+                    .0
                     .iter()
                     .map(|v| v.to_string())
                     .collect::<Vec<_>>()
@@ -141,7 +142,7 @@ impl From<FlowDefinition> for VfpJobBuildParam {
             .get_parameters()
             .iter()
             .map(|param| match param {
-                ParameterDefinition::StringParam {
+                ParameterDefinition::String {
                     name,
                     default_value,
                     ..
@@ -149,11 +150,15 @@ impl From<FlowDefinition> for VfpJobBuildParam {
                     name.clone(),
                     Value::String(default_value.clone().unwrap_or_default()),
                 ),
-                ParameterDefinition::BoolParam {
+                ParameterDefinition::Bool {
                     name,
                     default_value,
                     ..
                 } => (name.clone(), Value::Bool(*default_value)),
+                ParameterDefinition::Choice { name, choices, .. } => (
+                    name.clone(),
+                    Value::String(choices.first().cloned().unwrap_or_default()),
+                ),
             })
             .collect();
 
