@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-#[derive(Clone,Default)]
+#[derive(Clone, Default)]
 pub struct Shelves(pub Vec<u32>);
 
 impl FromStr for Shelves {
@@ -21,7 +21,7 @@ impl FromStr for Shelves {
                 v += char.to_digit(10).unwrap();
             }
         }
-        
+
         if v != 0 {
             result.push(v);
         }

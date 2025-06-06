@@ -409,7 +409,13 @@ async fn main() {
                             let build_params_template = VfpJobBuildParam::from(config_params);
                             let mut build_params = build_params_template.clone();
 
+                            let mut used_cl: Option<u32> = None;
+                            let mut used_sl: Option<Shelves> = None;
+
                             if let Some(ref db_params) = db.get_jenkins_build_param() {
+                                used_cl = db_params.get_change_list();
+                                used_sl = db_params.get_shelve_changes();
+                                
                                 let excluded = build_params.exclusive_merge_from(db_params);
                                 if !excluded.is_empty() {
                                     colored_println(
@@ -451,6 +457,14 @@ async fn main() {
 
                             let mut build_params_to_save = build_params.clone();
                             build_params_to_save.retain_differing_params(&build_params_template);
+                            
+                            if build_params_to_save.get_change_list().is_none(){
+                                build_params_to_save.set_change_list(used_cl);
+                            }
+                            if build_params_to_save.get_shelve_changes().is_none() {
+                                build_params_to_save.set_shelve_changes(used_sl);
+                            }
+                            
                             db.set_jenkins_build_param(Some(build_params_to_save));
                             save_with_error_log(&db, None);
 
