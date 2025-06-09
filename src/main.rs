@@ -17,7 +17,7 @@ use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
 use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
 use crate::jenkins::jenkins_model::shelves::Shelves;
-use crate::jenkins::query::{query_run_info, VfpJenkinsClient};
+use crate::jenkins::query::{query_builds_in_job, query_run_info, VfpJenkinsClient};
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use clap::{Parser, Subcommand};
@@ -117,6 +117,16 @@ enum Commands {
         /// Password of Jenkins.
         #[arg(short, long)]
         pwd: Option<String>,
+    },
+    /// Query Jenkins to get information of run tasks in job.
+    Info {
+        /// job name.
+        #[arg(short, long)]
+        job_name: Option<String>,
+
+        /// locator identity.
+        #[arg(short = '#', long)]
+        ci: Option<u32>,
     },
     /// Watch a Jenkins build task.
     Watch {
@@ -325,6 +335,37 @@ async fn main() {
                     Err(e) => {
                         colored_println(&mut stdout, ThemeColor::Error, e.to_string().as_str())
                     }
+                }
+            }
+            Commands::Info { job_name, ci } => {
+                let mut db = get_db(None);
+
+                if !cli_try_first_login(&mut db, Some(&mut stdout)).await {
+                    return;
+                }
+
+                let mut client = db.try_get_jenkins_async_client(&mut stdout, true).await;
+
+                if let Ok(ref mut client) = client {
+                    if let Ok(val) = input_job_name(job_name, db.get_interest_job_name()) {
+                        db.set_interest_job_name(Some(val));
+                    } else {
+                        println!("{}", ERR_NEED_A_JOB_NAME);
+                        return;
+                    }
+
+                    let job_name = db.get_interest_job_name().as_ref().unwrap().as_str();
+                    match query_builds_in_job(&client, job_name, Option::from(10)).await {
+                        Ok(builds) => {
+                            for run in &builds {
+                                let _ = query_run_info(&client, job_name, run.number).await;
+                            }
+                        }
+                        Err(_) => {}
+                    }
+                } else {
+                    colored_println(&mut stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
+                    return;
                 }
             }
             Commands::Build {
