@@ -4,6 +4,7 @@ use crate::db::{get_db, save_with_error_log};
 use crate::extract::extract_operation_info::{
     ExtractOperationInfo, OperationStatus, OperationStepType,
 };
+use crate::extract::extract_params::ExtractParams;
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::extract::repo_decoration::RepoDecoration;
 use crate::interact::{
@@ -23,7 +24,6 @@ use crossterm::execute;
 use crossterm::style::Color;
 use formatx::formatx;
 use std::io::Stdout;
-use std::path::PathBuf;
 
 /// # cli do extract
 ///
@@ -34,11 +34,8 @@ pub async fn cli_do_extract(
     stdout: &mut Stdout,
     job_name: Option<String>,
     ci: Option<u32>,
-    count: Option<u32>,
-    dest: Option<PathBuf>,
-    build_target_repo_template: Option<String>,
-    main_locator_pattern: Option<String>,
-    secondary_locator_template: Option<String>,
+    extract_params: ExtractParams,
+    ignore_count_input: bool,
 ) {
     let mut db = get_db(None);
 
@@ -50,19 +47,19 @@ pub async fn cli_do_extract(
     }
 
     db.set_extract_repo(Some(parse_without_input_with_default(
-        build_target_repo_template,
+        extract_params.build_target_repo_template,
         db.get_extract_repo().as_ref(),
         default_config::REPO_TEMPLATE,
     )));
 
     db.set_extract_locator_pattern(Some(parse_without_input_with_default(
-        main_locator_pattern,
+        extract_params.main_locator_pattern,
         db.get_extract_locator_pattern().as_ref(),
         default_config::LOCATOR_PATTERN,
     )));
 
     db.set_extract_s_locator_template(Some(parse_without_input_with_default(
-        secondary_locator_template,
+        extract_params.secondary_locator_template,
         db.get_extract_s_locator_template().as_ref(),
         default_config::LOCATOR_TEMPLATE,
     )));
@@ -85,9 +82,9 @@ pub async fn cli_do_extract(
     db.set_last_inner_version(ci_temp.into());
 
     db.set_last_player_count(Some(input_directly_with_default(
-        count,
+        extract_params.count,
         db.get_last_player_count().as_ref(),
-        false,
+        ignore_count_input,
         default_config::COUNT,
         false,
         HINT_PLAYER_COUNT,
@@ -95,7 +92,7 @@ pub async fn cli_do_extract(
     )));
 
     if let Ok(path) = input_path(
-        dest,
+        extract_params.dest,
         db.get_blast_path().as_ref(),
         true,
         HINT_EXTRACT_TO,

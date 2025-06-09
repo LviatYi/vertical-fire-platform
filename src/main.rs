@@ -13,13 +13,14 @@ use crate::cli::{cli_do_login, cli_try_first_login};
 use crate::constant::log::*;
 use crate::db::db_data_proxy::DbDataProxy;
 use crate::db::{delete_db_file, get_db, save_with_error_log};
+use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
 use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::{query_run_info, VfpJenkinsClient};
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use formatx::formatx;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
@@ -38,29 +39,6 @@ use strum_macros::Display;
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
-}
-
-#[derive(Args)]
-struct ExtractParams {
-    /// expected quantity.
-    #[arg(short, long)]
-    count: Option<u32>,
-
-    #[arg(short, long)]
-    /// target path to be extracted.
-    dest: Option<PathBuf>,
-
-    /// build target repo path.
-    #[arg(long = "repo")]
-    build_target_repo_template: Option<String>,
-
-    /// main locator pattern.
-    #[arg(long = "locator-pattern")]
-    main_locator_pattern: Option<String>,
-
-    #[arg(long = "s-locator-template")]
-    /// secondary locator template.
-    secondary_locator_template: Option<String>,
 }
 
 #[derive(Subcommand, Display)]
@@ -229,17 +207,7 @@ async fn main() {
                 ci,
                 extract_params,
             } => {
-                cli::cli_do_extract(
-                    &mut stdout,
-                    job_name,
-                    ci,
-                    extract_params.count,
-                    extract_params.dest,
-                    extract_params.build_target_repo_template,
-                    extract_params.main_locator_pattern,
-                    extract_params.secondary_locator_template,
-                )
-                .await;
+                cli::cli_do_extract(&mut stdout, job_name, ci, extract_params, false).await;
             }
             Commands::Run {
                 dest,
@@ -584,17 +552,7 @@ async fn main() {
                         let job_name = used_job_name;
                         let ci = Some(build_number);
 
-                        cli::cli_do_extract(
-                            &mut stdout,
-                            job_name,
-                            ci,
-                            extract_params.count,
-                            extract_params.dest,
-                            extract_params.build_target_repo_template,
-                            extract_params.main_locator_pattern,
-                            extract_params.secondary_locator_template,
-                        )
-                        .await;
+                        cli::cli_do_extract(&mut stdout, job_name, ci, extract_params, true).await;
                     }
                 } else {
                     colored_println(&mut stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
@@ -619,17 +577,7 @@ async fn main() {
                         let job_name = used_job_name;
                         let ci = Some(build_number);
 
-                        cli::cli_do_extract(
-                            &mut stdout,
-                            job_name,
-                            ci,
-                            extract_params.count,
-                            extract_params.dest,
-                            extract_params.build_target_repo_template,
-                            extract_params.main_locator_pattern,
-                            extract_params.secondary_locator_template,
-                        )
-                        .await;
+                        cli::cli_do_extract(&mut stdout, job_name, ci, extract_params, true).await;
                     }
                 }
             }

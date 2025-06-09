@@ -54,7 +54,7 @@ pub enum ParameterDefinition {
 }
 
 #[derive(Debug, Deserialize)]
-struct XmlRichText {
+pub struct XmlRichText {
     #[serde(rename = "$value")]
     pub content: Option<Vec<XmlRichTextElem>>,
 }
@@ -78,7 +78,7 @@ impl Display for XmlRichText {
 }
 
 #[derive(Debug, Deserialize)]
-enum XmlRichTextElem {
+pub enum XmlRichTextElem {
     #[serde(rename = "$text")]
     Content(String),
     #[serde(rename = "span")]
