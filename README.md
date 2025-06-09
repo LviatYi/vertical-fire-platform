@@ -74,7 +74,7 @@ Road Map:
 - [x] 添加对 xml 中的富文本支持。当前仅支持了 `<span>` 标签。
 - [ ] 添加 `fp info`，以允许查询 Jenkins Build Task 的状态。
 - [x] 优化 `fp build` 所使用的 CL 的记忆，延长生命周期以保持可用性。
-- [ ] 允许 `fp build` 与 `fp watch` 通过 `-param` 的方式传入其他基础参数。
+- [x] 允许 `fp build` 与 `fp watch` 通过 `-param` 的方式传入其他基础参数。
 - [ ] 提供一种直接打开记忆存储文件的方式。
 - [ ] 优化代码结构。
 
