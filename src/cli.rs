@@ -35,10 +35,10 @@ pub async fn cli_do_extract(
     job_name: Option<String>,
     ci: Option<u32>,
     count: Option<u32>,
+    dest: Option<PathBuf>,
     build_target_repo_template: Option<String>,
     main_locator_pattern: Option<String>,
     secondary_locator_template: Option<String>,
-    dest: Option<PathBuf>,
 ) {
     let mut db = get_db(None);
 

@@ -1,4 +1,4 @@
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use std::fmt::Display;
 
 #[derive(Debug, Deserialize)]
@@ -56,22 +56,23 @@ pub enum ParameterDefinition {
 #[derive(Debug, Deserialize)]
 struct XmlRichText {
     #[serde(rename = "$value")]
-    content: Vec<XmlRichTextElem>,
+    pub content: Option<Vec<XmlRichTextElem>>,
 }
 
 impl Display for XmlRichText {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            XmlRichText { content } => {
+        let XmlRichText { content } = self;
+        {
+            if let Some(ref content) = content {
                 for i in 0..content.len() {
                     write!(f, "{}", content[i])?;
                     if i < content.len() - 1 {
                         write!(f, " ")?;
                     }
                 }
-
-                Ok(())
             }
+
+            Ok(())
         }
     }
 }
@@ -209,13 +210,13 @@ mod tests {
             }
             Err(e) => {
                 println!("Error: {:?}", e);
-                assert!(false);
+                panic!();
             }
         }
     }
 
     #[test]
-    fn test_deserialize_config_xml_with_unknown_param_def() {
+    fn test_deserialize_config_xml_with_rich_text_description() {
         let content = r#"<?xml version='1.1' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
   <description></description>
@@ -268,7 +269,34 @@ mod tests {
             }
             Err(e) => {
                 println!("Error: {:?}", e);
-                assert!(false);
+                panic!();
+            }
+        }
+    }
+    
+    #[test]
+    fn test_deserialize_config_xml_with_empty_description() {
+        let content=r##"<flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
+    <properties>
+        <hudson.model.ParametersDefinitionProperty>
+            <parameterDefinitions>
+                <hudson.model.BooleanParameterDefinition>
+                    <name>IsUseCore</name>
+                    <description/>
+                    <defaultValue>true</defaultValue>
+                </hudson.model.BooleanParameterDefinition>
+            </parameterDefinitions>
+        </hudson.model.ParametersDefinitionProperty>
+    </properties>
+</flow-definition>"##;
+        
+        match quick_xml::de::from_str::<FlowDefinition>(content) {
+            Ok(result) => {
+                println!("{:#?}", result);
+            }
+            Err(e) => {
+                println!("Error: {:?}", e);
+                panic!();
             }
         }
     }

@@ -93,7 +93,7 @@ where
 /// ### Arguments
 ///
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
-/// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
+/// * `db_val`: The value from the memory. If db_val_directly_usable and defined, return this value directly (priority in order of definition).
 /// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `default`: The default value to return if no selection is made.
 /// * `not_empty`: The input should not be empty.
@@ -147,7 +147,7 @@ where
 /// ### Arguments
 ///
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
-/// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
+/// * `db_val`: The value from the memory. If db_val_directly_usable and defined, return this value directly (priority in order of definition).
 /// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `not_empty`: The input should not be empty.
 /// * `hint`: The hint for the selection.
@@ -198,7 +198,7 @@ where
 /// ### Arguments
 ///
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
-/// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
+/// * `db_val`: The value from the memory. If db_val_directly_usable and defined, return this value directly (priority in order of definition).
 /// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `hint`: The hint for the selection.
 /// * `err_hint`: The hint for error occurs.
@@ -392,7 +392,7 @@ impl<T> From<T> for SelectionCustomizableOptionVal<T> {
 /// ### Arguments
 ///
 /// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
-/// * `db_val`: The value from the memory. If defined, return this value directly (priority in order of definition).
+/// * `db_val`: The value from the memory. If db_val_directly_usable and defined, return this value directly (priority in order of definition).
 /// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `options`: The options to select from SelectionOptionVal.
 /// * `hint`: The hint for the selection.

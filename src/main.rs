@@ -19,7 +19,7 @@ use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::{query_run_info, VfpJenkinsClient};
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use formatx::formatx;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
@@ -40,6 +40,29 @@ struct Cli {
     command: Option<Commands>,
 }
 
+#[derive(Args)]
+struct ExtractParams {
+    /// expected quantity.
+    #[arg(short, long)]
+    count: Option<u32>,
+
+    #[arg(short, long)]
+    /// target path to be extracted.
+    dest: Option<PathBuf>,
+
+    /// build target repo path.
+    #[arg(long = "repo")]
+    build_target_repo_template: Option<String>,
+
+    /// main locator pattern.
+    #[arg(long = "locator-pattern")]
+    main_locator_pattern: Option<String>,
+
+    #[arg(long = "s-locator-template")]
+    /// secondary locator template.
+    secondary_locator_template: Option<String>,
+}
+
 #[derive(Subcommand, Display)]
 enum Commands {
     /// Extract ci build package.
@@ -52,25 +75,8 @@ enum Commands {
         #[arg(short = '#', long)]
         ci: Option<u32>,
 
-        /// expected quantity.
-        #[arg(short, long)]
-        count: Option<u32>,
-
-        /// build target repo path.
-        #[arg(long = "repo")]
-        build_target_repo_template: Option<String>,
-
-        /// main locator pattern.
-        #[arg(long = "locator-pattern")]
-        main_locator_pattern: Option<String>,
-
-        #[arg(long = "s-locator-template")]
-        /// secondary locator template.
-        secondary_locator_template: Option<String>,
-
-        #[arg(short, long)]
-        /// target path to be extracted.
-        dest: Option<PathBuf>,
+        #[command(flatten)]
+        extract_params: ExtractParams,
     },
     /// Run game instance.
     Run {
@@ -134,6 +140,23 @@ enum Commands {
         #[arg(short, long)]
         pwd: Option<String>,
     },
+    /// Watch a Jenkins build task.
+    Watch {
+        /// job name.
+        #[arg(short, long)]
+        job_name: Option<String>,
+
+        /// locator identity.
+        #[arg(short = '#', long)]
+        ci: Option<u32>,
+
+        /// do not automatically extract the package after success.
+        #[arg(long)]
+        no_extract: bool,
+
+        #[command(flatten)]
+        extract_params: ExtractParams,
+    },
     /// Request start a Jenkins build task.
     Build {
         /// job name.
@@ -166,20 +189,9 @@ enum Commands {
         /// do not automatically extract the package after success.
         #[arg(long)]
         no_extract: bool,
-    },
-    /// Watch a Jenkins build task.
-    Watch {
-        /// job name.
-        #[arg(short, long)]
-        job_name: Option<String>,
 
-        /// locator identity.
-        #[arg(short = '#', long)]
-        ci: Option<u32>,
-
-        /// do not automatically extract the package after success.
-        #[arg(long)]
-        no_extract: bool,
+        #[command(flatten)]
+        extract_params: ExtractParams,
     },
     /// Clean cache.
     Clean,
@@ -215,21 +227,17 @@ async fn main() {
             Commands::Extract {
                 job_name,
                 ci,
-                count,
-                build_target_repo_template,
-                main_locator_pattern,
-                secondary_locator_template,
-                dest,
+                extract_params,
             } => {
                 cli::cli_do_extract(
                     &mut stdout,
                     job_name,
                     ci,
-                    count,
-                    build_target_repo_template,
-                    main_locator_pattern,
-                    secondary_locator_template,
-                    dest,
+                    extract_params.count,
+                    extract_params.dest,
+                    extract_params.build_target_repo_template,
+                    extract_params.main_locator_pattern,
+                    extract_params.secondary_locator_template,
                 )
                 .await;
             }
@@ -343,10 +351,14 @@ async fn main() {
             } => {
                 let mut db: DbDataProxy = get_db(None);
                 match cli_do_login(&mut db, false, url, username, api_token, pwd).await {
-                    Ok(_) => colored_println(&mut stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT),
-                    Err(e) => colored_println(&mut stdout, ThemeColor::Error, e.to_string().as_str()),
+                    Ok(_) => {
+                        colored_println(&mut stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT)
+                    }
+                    Err(e) => {
+                        colored_println(&mut stdout, ThemeColor::Error, e.to_string().as_str())
+                    }
                 }
-            },
+            }
             Commands::Build {
                 job_name,
                 cl,
@@ -354,6 +366,7 @@ async fn main() {
                 params,
                 no_extract,
                 no_watch_and_extract,
+                extract_params,
             } => {
                 if params.len() % 2 != 0 {
                     colored_println(&mut stdout, ThemeColor::Error, ERR_NEED_EVEN_PARAM);
@@ -415,7 +428,7 @@ async fn main() {
                             if let Some(ref db_params) = db.get_jenkins_build_param() {
                                 used_cl = db_params.get_change_list();
                                 used_sl = db_params.get_shelve_changes();
-                                
+
                                 let excluded = build_params.exclusive_merge_from(db_params);
                                 if !excluded.is_empty() {
                                     colored_println(
@@ -457,14 +470,14 @@ async fn main() {
 
                             let mut build_params_to_save = build_params.clone();
                             build_params_to_save.retain_differing_params(&build_params_template);
-                            
-                            if build_params_to_save.get_change_list().is_none(){
+
+                            if build_params_to_save.get_change_list().is_none() {
                                 build_params_to_save.set_change_list(used_cl);
                             }
                             if build_params_to_save.get_shelve_changes().is_none() {
                                 build_params_to_save.set_shelve_changes(used_sl);
                             }
-                            
+
                             db.set_jenkins_build_param(Some(build_params_to_save));
                             save_with_error_log(&db, None);
 
@@ -570,22 +583,16 @@ async fn main() {
                     if let Some(build_number) = success_build_number {
                         let job_name = used_job_name;
                         let ci = Some(build_number);
-                        let count = *db.get_last_player_count();
-                        let build_target_repo_template = db.get_extract_repo().clone();
-                        let main_locator_pattern = db.get_extract_locator_pattern().clone();
-                        let secondary_locator_template =
-                            db.get_extract_s_locator_template().clone();
-                        let dest = None;
 
                         cli::cli_do_extract(
                             &mut stdout,
                             job_name,
                             ci,
-                            count,
-                            build_target_repo_template,
-                            main_locator_pattern,
-                            secondary_locator_template,
-                            dest,
+                            extract_params.count,
+                            extract_params.dest,
+                            extract_params.build_target_repo_template,
+                            extract_params.main_locator_pattern,
+                            extract_params.secondary_locator_template,
                         )
                         .await;
                     }
@@ -598,6 +605,7 @@ async fn main() {
                 job_name,
                 ci,
                 no_extract,
+                extract_params,
             } => {
                 if !cli_try_first_login(&mut get_db(None), Some(&mut stdout)).await {
                     return;
@@ -608,25 +616,18 @@ async fn main() {
 
                 if !no_extract {
                     if let Some(build_number) = success_build_number {
-                        let db = get_db(None);
                         let job_name = used_job_name;
                         let ci = Some(build_number);
-                        let count = *db.get_last_player_count();
-                        let build_target_repo_template = db.get_extract_repo().clone();
-                        let main_locator_pattern = db.get_extract_locator_pattern().clone();
-                        let secondary_locator_template =
-                            db.get_extract_s_locator_template().clone();
-                        let dest = None;
 
                         cli::cli_do_extract(
                             &mut stdout,
                             job_name,
                             ci,
-                            count,
-                            build_target_repo_template,
-                            main_locator_pattern,
-                            secondary_locator_template,
-                            dest,
+                            extract_params.count,
+                            extract_params.dest,
+                            extract_params.build_target_repo_template,
+                            extract_params.main_locator_pattern,
+                            extract_params.secondary_locator_template,
                         )
                         .await;
                     }
