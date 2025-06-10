@@ -3,8 +3,8 @@ pub const ERR_INPUT_INVALID_SHOULD_NOT_BE_EMPTY: &str = "Invalid input. Should n
 pub const ERR_EMPTY_REPO: &str = "There is no any package in the repo.";
 pub const ERR_NO_SPECIFIED_PACKAGE: &str = "No package found.";
 pub const ERR_NEED_A_NUMBER: &str = "Need a number.";
+pub const ERR_NEED_PARAM: &str = "Need {}.";
 pub const ERR_NEED_SHELVED: &str = "Need shelved change numbers.";
-pub const ERR_NEED_A_JOB_NAME: &str = "Need a job name.";
 pub const ERR_INVALID_PATH: &str = "Invalid path.";
 pub const ERR_INVALID_PATH_NOT_EXIST: &str = "Invalid path: not exist.";
 pub const ERR_DIR_IN_USE: &str = "Maybe {} is in use. skip.";
@@ -89,12 +89,17 @@ pub const WATCHING_RUN_TASK_IN_PROGRESS_PREPARE: &str =
 pub const WATCHING_RUN_TASK_IN_PROGRESS: &str =
     "Watching run task {} of {} in progress...(last check at {})";
 pub const WATCHING_RUN_TASK_SUCCESS: &str = "Run task {} of {} finished with SUCCESS.";
-pub const WATCHING_RUN_TASK_FAILURE: &str = "Run task {} of {} finished with FAILURE. Original Url: {}";
+pub const WATCHING_RUN_TASK_FAILURE: &str = "Run task {} of {} finished with FAILURE.";
+pub const RUN_TASK_CONSOLE_OUTPUT_URL: &str = "Console output url: {}";
 pub const RUN_TASK_COMPLETED: &str = "Run Task Completed with Success.";
 pub const EXTRACT_TASK_COMPLETED: &str = "All Extract Completed.";
 pub const DB_BUILD_PARAM_NOT_IN_USED: &str = "Some build param from memery not in used.";
 pub const REQUEST_BUILD_SUCCESS: &str = "Request build success.";
 pub const BUILD_USED_PARAMS: &str = "Build used params:";
 pub const AUTO_FETCH_LATEST_USED_CL: &str = "Auto fetch your latest used CL: {}";
+
+pub const PARAM_JOB_NAME: &str = "job name";
+pub const PARAM_DEST: &str = "path as destination";
+pub const PARAM_USERNAME: &str = "your jenkins username";
 
 pub const CONFIG_APPEND_LINE: &str = "\neadpClientIndex={}\n";

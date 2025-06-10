@@ -164,28 +164,6 @@ impl ThemeColor {
     }
 }
 
-pub fn try_colored_println(stdout: Option<&mut Stdout>, color: ThemeColor, content: &str) {
-    if let Some(stdout) = stdout {
-        let _ = execute!(
-            stdout,
-            SetForegroundColor(color.to_color()),
-            Print(format!("{}\n", content)),
-            ResetColor,
-        );
-    }
-}
-
-pub fn try_colored_print(stdout: Option<&mut Stdout>, color: Color, content: &str) {
-    if let Some(stdout) = stdout {
-        let _ = execute!(
-            stdout,
-            SetForegroundColor(color),
-            Print(content),
-            ResetColor,
-        );
-    }
-}
-
 pub fn colored_print(stdout: &mut Stdout, color: ThemeColor, content: &str) {
     let _ = execute!(
         stdout,

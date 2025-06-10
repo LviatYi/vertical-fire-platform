@@ -36,14 +36,13 @@ pub async fn cli_do_extract(
     ci: Option<u32>,
     extract_params: ExtractParams,
     ignore_count_input: bool,
-) {
+) -> Result<(), VfpError> {
     let mut db = get_db(None);
 
     if let Ok(val) = input_job_name(job_name, db.get_interest_job_name()) {
         db.set_interest_job_name(Some(val));
     } else {
-        println!("{}", ERR_EMPTY_REPO);
-        return;
+        return Err(VfpError::MissingParam(PARAM_JOB_NAME.to_string()));
     }
 
     db.set_extract_repo(Some(parse_without_input_with_default(
@@ -71,14 +70,10 @@ pub async fn cli_do_extract(
         &db.get_interest_job_name().clone().unwrap(),
     );
 
-    let ci_temp = input_ci(stdout, ci, &db, &repo_decoration).await;
+    let ci_temp = input_ci(stdout, ci, &db, &repo_decoration)
+        .await
+        .ok_or(VfpError::EmptyRepo)?;
 
-    if ci_temp.is_none() {
-        println!("{}", ERR_EMPTY_REPO);
-        return;
-    }
-
-    let ci_temp = ci_temp.unwrap();
     db.set_last_inner_version(ci_temp.into());
 
     db.set_last_player_count(Some(input_directly_with_default(
@@ -91,20 +86,18 @@ pub async fn cli_do_extract(
         Some(ERR_NEED_A_NUMBER),
     )));
 
-    if let Ok(path) = input_path(
-        extract_params.dest,
-        db.get_blast_path().as_ref(),
-        true,
-        HINT_EXTRACT_TO,
-        false,
-        true,
-        Some(ERR_INVALID_PATH),
-    ) {
-        db.set_blast_path(Some(path));
-    } else {
-        println!("{}", ERR_INPUT_INVALID);
-        return;
-    }
+    db.set_blast_path(Some(
+        input_path(
+            extract_params.dest,
+            db.get_blast_path().as_ref(),
+            true,
+            HINT_EXTRACT_TO,
+            false,
+            true,
+            Some(ERR_INVALID_PATH),
+        )
+        .map_err(|_| VfpError::MissingParam(PARAM_DEST.to_string()))?,
+    ));
 
     save_with_error_log(&db, None);
 
@@ -242,6 +235,8 @@ pub async fn cli_do_extract(
         );
     }
     let _ = execute!(stdout, crossterm::style::ResetColor);
+
+    Ok(())
 }
 
 /// # cli do login
@@ -287,7 +282,7 @@ pub async fn cli_do_login(
 
     db.set_jenkins_username(Some(username));
 
-    save_with_error_log(&db, None);
+    save_with_error_log(db, None);
 
     let login_method = inquire::Select::new(
         HINT_SELECT_LOGIN_METHOD,
@@ -371,89 +366,77 @@ pub async fn cli_do_watch(
     stdout: &mut Stdout,
     job_name: Option<String>,
     ci: Option<u32>,
-) -> (Option<String>, Option<u32>) {
+) -> Result<(Option<String>, Option<u32>), VfpError> {
     let mut success_build_number = None;
-    let mut used_job_name = None;
     let db = get_db(None);
-    let client = db.try_get_jenkins_async_client(stdout, true).await;
+    let client = db
+        .try_get_jenkins_async_client(stdout, true)
+        .await
+        .map_err(|_| VfpError::JenkinsClientInvalid)?;
 
-    if let Ok(client) = client {
-        let job_name = input_job_name(job_name, db.get_interest_job_name());
+    let used_job_name = Some(
+        input_job_name(job_name, db.get_interest_job_name())
+            .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?,
+    );
 
-        if job_name.is_err() {
-            println!("{}", ERR_EMPTY_REPO);
-            return (used_job_name, success_build_number);
-        }
-        used_job_name = Some(job_name.unwrap());
+    let username = db
+        .get_jenkins_username()
+        .as_ref()
+        .ok_or(VfpError::MissingParam(PARAM_USERNAME.to_string()))?;
+    let result = watch(
+        stdout,
+        client,
+        username,
+        &used_job_name.clone().unwrap(),
+        ci,
+    )
+    .await;
 
-        match db.get_jenkins_username() {
-            Some(username) => {
-                let result = watch(
-                    stdout,
-                    client,
-                    username,
-                    &used_job_name.clone().unwrap(),
-                    ci,
+    match result {
+        Ok(build_number) => {
+            success_build_number = Some(build_number);
+            colored_println(
+                stdout,
+                ThemeColor::Success,
+                &formatx!(
+                    WATCHING_RUN_TASK_SUCCESS,
+                    build_number,
+                    used_job_name.as_ref().unwrap()
                 )
-                .await;
+                .unwrap_or_default(),
+            );
 
-                match result {
-                    Ok(build_number) => {
-                        success_build_number = Some(build_number);
-                        colored_println(
-                            stdout,
-                            ThemeColor::Success,
-                            &formatx!(
-                                WATCHING_RUN_TASK_SUCCESS,
-                                build_number,
-                                used_job_name.as_ref().unwrap()
-                            )
-                            .unwrap_or_default(),
-                        );
-
-                        toast("Watch", vec![RUN_TASK_COMPLETED]);
-                    }
-                    Err(e) => match e {
-                        VfpWatchError::JenkinsError(_) => {
-                            colored_println(stdout, ThemeColor::Error, ERR_NO_IN_PROGRESS_RUN_TASK);
-                        }
-                        VfpWatchError::NoValidRunTask => {
-                            colored_println(stdout, ThemeColor::Error, ERR_NO_VALID_RUN_TASK);
-                        }
-                        VfpWatchError::WatchTaskFailed(build_number, log) => {
-                            let default_url = "".to_string();
-                            colored_println(
-                                stdout,
-                                ThemeColor::Error,
-                                &formatx!(
-                                    WATCHING_RUN_TASK_FAILURE,
-                                    build_number,
-                                    used_job_name.as_ref().unwrap(),
-                                    get_jenkins_workflow_run_url(
-                                        db.get_jenkins_url().as_ref().unwrap_or(&default_url),
-                                        used_job_name.as_ref().unwrap(),
-                                        build_number
-                                    )
-                                )
-                                .unwrap_or_default(),
-                            );
-                            colored_println(stdout, ThemeColor::Main, &log);
-                        }
-                    },
-                }
-            }
-            None => {
-                colored_println(stdout, ThemeColor::Error, ERR_NEED_A_JENKINS_USERNAME);
-            }
+            toast("Watch", vec![RUN_TASK_COMPLETED]);
         }
-    } else {
-        colored_println(stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
+        Err(e) => return match e {
+            VfpWatchError::JenkinsError(_) => {
+                Err(VfpError::Custom(ERR_NO_IN_PROGRESS_RUN_TASK.to_string()))
+            }
+            VfpWatchError::NoValidRunTask => {
+                Err(VfpError::Custom(ERR_NO_VALID_RUN_TASK.to_string()))
+            }
+            VfpWatchError::WatchTaskFailed(build_number, log) => {
+                Err(VfpError::RunTaskBuildFailed {
+                    build_number,
+                    job_name: used_job_name.clone().unwrap(),
+                    run_url: get_jenkins_workflow_run_url(
+                        db.get_jenkins_url().as_ref().unwrap(),
+                        used_job_name.as_ref().unwrap(),
+                        build_number,
+                    ),
+                    log,
+                })
+            }
+        },
     }
 
-    (used_job_name, success_build_number)
+    Ok((used_job_name, success_build_number))
 }
 
-pub async fn cli_try_first_login(db: &mut DbDataProxy, stdout: Option<&mut Stdout>) -> bool {
+pub async fn cli_try_first_login(
+    db: &mut DbDataProxy,
+    stdout: Option<&mut Stdout>,
+) -> Result<(), VfpError> {
     if db.user_never_login() {
         match cli_do_login(
             db,
@@ -469,16 +452,11 @@ pub async fn cli_try_first_login(db: &mut DbDataProxy, stdout: Option<&mut Stdou
                 if let Some(stdout) = stdout {
                     colored_println(stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT);
                 }
-                true
+                Ok(())
             }
-            Err(e) => {
-                if let Some(stdout) = stdout {
-                    colored_println(stdout, ThemeColor::Error, e.to_string().as_str());
-                }
-                false
-            }
+            Err(e) => Err(e),
         }
     } else {
-        true
+        Ok(())
     }
 }

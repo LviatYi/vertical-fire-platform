@@ -667,7 +667,7 @@ pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> Inq
     ) {
         Ok(SelectionCustomizableOptionVal::DataContain(d)) => Ok(d.get_data()),
         Ok(SelectionCustomizableOptionVal::Custom) => Text::from(HINT_INPUT_CUSTOM).prompt(),
-        Ok(SelectionCustomizableOptionVal::None) => panic!("should not be possible"),
+        Ok(SelectionCustomizableOptionVal::None) => unreachable!(),
         Err(e) => Err(e),
     }
 }
