@@ -52,26 +52,24 @@ impl Display for VfpError {
                 let msg = match method {
                     LoginMethod::ApiToken => {
                         formatx!(
-                            ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID,
-                            url,
-                            username,
-                            get_hidden_sensitive_string(
-                                key,
-                                crate::constant::util::SensitiveMode::Normal(4)
-                            ),
-                            e.to_string()
-                        )
-                    }
-                    LoginMethod::Pwd => {
-                        formatx!(
                             ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID,
                             url,
                             username,
                             get_hidden_sensitive_string(
                                 key,
+                                crate::constant::util::SensitiveMode::Normal(4)
+                            )
+                        )
+                    }
+                    LoginMethod::Pwd => {
+                        formatx!(
+                            ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID,
+                            url,
+                            username,
+                            get_hidden_sensitive_string(
+                                key,
                                 crate::constant::util::SensitiveMode::Full
-                            ),
-                            e.to_string()
+                            )
                         )
                     }
                 }

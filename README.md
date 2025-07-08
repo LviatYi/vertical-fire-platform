@@ -17,6 +17,8 @@ by LviatYi
 
 Change Log:
 
+- UNRELEASE
+    - 优化登录错误提示。 
 - v1.4.4
     - 修复了 `fp extract` 时错误的文件生成路径。该问题曾导致在 fp 的工作目录生成了一些空文件夹。
     - 添加对 xml 中的富文本支持。当前仅支持了 `<span>` 标签。

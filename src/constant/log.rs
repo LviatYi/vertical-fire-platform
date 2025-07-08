@@ -28,9 +28,9 @@ pub const ERR_JENKINS_CLIENT_INVALID: &str =
     "Cannot connect to jenkins. Maybe you should check your password or api token.";
 pub const ERR_JENKINS_CLIENT_INVALID_SIMPLE: &str = "Cannot connect to jenkins.";
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID: &str =
-    "Url: {}.\nUsername: {}\nApi-Token: {}\nMaybe you should check your api token.\nErr: {}";
+    "Url: {}.\nUsername: {}\nApi-Token: {}\nMaybe you should check your api token.";
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID: &str =
-    "Url: {}.\nUsername: {}\nPassword: {}\nMaybe you should check your password.\nErr: {}";
+    "Url: {}.\nUsername: {}\nPassword: {}\nMaybe you should check your password.";
 pub const ERR_JENKINS_CLIENT_GET_CRUMB_FAILED: &str = "Failed to get crumb. {}";
 pub const ERR_NO_IN_PROGRESS_RUN_TASK: &str = "There is no in progress run task.";
 pub const ERR_NO_VALID_RUN_TASK: &str =
