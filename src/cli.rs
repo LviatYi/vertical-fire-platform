@@ -263,7 +263,7 @@ pub async fn cli_do_login(
 ) -> Result<VfpJenkinsClient, VfpError> {
     db.set_jenkins_url(Some(input_directly_with_default(
         url.map(|v| v.as_ref().to_string()),
-        db.get_jenkins_url().as_ref(),
+        db.get_jenkins_url().as_ref().filter(|v| { !v.is_empty() }),
         simplified,
         default_config::JENKINS_URL.to_string(),
         true,
