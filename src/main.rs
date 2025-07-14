@@ -235,6 +235,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             ci,
             extract_params,
         } => {
+            // fp extract
             cli::cli_do_extract(&mut stdout, job_name, ci, extract_params, false).await?;
         }
         Commands::Run {
@@ -247,6 +248,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             force,
             server,
         } => {
+            // fp run
             let dest = input_path(
                 dest,
                 get_db(None).get_blast_path().as_ref(),
@@ -342,6 +344,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             api_token,
             pwd,
         } => {
+            // fp login
             let mut db: DbDataProxy = get_db(None);
             cli_do_login(&mut db, false, url, username, api_token, pwd).await?;
             colored_println(&mut stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT);
@@ -355,6 +358,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             no_watch_and_extract,
             extract_params,
         } => {
+            // fp build
             if params.len() % 2 != 0 {
                 return Err(VfpError::Custom(ERR_NEED_EVEN_PARAM.to_string()));
             }
@@ -528,6 +532,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             no_extract,
             extract_params,
         } => {
+            // fp watch
             cli_try_first_login(&mut get_db(None), Some(&mut stdout)).await?;
 
             let (used_job_name, success_build_number) =
@@ -543,9 +548,11 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             }
         }
         Commands::Clean => {
+            // fp clean
             delete_db_file(None);
         }
         Commands::Debug => {
+            // fp debug
             println!("Debug info:");
             println!("COUNT: {:#?}", default_config::COUNT);
             println!("RUN_COUNT: {:#?}", default_config::RUN_COUNT);
