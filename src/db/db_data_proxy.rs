@@ -2,6 +2,7 @@ use crate::constant::log::{LOGIN_SUCCESS_BY_API_TOKEN, LOGIN_SUCCESS_BY_PWD};
 use crate::db::db_struct::db_status::DBStatus;
 use crate::db::db_struct::version_only::VersionOnly;
 use crate::db::db_struct::{parse_content_with_upgrade, LatestVersionData};
+use crate::extract::repo_decoration::RepoDecoration;
 use crate::jenkins::build::VfpJobBuildParam;
 use crate::jenkins::query::{try_get_jenkins_async_client, VfpJenkinsClient};
 use crate::pretty_log::{colored_println, ThemeColor};
@@ -75,6 +76,28 @@ impl DbDataProxy {
     pub fn user_never_login(&self) -> bool {
         self.data.jenkins_username.is_none()
             || (self.data.jenkins_api_token.is_none() && self.data.jenkins_pwd.is_none())
+    }
+
+    pub fn get_repo_decoration(&self) -> RepoDecoration {
+        let default = "";
+        RepoDecoration::new(
+            self.get_extract_repo()
+                .as_ref()
+                .map(|s| s.as_ref())
+                .unwrap_or(default),
+            self.get_extract_locator_pattern()
+                .as_ref()
+                .map(|s| s.as_ref())
+                .unwrap_or(default),
+            self.get_extract_s_locator_template()
+                .as_ref()
+                .map(|s| s.as_ref())
+                .unwrap_or(default),
+            self.get_interest_job_name()
+                .as_ref()
+                .map(|s| s.as_ref())
+                .unwrap_or(default),
+        )
     }
 
     //region getter & setter

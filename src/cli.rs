@@ -6,7 +6,6 @@ use crate::extract::extract_operation_info::{
 };
 use crate::extract::extract_params::ExtractParams;
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
-use crate::extract::repo_decoration::RepoDecoration;
 use crate::interact::{
     input_ci, input_directly_with_default, input_job_name, input_path, input_pwd,
     parse_without_input_with_default,
@@ -63,12 +62,7 @@ pub async fn cli_do_extract(
         default_config::LOCATOR_TEMPLATE,
     )));
 
-    let repo_decoration = RepoDecoration::new(
-        &db.get_extract_repo().clone().unwrap(),
-        &db.get_extract_locator_pattern().clone().unwrap(),
-        &db.get_extract_s_locator_template().clone().unwrap(),
-        &db.get_interest_job_name().clone().unwrap(),
-    );
+    let repo_decoration = db.get_repo_decoration();
 
     let ci_temp = input_ci(stdout, ci, &db, &repo_decoration)
         .await
@@ -239,7 +233,7 @@ pub async fn cli_do_extract(
     Ok(())
 }
 
-/// # cli do login
+/// # cli do log in
 ///
 /// Login to Jenkins server.
 ///
@@ -263,7 +257,7 @@ pub async fn cli_do_login(
 ) -> Result<VfpJenkinsClient, VfpError> {
     db.set_jenkins_url(Some(input_directly_with_default(
         url.map(|v| v.as_ref().to_string()),
-        db.get_jenkins_url().as_ref().filter(|v| { !v.is_empty() }),
+        db.get_jenkins_url().as_ref().filter(|v| !v.is_empty()),
         simplified,
         default_config::JENKINS_URL.to_string(),
         true,
@@ -408,26 +402,28 @@ pub async fn cli_do_watch(
 
             toast("Watch", vec![RUN_TASK_COMPLETED]);
         }
-        Err(e) => return match e {
-            VfpWatchError::JenkinsError(_) => {
-                Err(VfpError::Custom(ERR_NO_IN_PROGRESS_RUN_TASK.to_string()))
-            }
-            VfpWatchError::NoValidRunTask => {
-                Err(VfpError::Custom(ERR_NO_VALID_RUN_TASK.to_string()))
-            }
-            VfpWatchError::WatchTaskFailed(build_number, log) => {
-                Err(VfpError::RunTaskBuildFailed {
-                    build_number,
-                    job_name: used_job_name.clone().unwrap(),
-                    run_url: get_jenkins_workflow_run_url(
-                        db.get_jenkins_url().as_ref().unwrap(),
-                        used_job_name.as_ref().unwrap(),
+        Err(e) => {
+            return match e {
+                VfpWatchError::JenkinsError(_) => {
+                    Err(VfpError::Custom(ERR_NO_IN_PROGRESS_RUN_TASK.to_string()))
+                }
+                VfpWatchError::NoValidRunTask => {
+                    Err(VfpError::Custom(ERR_NO_VALID_RUN_TASK.to_string()))
+                }
+                VfpWatchError::WatchTaskFailed(build_number, log) => {
+                    Err(VfpError::RunTaskBuildFailed {
                         build_number,
-                    ),
-                    log,
-                })
+                        job_name: used_job_name.clone().unwrap(),
+                        run_url: get_jenkins_workflow_run_url(
+                            db.get_jenkins_url().as_ref().unwrap(),
+                            used_job_name.as_ref().unwrap(),
+                            build_number,
+                        ),
+                        log,
+                    })
+                }
             }
-        },
+        }
     }
 
     Ok((used_job_name, success_build_number))
