@@ -434,13 +434,16 @@ pub async fn input_ci(
     stdout: &mut Stdout,
     param_val: Option<u32>,
     db: &DbDataProxy,
-    repo_decoration: &RepoDecoration,
 ) -> Option<u32> {
     if param_val.is_some() {
         return param_val;
     }
 
-    let latest = repo_decoration.get_sorted_ci_list().first().copied();
+    let latest = db
+        .get_repo_decoration()
+        .get_sorted_ci_list()
+        .first()
+        .copied();
     let last_used = *db.get_last_inner_version();
 
     let mut options: Vec<String> = Vec::new();
@@ -546,7 +549,7 @@ pub async fn input_ci(
     }
     //endregion
 
-    let exist_ci_list = repo_decoration.get_sorted_ci_list();
+    let exist_ci_list = db.get_repo_decoration().get_sorted_ci_list();
 
     //region last used ci
     if let Some(ref last_used) = last_used {
@@ -575,7 +578,7 @@ pub async fn input_ci(
                 last_used
             } else {
                 let exist_ci_list_for_inquire =
-                    repo_decoration.get_sorted_ci_list().deref().clone();
+                    db.get_repo_decoration().get_sorted_ci_list().clone();
 
                 let input = Text::from(HINT_INPUT_CUSTOM)
                     .with_validator(move |v: &str| {

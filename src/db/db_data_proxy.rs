@@ -11,15 +11,21 @@ use jenkins_sdk::JenkinsError;
 use std::fs::File;
 use std::io::{Stdout, Write};
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 #[derive(Debug, Default)]
 pub struct DbDataProxy {
     data: LatestVersionData,
+
+    cached_repo_decoration: OnceLock<RepoDecoration>,
 }
 
 impl From<LatestVersionData> for DbDataProxy {
     fn from(data: LatestVersionData) -> Self {
-        Self { data }
+        Self {
+            data,
+            cached_repo_decoration: OnceLock::new(),
+        }
     }
 }
 
@@ -78,26 +84,29 @@ impl DbDataProxy {
             || (self.data.jenkins_api_token.is_none() && self.data.jenkins_pwd.is_none())
     }
 
-    pub fn get_repo_decoration(&self) -> RepoDecoration {
-        let default = "";
-        RepoDecoration::new(
-            self.get_extract_repo()
-                .as_ref()
-                .map(|s| s.as_ref())
-                .unwrap_or(default),
-            self.get_extract_locator_pattern()
-                .as_ref()
-                .map(|s| s.as_ref())
-                .unwrap_or(default),
-            self.get_extract_s_locator_template()
-                .as_ref()
-                .map(|s| s.as_ref())
-                .unwrap_or(default),
-            self.get_interest_job_name()
-                .as_ref()
-                .map(|s| s.as_ref())
-                .unwrap_or(default),
-        )
+    pub fn get_repo_decoration(&self) -> &RepoDecoration {
+        self.cached_repo_decoration.get_or_init(|| {
+            let default = "";
+
+            RepoDecoration::new(
+                self.get_extract_repo()
+                    .as_ref()
+                    .map(|s| s.as_ref())
+                    .unwrap_or(default),
+                self.get_extract_locator_pattern()
+                    .as_ref()
+                    .map(|s| s.as_ref())
+                    .unwrap_or(default),
+                self.get_extract_s_locator_template()
+                    .as_ref()
+                    .map(|s| s.as_ref())
+                    .unwrap_or(default),
+                self.get_interest_job_name()
+                    .as_ref()
+                    .map(|s| s.as_ref())
+                    .unwrap_or(default),
+            )
+        })
     }
 
     //region getter & setter

@@ -2,8 +2,8 @@ use crate::extract::extractor_util::{
     extract_ci_by_main_locator, get_sorted_main_locators,
     remove_beginning_separator_in_relative_path,
 };
-use std::cell::{Ref, RefCell};
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 type CiList = Vec<u32>;
 
@@ -66,9 +66,9 @@ pub struct RepoDecoration {
 
     job_name: String,
 
-    sorted_ci_package_names_cached: RefCell<Option<Vec<String>>>,
+    sorted_ci_package_names_cached: OnceLock<Vec<String>>,
 
-    sorted_ci_list_cached: RefCell<Option<CiList>>,
+    sorted_ci_list_cached: OnceLock<CiList>,
 }
 
 impl RepoDecoration {
@@ -86,8 +86,8 @@ impl RepoDecoration {
             main_locator_pattern: main_locator_pattern.to_string(),
             secondary_locator_template: secondary_locator_template.to_string(),
             job_name: job_name.to_string(),
-            sorted_ci_package_names_cached: RefCell::new(None),
-            sorted_ci_list_cached: RefCell::new(None),
+            sorted_ci_package_names_cached: OnceLock::new(),
+            sorted_ci_list_cached: OnceLock::new(),
         }
     }
 
@@ -95,33 +95,22 @@ impl RepoDecoration {
         PathBuf::from(&self.build_target_repo_template).join(&self.job_name)
     }
 
-    fn get_cached_locator_list(&self) -> Ref<Vec<String>> {
-        if self.sorted_ci_package_names_cached.borrow().is_none() {
-            self.sorted_ci_package_names_cached
-                .replace(Some(get_sorted_main_locators(
-                    self.assemble_build_target_repo(),
-                    self.main_locator_pattern.as_str(),
-                )));
-        }
-
-        Ref::map(self.sorted_ci_package_names_cached.borrow(), |v| {
-            v.as_ref().unwrap()
+    fn get_cached_locator_list(&self) -> &Vec<String> {
+        self.sorted_ci_package_names_cached.get_or_init(|| {
+            get_sorted_main_locators(
+                self.assemble_build_target_repo(),
+                self.main_locator_pattern.as_str(),
+            )
         })
     }
 
-    pub fn get_sorted_ci_list(&self) -> Ref<CiList> {
-        if self.sorted_ci_list_cached.borrow().is_none() {
-            self.sorted_ci_list_cached.replace(Some(
-                self.get_cached_locator_list()
-                    .iter()
-                    .filter_map(|v| {
-                        extract_ci_by_main_locator(self.main_locator_pattern.as_str(), v)
-                    })
-                    .collect(),
-            ));
-        }
-
-        Ref::map(self.sorted_ci_list_cached.borrow(), |v| v.as_ref().unwrap())
+    pub fn get_sorted_ci_list(&self) -> &CiList {
+        self.sorted_ci_list_cached.get_or_init(|| {
+            self.get_cached_locator_list()
+                .iter()
+                .filter_map(|v| extract_ci_by_main_locator(self.main_locator_pattern.as_str(), v))
+                .collect()
+        })
     }
 
     pub fn get_full_path_by_ci(&self, ci: u32) -> Option<PathBuf> {
