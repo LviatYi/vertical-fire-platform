@@ -1,15 +1,18 @@
 use crate::constant::log::*;
+use crate::db::db_data_proxy::DbDataProxy;
+use crate::interact::input_ci_for_watch;
 use crate::jenkins::jenkins_model::reasoned_run_status::ReasonedRunStatus;
 use crate::jenkins::jenkins_model::run_status::RunStatus;
 use crate::jenkins::query::{
     query_run_info, query_run_log, query_user_latest_info, VfpJenkinsClient,
 };
+use crate::jenkins::util::get_jenkins_workflow_run_url;
 use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
+use crate::vfp_error::VfpError;
 use chrono::Local;
 use formatx::formatx;
 use jenkins_sdk::JenkinsError;
 use std::io::Stdout;
-use thiserror::Error;
 
 async fn get_reasoned_run_status(
     client: &VfpJenkinsClient,
@@ -46,12 +49,17 @@ async fn get_reasoned_run_status(
 pub async fn watch(
     stdout: &mut Stdout,
     client: VfpJenkinsClient,
-    username: &str,
+    db: &DbDataProxy,
     job_name: &str,
     ci: Option<u32>,
-) -> Result<u32, VfpWatchError> {
+) -> Result<u32, VfpError> {
     let build_number;
     if ci.is_none() {
+        let username = db
+            .get_jenkins_username()
+            .as_ref()
+            .ok_or(VfpError::MissingParam(PARAM_USERNAME.to_string()))?;
+
         let latest_info = query_user_latest_info(&client, job_name, username, None).await?;
 
         if let Some(in_progress) = latest_info.in_progress {
@@ -59,11 +67,32 @@ pub async fn watch(
         } else if let Some(failed) = latest_info.failed {
             let log = query_run_log(&client, job_name, failed.number).await?;
 
-            return Err(VfpWatchError::WatchTaskFailed(failed.number, log));
+            return Err(VfpError::RunTaskBuildFailed {
+                build_number: failed.number,
+                job_name: job_name.to_string(),
+                run_url: get_jenkins_workflow_run_url(
+                    db.get_jenkins_url().as_ref().unwrap(),
+                    job_name,
+                    failed.number,
+                ),
+                log,
+            });
         } else if let Some(latest_success) = latest_info.latest_success {
             return Ok(latest_success.number);
         } else {
-            return Err(VfpWatchError::NoValidRunTask);
+            colored_println(
+                stdout,
+                ThemeColor::Main,
+                &format!("{} ({})", NO_IN_PROGRESS_RUN_TASK_OF_USER, username),
+            );
+
+            let ci = input_ci_for_watch(stdout, None, db, job_name).await;
+
+            if let Some(ci) = ci {
+                build_number = ci;
+            } else {
+                return Err(VfpError::Custom(ERR_NO_VALID_RUN_TASK.to_string()));
+            }
         }
     } else {
         build_number = ci.unwrap();
@@ -103,7 +132,16 @@ pub async fn watch(
                 return Ok(build_number);
             }
             ReasonedRunStatus::Failure(log) => {
-                return Err(VfpWatchError::WatchTaskFailed(build_number, log));
+                return Err(VfpError::RunTaskBuildFailed {
+                    build_number,
+                    job_name: job_name.to_string(),
+                    run_url: get_jenkins_workflow_run_url(
+                        db.get_jenkins_url().as_ref().unwrap(),
+                        job_name,
+                        build_number,
+                    ),
+                    log,
+                })
             }
         }
 
@@ -112,16 +150,4 @@ pub async fn watch(
         ))
         .await;
     }
-}
-
-#[derive(Error, Debug)]
-pub enum VfpWatchError {
-    #[error(transparent)]
-    JenkinsError(#[from] JenkinsError),
-
-    #[error("{msg}", msg = ERR_NO_IN_PROGRESS_RUN_TASK)]
-    NoValidRunTask,
-
-    #[error("{msg}", msg = ERR_WATCH_RUN_TASK_FAILED)]
-    WatchTaskFailed(u32, String),
 }

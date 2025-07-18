@@ -7,15 +7,14 @@ use crate::extract::extract_operation_info::{
 use crate::extract::extract_params::ExtractParams;
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::interact::{
-    input_ci, input_directly_with_default, input_job_name, input_path, input_pwd,
+    input_ci_for_extract, input_directly_with_default, input_job_name, input_path, input_pwd,
     parse_without_input_with_default,
 };
 use crate::jenkins::query::{
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
     VfpJenkinsClient,
 };
-use crate::jenkins::util::get_jenkins_workflow_run_url;
-use crate::jenkins::watch::{watch, VfpWatchError};
+use crate::jenkins::watch::watch;
 use crate::pretty_log::{colored_println, toast, ThemeColor};
 use crate::vfp_error::VfpError;
 use crate::{default_config, pretty_log};
@@ -62,9 +61,7 @@ pub async fn cli_do_extract(
         default_config::LOCATOR_TEMPLATE,
     )));
 
-    let repo_decoration = db.get_repo_decoration();
-
-    let ci_temp = input_ci(stdout, ci, &db, &repo_decoration)
+    let ci_temp = input_ci_for_extract(stdout, ci, &db)
         .await
         .ok_or(VfpError::EmptyRepo)?;
 
@@ -95,7 +92,7 @@ pub async fn cli_do_extract(
 
     save_with_error_log(&db, None);
 
-    if let Some(path) = repo_decoration.get_full_path_by_ci(ci_temp) {
+    if let Some(path) = db.get_repo_decoration().get_full_path_by_ci(ci_temp) {
         if let Some(file_name) = path.file_stem().and_then(|v| v.to_str()) {
             let count = db.get_last_player_count().unwrap();
             let pty_logger = pretty_log::VfpPrettyLogger::apply_for(stdout, count);
@@ -373,18 +370,7 @@ pub async fn cli_do_watch(
             .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?,
     );
 
-    let username = db
-        .get_jenkins_username()
-        .as_ref()
-        .ok_or(VfpError::MissingParam(PARAM_USERNAME.to_string()))?;
-    let result = watch(
-        stdout,
-        client,
-        username,
-        &used_job_name.clone().unwrap(),
-        ci,
-    )
-    .await;
+    let result = watch(stdout, client, &db, &used_job_name.clone().unwrap(), ci).await;
 
     match result {
         Ok(build_number) => {
@@ -402,28 +388,7 @@ pub async fn cli_do_watch(
 
             toast("Watch", vec![RUN_TASK_COMPLETED]);
         }
-        Err(e) => {
-            return match e {
-                VfpWatchError::JenkinsError(_) => {
-                    Err(VfpError::Custom(ERR_NO_IN_PROGRESS_RUN_TASK.to_string()))
-                }
-                VfpWatchError::NoValidRunTask => {
-                    Err(VfpError::Custom(ERR_NO_VALID_RUN_TASK.to_string()))
-                }
-                VfpWatchError::WatchTaskFailed(build_number, log) => {
-                    Err(VfpError::RunTaskBuildFailed {
-                        build_number,
-                        job_name: used_job_name.clone().unwrap(),
-                        run_url: get_jenkins_workflow_run_url(
-                            db.get_jenkins_url().as_ref().unwrap(),
-                            used_job_name.as_ref().unwrap(),
-                            build_number,
-                        ),
-                        log,
-                    })
-                }
-            }
-        }
+        Err(e) => return Err(e),
     }
 
     Ok((used_job_name, success_build_number))

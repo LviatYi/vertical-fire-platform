@@ -32,10 +32,8 @@ pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID: &str =
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID: &str =
     "Url: {}.\nUsername: {}\nPassword: {}\nMaybe you should check your password.";
 pub const ERR_JENKINS_CLIENT_GET_CRUMB_FAILED: &str = "Failed to get crumb. {}";
-pub const ERR_NO_IN_PROGRESS_RUN_TASK: &str = "There is no in progress run task.";
 pub const ERR_NO_VALID_RUN_TASK: &str =
     "There is no valid run task (in progress, failure or success).";
-pub const ERR_WATCH_RUN_TASK_FAILED: &str = "The watched run task failed.";
 pub const ERR_TOAST_SHOW_FAILED: &str = "Failed to show toast notification.";
 pub const ERR_NEED_EVEN_PARAM: &str = "You must provide sufficient parameters.";
 pub const ERR_QUERY_JOB_CONFIG: &str = "Failed to query job config. {}";
@@ -43,13 +41,14 @@ pub const ERR_REQUEST_BUILD_FAILED: &str = "Failed to request a build task. {}";
 
 pub const HINT_JOB_NAME: &str = "use job:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
-pub const HINT_LATEST_CI_SUFFIX: &str = "(GLOBAL latest success)";
-pub const HINT_MY_LATEST_CI_SUFFIX: &str = "(USER latest success {})";
+pub const HINT_GLOBAL_LATEST_IN_PROGRESS_CI_SUFFIX: &str = "GLOBAL latest in progress";
+pub const HINT_GLOBAL_LATEST_SUCCESS_CI_SUFFIX: &str = "GLOBAL latest success";
+pub const HINT_MY_LATEST_CI_SUFFIX: &str = "USER latest success {}";
 pub const HINT_NO_MY_LATEST_CI_SUFFIX: &str = "there is no success run task in {}";
 pub const HINT_MY_LATEST_IN_PROGRESS_CI_SUFFIX: &str = "({} in progress)";
 pub const HINT_MY_LATEST_FAIL_CI_SUFFIX: &str = "({} failed)";
-pub const HINT_LAST_USED_SUFFIX: &str = "(last used)";
-pub const HINT_CUSTOM: &str = "Custom";
+pub const HINT_LAST_USED_SUFFIX: &str = "last used";
+pub const HINT_CUSTOM: &str = "Custom (tap enter to input)";
 pub const HINT_NOT_SET: &str = "Do not set";
 pub const HINT_SELECT_CI: &str = "use ci:";
 pub const HINT_INPUT_CUSTOM: &str = "use custom: ";
@@ -88,6 +87,7 @@ pub const WATCHING_RUN_TASK_IN_PROGRESS_PREPARE: &str =
     "Prepare to watching run task {} of {} in progress...";
 pub const WATCHING_RUN_TASK_IN_PROGRESS: &str =
     "Watching run task {} of {} in progress...(last check at {})";
+pub const NO_IN_PROGRESS_RUN_TASK_OF_USER: &str = "There is no in progress run task of yours.";
 pub const WATCHING_RUN_TASK_SUCCESS: &str = "Run task {} of {} finished with SUCCESS.";
 pub const WATCHING_RUN_TASK_FAILURE: &str = "Run task {} of {} finished with FAILURE.";
 pub const RUN_TASK_CONSOLE_OUTPUT_URL: &str = "Console output url: {}";

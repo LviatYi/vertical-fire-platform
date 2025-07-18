@@ -51,7 +51,6 @@ pub fn get_db(path: Option<&Path>) -> DbDataProxy {
     get_default_db_file_path(&get_path_or_home_path(path))
         .and_then(|item| DbDataProxy::get_from_path(&item))
         .unwrap_or_default()
-        .into()
 }
 
 pub fn delete_db_file(path: Option<&Path>) {

@@ -125,11 +125,18 @@ pub async fn query_run_info(
     .await
 }
 
+/// # UserLatestWorkflowInfo
+///
+/// This struct holds the latest workflow information for a user.
+/// It contains the latest successful workflow run, the latest in-progress workflow run, and the latest failed workflow run.
 pub struct UserLatestWorkflowInfo {
+    /// user latest successful workflow run
     pub latest_success: Option<WorkflowRun>,
 
+    /// user latest in-progress workflow run
     pub in_progress: Option<WorkflowRun>,
 
+    /// user latest failed workflow run
     pub failed: Option<WorkflowRun>,
 }
 

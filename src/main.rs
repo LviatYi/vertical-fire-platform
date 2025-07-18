@@ -136,6 +136,10 @@ enum Commands {
 
         #[command(flatten)]
         extract_params: ExtractParams,
+
+        /// Jenkins URL to run task.
+        #[arg(short, long)]
+        url:Option<String>,
     },
     /// Request start a Jenkins build task.
     Build {
@@ -397,7 +401,6 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
                 })
                 .collect();
 
-            let mut need_query_used_cl = false;
             let job_name = db.get_interest_job_name().clone().unwrap();
 
             let config_params = query_job_config(&client, &job_name).await.map_err(|e| {
@@ -458,7 +461,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             db.set_jenkins_build_param(Some(build_params_to_save));
             save_with_error_log(&db, None);
 
-            need_query_used_cl = build_params.get_shelve_changes().is_none();
+            let need_query_used_cl = build_params.get_shelve_changes().is_none();
 
             request_build(&client, &job_name, &build_params)
                 .await
@@ -531,6 +534,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             ci,
             no_extract,
             extract_params,
+            url,
         } => {
             // fp watch
             cli_try_first_login(&mut get_db(None), Some(&mut stdout)).await?;

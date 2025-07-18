@@ -37,6 +37,12 @@ impl From<InquireError> for VfpError {
     }
 }
 
+impl From<JenkinsError> for VfpError {
+    fn from(_: JenkinsError) -> Self {
+        VfpError::JenkinsClientInvalid
+    }
+}
+
 impl Display for VfpError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
@@ -47,7 +53,7 @@ impl Display for VfpError {
                 url,
                 username,
                 key,
-                e,
+                e: _,
             } => {
                 let msg = match method {
                     LoginMethod::ApiToken => {

@@ -1,7 +1,8 @@
 use crate::constant::log::*;
 use crate::db::db_data_proxy::DbDataProxy;
 use crate::default_config;
-use crate::extract::repo_decoration::{OrderedCiList, RepoDecoration};
+use crate::extract::repo_decoration::OrderedCiList;
+use crate::jenkins::jenkins_model::run_status::RunStatus;
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::query_user_latest_info;
 use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
@@ -12,7 +13,6 @@ use inquire::validator::{ErrorMessage, Validation};
 use inquire::{InquireError, Password, PasswordDisplayMode, Select, Text};
 use std::fmt::{Display, Formatter};
 use std::io::Stdout;
-use std::ops::Deref;
 use std::path::PathBuf;
 
 //region parse directly
@@ -430,7 +430,7 @@ where
 }
 //endregion
 
-pub async fn input_ci(
+pub async fn input_ci_for_extract(
     stdout: &mut Stdout,
     param_val: Option<u32>,
     db: &DbDataProxy,
@@ -475,12 +475,14 @@ pub async fn input_ci(
                         Some(ref latest_success) => {
                             latest_mine_ci = Some(latest_success.number);
                             let mut opt_hint = latest_success.number.to_string()
+                                + "("
                                 + formatx!(
                                     HINT_MY_LATEST_CI_SUFFIX,
                                     db.get_jenkins_username().clone().unwrap_or_default()
                                 )
                                 .unwrap_or_default()
-                                .as_str();
+                                .as_str()
+                                + ")";
 
                             if let Some(ref in_progress) = user_latest_info.in_progress {
                                 opt_hint += formatx!(
@@ -544,7 +546,10 @@ pub async fn input_ci(
 
     //region latest ci
     if let Some(latest) = latest {
-        options.push(format!("{}{}", latest, HINT_LATEST_CI_SUFFIX));
+        options.push(format!(
+            "{}({})",
+            latest, HINT_GLOBAL_LATEST_SUCCESS_CI_SUFFIX
+        ));
         latest_opt_index = options.len() - 1;
     }
     //endregion
@@ -553,8 +558,8 @@ pub async fn input_ci(
 
     //region last used ci
     if let Some(ref last_used) = last_used {
-        if exist_ci_list.deref().is_ci_exist(last_used) {
-            options.push(format!("{}{}", last_used, HINT_LAST_USED_SUFFIX));
+        if exist_ci_list.is_ci_exist(last_used) {
+            options.push(format!("{}({})", last_used, HINT_LAST_USED_SUFFIX));
             last_used_index = options.len() - 1;
         }
     }
@@ -605,6 +610,121 @@ pub async fn input_ci(
     }
 }
 
+/// # input ci for watch
+///
+/// When the user's relevant information cannot be queried, the watch target needs to be manually entered
+pub async fn input_ci_for_watch(
+    stdout: &mut Stdout,
+    param_val: Option<u32>,
+    db: &DbDataProxy,
+    job_name: &str,
+) -> Option<u32> {
+    if param_val.is_some() {
+        return param_val;
+    }
+
+    let last_used = *db.get_last_inner_version();
+    let mut latest_global_in_progress: Option<u32> = None;
+    let mut latest_global_success: Option<u32> = None;
+
+    let mut latest_global_in_progress_index: usize = usize::MAX;
+    let mut latest_global_success_index: usize = usize::MAX;
+    let mut last_used_index: usize = usize::MAX;
+
+    let mut options: Vec<String> = Vec::new();
+
+    //region global latest ci
+    if let Ok(client) = db.try_get_jenkins_async_client(stdout, false).await {
+        let builds = crate::jenkins::query::query_builds_in_job(
+            &client,
+            job_name,
+            Some(default_config::WATCH_QUERY_BUILDS_COUNT),
+        )
+        .await;
+
+        if let Ok(builds) = builds {
+            for build in builds.builds {
+                if let Ok(run_info) =
+                    crate::jenkins::query::query_run_info(&client, job_name, build.number).await
+                {
+                    match run_info.result {
+                        RunStatus::Processing => {
+                            if latest_global_in_progress.is_some() {
+                                continue;
+                            }
+                            latest_global_in_progress = Some(run_info.number);
+                            options.push(format!(
+                                "{}({})",
+                                run_info.number, HINT_GLOBAL_LATEST_IN_PROGRESS_CI_SUFFIX
+                            ));
+                            latest_global_in_progress_index = options.len() - 1;
+                        }
+                        RunStatus::Success => {
+                            if latest_global_success.is_some() {
+                                continue;
+                            }
+                            latest_global_success = Some(run_info.number);
+                            options.push(format!(
+                                "{}({})",
+                                run_info.number, HINT_GLOBAL_LATEST_SUCCESS_CI_SUFFIX
+                            ));
+                            latest_global_success_index = options.len() - 1;
+                        }
+                        _ => {}
+                    }
+                }
+
+                if latest_global_in_progress.is_some() && latest_global_success.is_some() {
+                    break;
+                }
+            }
+        }
+    }
+    //endregion
+
+    //region last used ci
+    if let Some(ref last_used) = last_used {
+        options.push(format!("{}({})", last_used, HINT_LAST_USED_SUFFIX));
+        last_used_index = options.len() - 1;
+    }
+    //endregion
+
+    //region custom ci
+    options.push(HINT_CUSTOM.to_string());
+    //endregion
+
+    let selection = Select::new(HINT_SELECT_CI, options)
+        .without_filtering()
+        .raw_prompt();
+
+    match selection {
+        Ok(choice) => {
+            if choice.index == latest_global_in_progress_index {
+                latest_global_in_progress
+            } else if choice.index == latest_global_success_index {
+                latest_global_success
+            } else if choice.index == last_used_index {
+                last_used
+            } else {
+                let input = Text::from(HINT_INPUT_CUSTOM)
+                    .with_validator(move |v: &str| {
+                        if let Ok(_) = v.parse::<u32>() {
+                            Ok(Validation::Valid)
+                        } else {
+                            Ok(Validation::Invalid(ErrorMessage::Custom(
+                                ERR_NEED_A_NUMBER.to_string(),
+                            )))
+                        }
+                    })
+                    .prompt();
+
+                input.ok().and_then(|str| str.parse::<u32>().ok())
+            }
+        }
+        Err(_) => None,
+    }
+}
+
 pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> InquireResult<String> {
     let mut origin_options: Vec<String> = default_config::RECOMMEND_JOB_NAMES
         .to_vec()
@@ -623,7 +743,12 @@ pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> Inq
 
             options = cut_off_at_index
                 .into_iter()
-                .map(|v| SelectionCustomizableOptionVal::from_with_hint(v, HINT_LAST_USED_SUFFIX))
+                .map(|v| {
+                    SelectionCustomizableOptionVal::from_with_hint(
+                        v,
+                        &format!("({})", HINT_LAST_USED_SUFFIX),
+                    )
+                })
                 .collect();
 
             options.append(
@@ -638,7 +763,7 @@ pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> Inq
             options = vec![SelectionCustomizableOptionVal::DataContain(
                 SelectionOptionVal::DataWithHintSuffix(
                     last_used,
-                    HINT_LAST_USED_SUFFIX.to_string(),
+                    format!("({})", HINT_LAST_USED_SUFFIX),
                 ),
             )];
             options.append(
@@ -679,7 +804,10 @@ pub fn input_cl(param_val: Option<u32>, db_val: &Option<u32>) -> Option<u32> {
     let options: Vec<SelectionCustomizableOptionVal<u32>> = if let Some(last_used) = *db_val {
         vec![
             SelectionCustomizableOptionVal::None,
-            SelectionCustomizableOptionVal::from_with_hint(last_used, HINT_LAST_USED_SUFFIX),
+            SelectionCustomizableOptionVal::from_with_hint(
+                last_used,
+                &format!("({})", HINT_LAST_USED_SUFFIX),
+            ),
             SelectionCustomizableOptionVal::Custom,
         ]
     } else {
@@ -727,7 +855,10 @@ pub fn input_sl(param_val: Option<Shelves>, db_val: &Option<Shelves>) -> Option<
         if let Some(last_used) = db_val.clone() {
             vec![
                 SelectionCustomizableOptionVal::None,
-                SelectionCustomizableOptionVal::from_with_hint(last_used, HINT_LAST_USED_SUFFIX),
+                SelectionCustomizableOptionVal::from_with_hint(
+                    last_used,
+                    &format!("({})", HINT_LAST_USED_SUFFIX),
+                ),
                 SelectionCustomizableOptionVal::Custom,
             ]
         } else {

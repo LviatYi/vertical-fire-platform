@@ -20,6 +20,7 @@ Change Log:
 - UNRELEASE
     - 优化登录错误提示。 
     - 优化针对 jenkins url 记忆的空值处理。
+    - 优化 `fp watch` 在无法找到用户自己的 run task 时，则进入二次输入流程。
 - v1.4.4
     - 修复了 `fp extract` 时错误的文件生成路径。该问题曾导致在 fp 的工作目录生成了一些空文件夹。
     - 添加对 xml 中的富文本支持。当前仅支持了 `<span>` 标签。
@@ -116,14 +117,12 @@ setx path "%path%;PATH_TO_FP_ROOT_DIR"
 可以这样使用：
 
 ```shell
-// usage
 fp extract -j dev -ci 1111 -c 4 -d C:/path/to/extract
 ```
 
 也可以这样使用：
 
 ```shell
-// usage
 fp extract
 ```
 
@@ -175,7 +174,6 @@ fp run
 可以这样使用：
 
 ```shell
-// usage
 fp login --url https://your.jenkins.url -u your_username -p your_password
 
 // or
@@ -185,7 +183,6 @@ fp login --url https://your.jenkins.url -u your_username -a your_api_token
 也可以这样使用：
 
 ```shell
-// usage
 fp login
 ```
 
@@ -203,7 +200,6 @@ fp login
 可以这样使用：
 
 ```shell
-// usage
 fp build -j your_interested_job_name --cl 321 --sl 123,456,789
 ```
 
@@ -220,6 +216,8 @@ fp build
 - **--no-watch-and-extract** 在所需的操作成功后，不要执行监视与自动解压。
 - **--no-extract** 在所需的操作成功后，不要执行自动解压。
 
+此外，若执行 extract ，则可以额外使用 `fp extract` 的所有参数。
+
 ---
 
 ### Watch
@@ -229,20 +227,20 @@ fp build
 可以这样使用：
 
 ```shell
-// usage
 fp watch -j your_interested_job_name --ci 1111
 ```
 
 也可以这样使用：
 
 ```shell
-// usage
 fp watch
 ```
 
 - **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
 - **-#, --ci <CI>** 包 ID。用于定位包。
 - **--no-extract** 在所需的操作成功后，不要执行自动解压。
+
+此外，若执行 extract ，则可以额外使用 `fp extract` 的所有参数。
 
 ---
 

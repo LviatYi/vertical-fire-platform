@@ -1,5 +1,7 @@
 use crate::jenkins::jenkins_endpoint::job_config::JobConfig;
-use crate::jenkins::jenkins_model::job_config::{FlowDefinition, ParameterDefinition};
+use crate::jenkins::jenkins_model::job_config::{
+    ChoiceParameter, FlowDefinition, ParameterDefinition,
+};
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::VfpJenkinsClient;
 use jenkins_sdk::{JenkinsError, TriggerBuild};
@@ -155,10 +157,24 @@ impl From<FlowDefinition> for VfpJobBuildParam {
                     default_value,
                     ..
                 } => (name.clone(), Value::Bool(*default_value)),
-                ParameterDefinition::Choice { name, choices, .. } => (
-                    name.clone(),
-                    Value::String(choices.first().cloned().unwrap_or_default()),
-                ),
+                ParameterDefinition::Choice { name, choices, .. } => {
+                    let first = choices.first().cloned();
+                    match first {
+                        Some(ChoiceParameter::String(param)) => {
+                            (name.clone(), Value::String(param.string))
+                        }
+                        Some(ChoiceParameter::Array { string_array: arr }) => (
+                            name.clone(),
+                            Value::String(
+                                arr.first()
+                                    .cloned()
+                                    .map(|item| item.string)
+                                    .unwrap_or_default(),
+                            ),
+                        ),
+                        None => (name.clone(), Value::String(String::new())),
+                    }
+                }
             })
             .collect();
 

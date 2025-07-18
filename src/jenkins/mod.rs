@@ -16,13 +16,11 @@ mod tests {
     use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
     use crate::jenkins::pwd_jenkins_async_client::PwdJenkinsAsyncClient;
     use crate::jenkins::query::*;
-    use crate::jenkins::watch::watch;
     use jenkins_sdk::{AsyncQuery, AsyncRawQuery, JenkinsAsyncClient, JobsInfo, TriggerBuild};
     use reqwest::header::COOKIE;
     use reqwest::Client;
     use serde_json::json;
     use std::time::Instant;
-    use win_toast_notify::WinToastNotify;
 
     const URL: &str = "";
     const USERNAME: &str = "";
@@ -305,28 +303,6 @@ mod tests {
             }
             Err(e) => {
                 println!("Failed to parse JSON: {:#?}", e);
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_watch() {
-        let mut stdout = std::io::stdout();
-        let client_valid =
-            VfpJenkinsClient::ApiTokenClient(JenkinsAsyncClient::new(URL, USERNAME, API_TOKEN));
-        let result = watch(&mut stdout, client_valid, USERNAME, JOB_NAME, None).await;
-
-        match result {
-            Ok(_) => {
-                println!("Watch completed successfully. Send toast.");
-                WinToastNotify::new()
-                    .set_title("Vertical FP")
-                    .set_messages(vec!["Run Task Completed with Success."])
-                    .show()
-                    .expect("Failed to show toast notification")
-            }
-            Err(e) => {
-                println!("Error: {:#?}", e);
             }
         }
     }
