@@ -97,6 +97,7 @@ pub const DB_BUILD_PARAM_NOT_IN_USED: &str = "Some build param from memery not i
 pub const REQUEST_BUILD_SUCCESS: &str = "Request build success.";
 pub const BUILD_USED_PARAMS: &str = "Build used params:";
 pub const AUTO_FETCH_LATEST_USED_CL: &str = "Auto fetch your latest used CL: {}";
+pub const URL_OUTPUT: &str = "Url: ";
 
 pub const PARAM_JOB_NAME: &str = "job name";
 pub const PARAM_DEST: &str = "path as destination";

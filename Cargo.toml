@@ -1,10 +1,10 @@
 [package]
 name = "vertical-fire-platform"
-version = "1.4.4"
+version = "1.4.5"
 edition = "2021"
 authors = ["LviatYi"]
 build = "build.rs"
-description = "⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟ |  ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄\n⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄ |  ⠄⠄⠄⠄⠄⠄⠛⢿⣿⣿⠛⠛⠛⣿⣿⣦⠄⠄⠄⠄⠄⠄⠄⠄\n⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄ |  ⠄⠄⠄⠄⠄⠄⠄⢸⣿⣿⣤⣤⣤⣿⣿⠃⠄⡀⠄⠄⠄⠄⠄⠄\n⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄ |  ⠄⠄⠄⠄⠄⠄⣤⣼⣿⣿⣤⡀⠉⣿⣿⣦⣤⣿⠄⠄⠄⠄⠄⠄\n⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄ |  ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄\n\nDestroy all obstacles in the way of development!\nPowered by LviatYi & RUST\n"
+description = "⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟ |  ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄\n⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄ |  ⠄⠄⠄⠄⠄⠄⠛⢿⣿⣿⠛⠛⠛⣿⣿⣦⠄⠄⠄⠄⠄⠄⠄⠄\n⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄ |  ⠄⠄⠄⠄⠄⠄⠄⢸⣿⣿⣤⣤⣤⣿⣿⠃⠄⡀⠄⠄⠄⠄⠄⠄\n⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄ |  ⠄⠄⠄⠄⠄⠄⣤⣼⣿⣿⣤⡀⠉⣿⣿⣦⣤⣿⠄⠄⠄⠄⠄⠄\n⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄ |  ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄\n\nDestroy all obstacles in the way of development!\nPowered by LviatYi & RUST\n\nGet More Info at:\nhttps://github.com/LviatYi/vertical-fire-platform\n"
 
 [dependencies]
 clap = { version = "4.5.29", features = ["derive"] }

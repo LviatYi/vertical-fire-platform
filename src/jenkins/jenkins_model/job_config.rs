@@ -48,9 +48,23 @@ pub enum ParameterDefinition {
     Choice {
         name: String,
         description: Option<XmlRichText>,
-        #[serde(default)]
-        choices: Vec<String>,
+        choices: Vec<ChoiceParameter>,
     },
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub enum ChoiceParameter {
+    #[serde(rename = "string")]
+    String(StringParameter),
+    #[serde(rename = "a")]
+    Array {
+        string_array: Vec<StringParameter>,
+    },
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct StringParameter {
+    pub string: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -246,6 +260,21 @@ mod tests {
         <hudson.model.ChoiceParameterDefinition>
           <name>TestType</name>
           <description><span style='color:red'> Please select TestType before build.</span></description>
+          <choices>
+            <string/>
+            <string>Content</string>
+            <string>Other</string>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>JuiceEnvironment</name>
+          <description/>
+          <choices class="java.util.Arrays$ArrayList">
+          <a class="string-array">
+            <string>Autosmoke</string>
+            <string>EARO_QA</string>
+          </a>
+          </choices>
         </hudson.model.ChoiceParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
@@ -273,10 +302,10 @@ mod tests {
             }
         }
     }
-    
+
     #[test]
     fn test_deserialize_config_xml_with_empty_description() {
-        let content=r##"<flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
+        let content = r##"<flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
     <properties>
         <hudson.model.ParametersDefinitionProperty>
             <parameterDefinitions>
@@ -289,7 +318,7 @@ mod tests {
         </hudson.model.ParametersDefinitionProperty>
     </properties>
 </flow-definition>"##;
-        
+
         match quick_xml::de::from_str::<FlowDefinition>(content) {
             Ok(result) => {
                 println!("{:#?}", result);

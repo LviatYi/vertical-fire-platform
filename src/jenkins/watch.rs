@@ -109,10 +109,29 @@ pub async fn watch(
         .unwrap_or_default(),
     );
 
+    colored_println(
+        stdout,
+        ThemeColor::Second,
+        &format!(
+            "{} {}",
+            URL_OUTPUT,
+            get_jenkins_workflow_run_url(
+                db.get_jenkins_url().as_ref().unwrap(),
+                job_name,
+                build_number
+            )
+        ),
+    );
+
+    let mut clean_able = false;
     loop {
         let get_reasoned_run_status =
             get_reasoned_run_status(&client, job_name, build_number).await?;
-        clean_one_line(stdout);
+
+        if clean_able {
+            clean_one_line(stdout);
+        }
+        clean_able = true;
 
         match get_reasoned_run_status {
             ReasonedRunStatus::Processing => {

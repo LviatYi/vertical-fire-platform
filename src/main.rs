@@ -17,12 +17,14 @@ use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
 use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
 use crate::jenkins::jenkins_model::shelves::Shelves;
-use crate::jenkins::query::{query_run_info, VfpJenkinsClient};
+use crate::jenkins::query::{query_builds_in_job, query_run_info, VfpJenkinsClient};
+use crate::jenkins::util::get_jenkins_workflow_run_url;
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use crate::vfp_error::VfpError;
 use clap::{Parser, Subcommand};
 use formatx::formatx;
+use std::error::Error;
 use std::fmt::Display;
 use std::io::stdout;
 use std::path::{Path, PathBuf};
@@ -495,6 +497,32 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             sorted_params_for_show.iter().for_each(|(k, v)| {
                 colored_println(&mut stdout, ThemeColor::Main, &format!("{}: {}", k, v));
             });
+
+            if let Ok(builds) = query_builds_in_job(&client, &job_name, Some(3))
+                .await
+                .map(|b| b.builds)
+            {
+                for build in builds {
+                    if let Ok(run) = query_run_info(&client, &job_name, build.number).await {
+                        if run.is_mine(db.get_jenkins_username().as_ref().unwrap()) {
+                            colored_println(
+                                &mut stdout,
+                                ThemeColor::Second,
+                                &format!(
+                                    "{} {}",
+                                    URL_OUTPUT,
+                                    get_jenkins_workflow_run_url(
+                                        db.get_jenkins_url().as_ref().unwrap(),
+                                        &job_name,
+                                        build.number,
+                                    )
+                                ),
+                            );
+                            break;
+                        }
+                    }
+                }
+            }
 
             if no_watch_and_extract {
                 return Ok(());
