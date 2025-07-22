@@ -67,7 +67,7 @@ jobs:
       - name: Package into zip
         run: |
           mkdir release-dir
-          copy ./target/${{env.TARGET}}/release/${{ steps.get_cargo_package_name.outputs.value }}.exe release-dir\
+          copy ./target/${{env.TARGET}}/release/fp.exe release-dir\
           Compress-Archive -Path release-dir\* -DestinationPath ${{env.RLS_ZIP_NAME}}
 
       - name: Archive source code
@@ -77,7 +77,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-release
-          path: ./target/${{env.TARGET}}/release/${{ steps.get_cargo_package_name.outputs.value }}.exe
+          path: ./target/${{env.TARGET}}/release/fp.exe
 
       - name: Upload source code as artifact
         uses: actions/upload-artifact@v4
