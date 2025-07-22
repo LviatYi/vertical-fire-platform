@@ -1,6 +1,6 @@
 [package]
 name = "vertical-fire-platform"
-version = "1.4.5"
+version = "1.4.6"
 edition = "2021"
 authors = ["LviatYi"]
 build = "build.rs"
@@ -24,7 +24,6 @@ tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread", "macros"] }
 serde_json = "1.0.140"
 reqwest = { version = "0.12.15", features = ["cookies"] }
 async-trait = "0.1.88"
-thiserror = "2.0.12"
 chrono = "0.4.40"
 win-toast-notify = "0.1.6"
 base64 = "0.22.1"

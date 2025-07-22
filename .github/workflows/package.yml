@@ -28,19 +28,24 @@ jobs:
 
       - name: Set filenames as Env variable
         run: |
+          $target = "x86_64-pc-windows-msvc"
+          echo "TARGET=$target" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "SRC_FILENAME=${{ steps.get_cargo_package_name.outputs.value }}-${{ github.ref_name }}-source.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "RLS_FILENAME=fp.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "RLS_ZIP_NAME=vfp-${{ github.ref_name }}-$target.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Print Env variable
         run: |
+          echo "TARGET: ${{env.TARGET}}"
           echo "SRC_FILENAME: ${{env.SRC_FILENAME}}"
           echo "RLS_FILENAME: ${{env.RLS_FILENAME}}"
+          echo "RLS_ZIP_NAME: ${{env.RLS_ZIP_NAME}}"
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: x86_64-pc-windows-msvc
+          target: ${{env.TARGET}}
           default: true
 
       - name: Build
@@ -54,7 +59,13 @@ jobs:
           PACKAGE_FILE_STEM: ${{ secrets.PACKAGE_FILE_STEM}}
           RECOMMEND_JOB_NAMES: ${{ secrets.RECOMMEND_JOB_NAMES}}
           REPO_TEMPLATE: ${{ secrets.REPO_TEMPLATE}}
-        run: cargo build --release --target x86_64-pc-windows-msvc
+        run: cargo build --release --target ${{env.TARGET}}
+
+      - name: Package into zip
+        run: |
+          mkdir release-dir
+          copy ./target/${{env.TARGET}}/release/${{ steps.get_cargo_package_name.outputs.value }}.exe release-dir\
+          Compress-Archive -Path release-dir\* -DestinationPath ${{env.RLS_ZIP_NAME}}
 
       - name: Archive source code
         run: git archive -o ${{env.SRC_FILENAME}} HEAD
@@ -63,7 +74,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-release
-          path: ./target/x86_64-pc-windows-msvc/release/${{ steps.get_cargo_package_name.outputs.value }}.exe
+          path: ./target/${{env.TARGET}}/release/${{ steps.get_cargo_package_name.outputs.value }}.exe
 
       - name: Upload source code as artifact
         uses: actions/upload-artifact@v4
@@ -88,8 +99,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/x86_64-pc-windows-msvc/release/fp.exe
-          asset_name: ${{ env.RLS_FILENAME }}
+          asset_path: ./${{env.RLS_ZIP_NAME}}
+          asset_name: ${{env.RLS_ZIP_NAME}}
           asset_content_type: application/zip
 
       - name: Upload Source Code
