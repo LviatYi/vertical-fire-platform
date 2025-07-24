@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.5.2] - 2025-07-24
+
 ### 🐛 Fixed
 
 - 更新后未保存被消耗的版本状态。
@@ -205,7 +207,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.2...HEAD
+
+[1.5.2]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.1...v1.5.2
 
 [1.5.1]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.0...v1.5.1
 
