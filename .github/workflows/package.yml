@@ -86,6 +86,26 @@ jobs:
           name: source-code
           path: ${{env.SRC_FILENAME}}
 
+      - name: Extract Release Notes
+        id: extract_release_notes
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".Substring(1)
+          $changelog = Get-Content -Path CHANGELOG.md -Raw
+          $startIndex = $changelog.IndexOf("## [$version]")
+          if ($startIndex -eq -1) {
+            echo "Could not find changelog entry for version $version"
+            exit 1
+          }
+          $changelog = $changelog.Substring($startIndex)
+          $nextHeaderIndex = $changelog.IndexOf("## [", 1)
+          if ($nextHeaderIndex -ne -1) {
+            $changelog = $changelog.Substring(0, $nextHeaderIndex)
+          }
+          $release_body = ($changelog -split '\r?\n' | Select-Object -Skip 1) -join "`n"
+          $release_body | Out-File -FilePath "releasenotes.md"
+          echo "path=releasenotes.md" >> $env:GITHUB_OUTPUT
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -94,6 +114,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           release_name: Release ${{ steps.get_cargo_package_name.outputs.value }} ${{ github.ref_name }}
+          body_path: ${{ steps.extract_release_notes.outputs.path }}
           draft: false
           prerelease: false
 
