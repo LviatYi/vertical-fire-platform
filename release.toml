@@ -1,0 +1,8 @@
+pre-release-replacements = [
+    { file = "README.md", search = "v.*\\s*\\nby LviatYi", replace = "v{{version}}  \\nby LviatYi" },
+    { file = "CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+    { file = "CHANGELOG.md", search = "\\.\\.\\.HEAD", replace = "...{{tag_name}}", exactly = 1 },
+    { file = "CHANGELOG.md", search = "ReleaseDate", replace = "{{date}}" },
+    { file = "CHANGELOG.md", search = "<!-- next-header -->", replace = "<!-- next-header -->\n\n## [Unreleased] - ReleaseDate", exactly = 1 },
+    { file = "CHANGELOG.md", search = "<!-- next-url -->", replace = "<!-- next-url -->\n\n[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/{{tag_name}}...HEAD", exactly = 1 },
+]

@@ -40,3 +40,10 @@ tempfile = "3.14.0"
 
 [build-dependencies]
 regex = "1.11.1"
+
+[package.metadata.release]
+tag-name = "v{{version}}"
+sign-tag = false
+consolidate-commits = true
+pre-release-commit-message = "chore(release): v{{version}}"
+push = false
