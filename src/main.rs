@@ -221,10 +221,15 @@ async fn main() {
         show_welcome(Some(command_name.as_str()));
 
         {
-            let db = get_db(None);
+            let mut db = get_db(None);
             if !db.is_never_check_version() {
                 if let Some(version) = db.get_latest_remote_version() {
-                    show_upgradable_hit(&mut stdout, version.to_string().as_str());
+                    if version.to_string().eq(env!("CARGO_PKG_VERSION")) {
+                        db.consume_update_status();
+                        save_with_error_log(&db, None);
+                    } else {
+                        show_upgradable_hit(&mut stdout, version.to_string().as_str());
+                    }
                 }
             }
         }

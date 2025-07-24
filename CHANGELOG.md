@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### 🐛 Fixed
+
+- 更新后未保存被消耗的版本状态。
+- `cargo release` 过程中错误地替换了 ReadMe 中的版本信息。
+
 ## [1.5.1] - 2025-07-24
 
 ### ⚙️ Changed

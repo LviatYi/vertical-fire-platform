@@ -98,12 +98,13 @@ pub fn fetch_and_try_auto_update(stdout: &mut std::io::Stdout) {
         }
     }
 
+    save_with_error_log(&db, None);
+    
     if db.has_latest_version() && db.is_auto_update_enabled() {
         colored_println(stdout, ThemeColor::Main, AUTO_UPDATE_ENABLED);
 
         do_self_update_with_log(stdout, &mut db, None);
     }
-    save_with_error_log(&db, None);
 }
 
 pub fn do_self_update_with_log(
@@ -163,4 +164,5 @@ pub fn do_self_update_with_log(
     }
 
     db.consume_update_status();
+    save_with_error_log(&db, None);
 }
