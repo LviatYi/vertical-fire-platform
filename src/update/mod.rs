@@ -111,6 +111,23 @@ pub fn do_self_update_with_log(
     db: &mut DbDataProxy,
     specified_version: Option<&str>,
 ) {
+    if let Some(specified_version) = specified_version {
+        if let Ok(version) = Version::parse(specified_version) {
+            if version.lt(&Version::parse(default_config::OLDEST_SUPPORT_UPDATE_VERSION).unwrap()) {
+                colored_println(
+                    stdout,
+                    ThemeColor::Error,
+                    &formatx!(
+                        ERR_VERSION_NOT_SUPPORT_UPDATE,
+                        default_config::OLDEST_SUPPORT_UPDATE_VERSION
+                    )
+                    .unwrap_or_default(),
+                );
+                return;
+            }
+        }
+    }
+
     match update::self_update(specified_version) {
         Ok(update_result) => match update_result {
             None => {

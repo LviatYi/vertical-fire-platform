@@ -19,8 +19,6 @@ by LviatYi
 
 更新计划 | Road Map:
 
-- [ ] 分离 CHANGELOG 与 README.md，应用 CHANGELOG 标准。
-- [ ] 禁用目标低于 1.5.0 版本的更新。  
 - [ ] 添加 `fp info`，以允许查询 Jenkins Build Task 的状态。
 - [ ] 某些环境中，可能不存在 wmic 命令，因而无法查询特定可执行文件的运行状态。因此需要额外的替代方案。
 - [ ] 提供一种直接打开记忆存储文件的方式。

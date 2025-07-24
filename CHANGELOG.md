@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### ⚙️ Changed
+
+- 优化 ChangeLog 流程。实现全流程自动化。应用 CHANGELOG 标准。
+
+### ⛔ Removed
+
+- 禁用目标低于 1.5.0 版本的更新。
+
 ## [1.5.0] - 2025-07-24
 
 ### 🚀 Added

@@ -5,6 +5,7 @@ pub const COUNT: u32 = 4;
 pub const RUN_COUNT: u32 = 1;
 pub const WATCH_INTERVAL: u64 = 10;
 pub const WATCH_QUERY_BUILDS_COUNT: u32 = 10;
+pub const OLDEST_SUPPORT_UPDATE_VERSION: &str = "1.5.0";
 
 pub const RECOMMEND_JOB_NAMES: [&str; 0] = [
 ];

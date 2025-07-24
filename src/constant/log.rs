@@ -39,6 +39,8 @@ pub const ERR_NEED_EVEN_PARAM: &str = "You must provide sufficient parameters.";
 pub const ERR_QUERY_JOB_CONFIG: &str = "Failed to query job config. {}";
 pub const ERR_REQUEST_BUILD_FAILED: &str = "Failed to request a build task. {}";
 pub const ERR_VERSION_PARSE_FAILED: &str = "Failed to parse version. {}";
+pub const ERR_VERSION_NOT_SUPPORT_UPDATE: &str =
+    "This version does not support update. Please upgrade to a newer version great than {}.";
 pub const ERR_UPDATE_FAILED: &str = "Update failed. {}";
 
 pub const HINT_JOB_NAME: &str = "use job:";
@@ -69,7 +71,8 @@ pub const HINT_SELECT_CL: &str = "use change list: ";
 pub const HINT_SELECT_SL: &str = "use shelved changes: ";
 pub const HINT_UPGRADABLE: &str = "There is a new version available. Latest: {}. Current: {}";
 pub const HINT_UPGRADE_OPERATION: &str = "Use `fp update` to upgrade to the latest version.";
-pub const HINT_AUTO_UPGRADE_OPERATION: &str = "Use `fp update --auto-update` to enable auto update.";
+pub const HINT_AUTO_UPGRADE_OPERATION: &str =
+    "Use `fp update --auto-update` to enable auto update.";
 pub const HINT_UPGRADE_SILENT_OPERATION: &str =
     "Use `fp update --never-check` to disable update check and hints.";
 
