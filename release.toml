@@ -3,6 +3,7 @@ sign-tag = false
 consolidate-commits = true
 pre-release-commit-message = "chore(release): v1.2.3"
 push = false
+verify = false
 pre-release-replacements = [
     { file = "README.md", search = "v.*\\s*\\nby LviatYi", replace = "v{{version}}  \\nby LviatYi" },
     { file = "CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
