@@ -1,9 +1,9 @@
 tag-name = "v{{version}}"
 sign-tag = false
-consolidate-commits = true
-pre-release-commit-message = "chore(release): v{{version}}"
 push = false
 verify = false
+consolidate-commits = true
+pre-release-commit-message = "chore(release): v{{next_version}}"
 pre-release-replacements = [
     { file = "README.md", search = "v.*\\s*\\nby LviatYi", replace = "v{{version}}  \\nby LviatYi" },
     { file = "CHANGELOG.md", search = "[Uu]nreleased", replace = "{{version}}" },
