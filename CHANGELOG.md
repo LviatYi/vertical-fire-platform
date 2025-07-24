@@ -190,7 +190,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.0...HEAD
 
 [1.3.2]: https://github.com/LviatYi/vertical-fire-platform/releases/tag/v1.3.2
 
