@@ -19,6 +19,11 @@ define_versioned_data_type!(FpDbV6, VERSION_FP_DB_V6, {
     pub jenkins_api_token: Option<String>,
     pub jenkins_pwd: Option<String>,
     pub jenkins_build_params: Option<VfpJobBuildParam>,
+    #[serde(default)]
+    pub never_check_version: bool,
+    #[serde(default)]
+    pub auto_update_enabled: bool,
+    pub latest_remote_version: Option<String>,
     }
 );
 

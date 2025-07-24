@@ -38,6 +38,8 @@ pub const ERR_TOAST_SHOW_FAILED: &str = "Failed to show toast notification.";
 pub const ERR_NEED_EVEN_PARAM: &str = "You must provide sufficient parameters.";
 pub const ERR_QUERY_JOB_CONFIG: &str = "Failed to query job config. {}";
 pub const ERR_REQUEST_BUILD_FAILED: &str = "Failed to request a build task. {}";
+pub const ERR_VERSION_PARSE_FAILED: &str = "Failed to parse version. {}";
+pub const ERR_UPDATE_FAILED: &str = "Update failed. {}";
 
 pub const HINT_JOB_NAME: &str = "use job:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
@@ -65,6 +67,11 @@ pub const HINT_JENKINS_API_TOKEN_DOC: &str =
     "https://www.jenkins.io/doc/book/using/remote-access-api/";
 pub const HINT_SELECT_CL: &str = "use change list: ";
 pub const HINT_SELECT_SL: &str = "use shelved changes: ";
+pub const HINT_UPGRADABLE: &str = "There is a new version available. Latest: {}. Current: {}";
+pub const HINT_UPGRADE_OPERATION: &str = "Use `fp update` to upgrade to the latest version.";
+pub const HINT_AUTO_UPGRADE_OPERATION: &str = "Use `fp update --auto-update` to enable auto update.";
+pub const HINT_UPGRADE_SILENT_OPERATION: &str =
+    "Use `fp update --never-check` to disable update check and hints.";
 
 pub const LOGIN_SUCCESS_BY_PWD: &str = "Login success by password!";
 pub const LOGIN_SUCCESS_BY_API_TOKEN: &str = "Login success by api token!";
@@ -97,7 +104,15 @@ pub const DB_BUILD_PARAM_NOT_IN_USED: &str = "Some build param from memery not i
 pub const REQUEST_BUILD_SUCCESS: &str = "Request build success.";
 pub const BUILD_USED_PARAMS: &str = "Build used params:";
 pub const AUTO_FETCH_LATEST_USED_CL: &str = "Auto fetch your latest used CL: {}";
+pub const AUTO_FETCH_LATEST_USED_CL_FAILED: &str =
+    "Auto fetch used CL in latest build failed. This data may be invalid";
 pub const URL_OUTPUT: &str = "Url: ";
+pub const AUTO_UPDATE_ENABLED: &str = "Auto update enabled.";
+pub const AUTO_UPDATE_DISABLED: &str = "Auto update disabled.";
+pub const UPGRADE_TO_VERSION_SUCCESS: &str = "Upgrade to version {} success!";
+pub const CURRENT_VERSION_UP_TO_DATE: &str = "Current version is up to date.";
+pub const DISABLE_AUTO_UPDATE_BECAUSE_OF_UPDATE_FAILED: &str = "Auto-Update disabled.";
+pub const NEVER_CHECK_VERSION: &str = "Never check version.";
 
 pub const PARAM_JOB_NAME: &str = "job name";
 pub const PARAM_DEST: &str = "path as destination";

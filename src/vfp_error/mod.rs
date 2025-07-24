@@ -29,6 +29,8 @@ pub enum VfpError {
         run_url: String,
         log: String,
     },
+    VersionParseFailed(String),
+    SelfUpdateError(self_update::errors::Error),
 }
 
 impl From<InquireError> for VfpError {
@@ -40,6 +42,12 @@ impl From<InquireError> for VfpError {
 impl From<JenkinsError> for VfpError {
     fn from(_: JenkinsError) -> Self {
         VfpError::JenkinsClientInvalid
+    }
+}
+
+impl From<self_update::errors::Error> for VfpError {
+    fn from(value: self_update::errors::Error) -> Self {
+        VfpError::SelfUpdateError(value)
     }
 }
 
@@ -93,6 +101,10 @@ impl Display for VfpError {
                 job_name,
                 ..
             } => formatx!(WATCHING_RUN_TASK_FAILURE, build_number, job_name).unwrap_or_default(),
+            VfpError::VersionParseFailed(ver) => {
+                formatx!(ERR_VERSION_PARSE_FAILED, ver).unwrap_or_default()
+            },
+            VfpError::SelfUpdateError(e) => e.to_string(),
         };
         write!(f, "{}", str)
     }

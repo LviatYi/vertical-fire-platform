@@ -59,6 +59,7 @@ jobs:
           PACKAGE_FILE_STEM: ${{ secrets.PACKAGE_FILE_STEM}}
           RECOMMEND_JOB_NAMES: ${{ secrets.RECOMMEND_JOB_NAMES}}
           REPO_TEMPLATE: ${{ secrets.REPO_TEMPLATE}}
+          QUERY_TOKEN_GITHUB: ${{ secrets.QUERY_TOKEN_GITHUB}}
         run: cargo build --release --target ${{env.TARGET}}
 
       - name: Watch

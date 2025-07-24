@@ -109,6 +109,14 @@ impl DbDataProxy {
         })
     }
 
+    pub fn has_latest_version(&self) -> bool {
+        self.data.latest_remote_version.is_some()
+    }
+
+    pub fn consume_update_status(&mut self) {
+        self.data.latest_remote_version = None;
+    }
+
     //region getter & setter
     pub fn get_last_inner_version(&self) -> &Option<u32> {
         &self.data.last_inner_version
@@ -224,6 +232,36 @@ impl DbDataProxy {
 
     pub fn set_jenkins_build_param(&mut self, val: Option<VfpJobBuildParam>) -> &mut Self {
         self.data.jenkins_build_params = val;
+        self
+    }
+
+    pub fn is_auto_update_enabled(&self) -> bool {
+        self.data.auto_update_enabled
+    }
+
+    pub fn set_auto_update_enabled(&mut self, val: bool) -> &mut Self {
+        self.data.auto_update_enabled = val;
+        self
+    }
+
+    pub fn is_never_check_version(&self) -> bool {
+        self.data.never_check_version
+    }
+
+    pub fn set_never_check_version(&mut self, val: bool) -> &mut Self {
+        self.data.never_check_version = val;
+        self
+    }
+
+    pub fn get_latest_remote_version(&self) -> Option<semver::Version> {
+        self.data
+            .latest_remote_version
+            .to_owned()
+            .and_then(|v| semver::Version::parse(&v).ok())
+    }
+
+    pub fn set_latest_remote_version(&mut self, val: Option<&str>) -> &mut Self {
+        self.data.latest_remote_version = val.map(|v| v.to_owned());
         self
     }
 

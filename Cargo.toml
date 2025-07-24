@@ -1,6 +1,6 @@
 [package]
 name = "vertical-fire-platform"
-version = "1.4.6"
+version = "1.5.0"
 edition = "2021"
 authors = ["LviatYi"]
 build = "build.rs"
@@ -28,6 +28,8 @@ chrono = "0.4.40"
 win-toast-notify = "0.1.6"
 base64 = "0.22.1"
 quick-xml = { version = "0.37.4", features = ["serialize"] }
+self_update = { version = "0.42.0", features = ["archive-zip"] }
+semver = "1.0.26"
 
 [[bin]]
 name = "fp"

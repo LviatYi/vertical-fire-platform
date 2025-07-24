@@ -7,6 +7,7 @@ mod interact;
 mod jenkins;
 mod pretty_log;
 mod run;
+mod update;
 mod vfp_error;
 
 use crate::cli::{cli_do_login, cli_try_first_login};
@@ -21,12 +22,12 @@ use crate::jenkins::query::{query_builds_in_job, query_run_info, VfpJenkinsClien
 use crate::jenkins::util::get_jenkins_workflow_run_url;
 use crate::pretty_log::{colored_println, ThemeColor};
 use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
+use crate::update::{do_self_update_with_log, fetch_and_try_auto_update};
 use crate::vfp_error::VfpError;
 use clap::{Parser, Subcommand};
 use formatx::formatx;
-use std::error::Error;
+use rand::Rng;
 use std::fmt::Display;
-use std::io::stdout;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
@@ -138,10 +139,6 @@ enum Commands {
 
         #[command(flatten)]
         extract_params: ExtractParams,
-
-        /// Jenkins URL to run task.
-        #[arg(short, long)]
-        url:Option<String>,
     },
     /// Request start a Jenkins build task.
     Build {
@@ -179,8 +176,23 @@ enum Commands {
         #[command(flatten)]
         extract_params: ExtractParams,
     },
+    /// Upgrade to the latest version.
+    Update {
+        #[arg(long, conflicts_with("no_auto_update"), conflicts_with("never_check"))]
+        auto_update: bool,
+
+        #[arg(long, conflicts_with("auto_update"))]
+        no_auto_update: bool,
+
+        #[arg(long, conflicts_with("auto_update"))]
+        never_check: bool,
+
+        #[arg(short, long)]
+        version: Option<String>,
+    },
     /// Clean cache.
     Clean,
+    #[cfg(debug_assertions)]
     /// Show debug info.
     Debug,
 }
@@ -202,16 +214,25 @@ impl Display for LoginMethod {
 
 #[tokio::main]
 async fn main() {
+    let mut stdout = std::io::stdout();
     let cli = Cli::parse();
     if let Some(command) = cli.command {
         let command_name = command.to_string();
         show_welcome(Some(command_name.as_str()));
 
-        match main_cli(command).await {
+        {
+            let db = get_db(None);
+            if !db.is_never_check_version() {
+                if let Some(version) = db.get_latest_remote_version() {
+                    show_upgradable_hit(&mut stdout, version.to_string().as_str());
+                }
+            }
+        }
+
+        match main_cli(command, &mut stdout).await {
             Ok(_) => {}
             Err(err) => match &err {
                 e @ VfpError::RunTaskBuildFailed { log, run_url, .. } => {
-                    let mut stdout = stdout();
                     e.colored_println(&mut stdout);
 
                     colored_println(&mut stdout, ThemeColor::Main, log.as_str());
@@ -224,17 +245,18 @@ async fn main() {
                     );
                 }
                 _ => {
-                    err.colored_println(&mut stdout());
+                    err.colored_println(&mut stdout);
                 }
             },
         }
+
+        fetch_and_try_auto_update(&mut stdout);
 
         show_finished(Some(command_name.as_str()));
     }
 }
 
-async fn main_cli(command: Commands) -> Result<(), VfpError> {
-    let mut stdout = std::io::stdout();
+async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(), VfpError> {
     match command {
         Commands::Extract {
             job_name,
@@ -242,7 +264,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             extract_params,
         } => {
             // fp extract
-            cli::cli_do_extract(&mut stdout, job_name, ci, extract_params, false).await?;
+            cli::cli_do_extract(stdout, job_name, ci, extract_params, false).await?;
         }
         Commands::Run {
             dest,
@@ -353,7 +375,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             // fp login
             let mut db: DbDataProxy = get_db(None);
             cli_do_login(&mut db, false, url, username, api_token, pwd).await?;
-            colored_println(&mut stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT);
+            colored_println(stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT);
         }
         Commands::Build {
             job_name,
@@ -371,10 +393,10 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
 
             let mut db = get_db(None);
 
-            cli_try_first_login(&mut db, Some(&mut stdout)).await?;
+            cli_try_first_login(&mut db, Some(stdout)).await?;
 
             let mut client = db
-                .try_get_jenkins_async_client(&mut stdout, true)
+                .try_get_jenkins_async_client(stdout, true)
                 .await
                 .map_err(|_| VfpError::JenkinsClientInvalid)?;
             if let VfpJenkinsClient::PwdClient(ref mut client) = client {
@@ -421,10 +443,10 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
 
                 let excluded = build_params.exclusive_merge_from(db_params);
                 if !excluded.is_empty() {
-                    colored_println(&mut stdout, ThemeColor::Warn, DB_BUILD_PARAM_NOT_IN_USED);
+                    colored_println(stdout, ThemeColor::Warn, DB_BUILD_PARAM_NOT_IN_USED);
 
                     excluded.iter().for_each(|(k, v)| {
-                        colored_println(&mut stdout, ThemeColor::Second, &format!("{}: {}", k, v))
+                        colored_println(stdout, ThemeColor::Second, &format!("{}: {}", k, v))
                     })
                 }
             }
@@ -472,9 +494,9 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
                         formatx!(ERR_REQUEST_BUILD_FAILED, e.to_string()).unwrap_or_default(),
                     )
                 })?;
-            colored_println(&mut stdout, ThemeColor::Success, REQUEST_BUILD_SUCCESS);
+            colored_println(stdout, ThemeColor::Success, REQUEST_BUILD_SUCCESS);
 
-            colored_println(&mut stdout, ThemeColor::Main, BUILD_USED_PARAMS);
+            colored_println(stdout, ThemeColor::Main, BUILD_USED_PARAMS);
 
             let mut sorted_params_for_show: Vec<(&String, &serde_json::Value)> =
                 build_params.params.iter().collect();
@@ -495,7 +517,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
                 }
             });
             sorted_params_for_show.iter().for_each(|(k, v)| {
-                colored_println(&mut stdout, ThemeColor::Main, &format!("{}: {}", k, v));
+                colored_println(stdout, ThemeColor::Main, &format!("{}: {}", k, v));
             });
 
             if let Ok(builds) = query_builds_in_job(&client, &job_name, Some(3))
@@ -506,7 +528,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
                     if let Ok(run) = query_run_info(&client, &job_name, build.number).await {
                         if run.is_mine(db.get_jenkins_username().as_ref().unwrap()) {
                             colored_println(
-                                &mut stdout,
+                                stdout,
                                 ThemeColor::Second,
                                 &format!(
                                     "{} {}",
@@ -529,19 +551,21 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             }
 
             let (used_job_name, success_build_number) =
-                cli::cli_do_watch(&mut stdout, Some(job_name.clone()), None).await?;
+                cli::cli_do_watch(stdout, Some(job_name.clone()), None).await?;
 
             if let (true, Some(build_number)) = (need_query_used_cl, success_build_number) {
                 if let Ok(workflow_run) = query_run_info(&client, &job_name, build_number).await {
                     if let Some(changelist) = workflow_run.get_change_list_in_build_meta_data() {
                         let params = db.get_mut_jenkins_build_param().unwrap();
                         colored_println(
-                            &mut stdout,
+                            stdout,
                             ThemeColor::Second,
                             &formatx!(AUTO_FETCH_LATEST_USED_CL, changelist).unwrap_or_default(),
                         );
                         params.set_change_list(Some(changelist));
                         save_with_error_log(&db, None);
+                    } else {
+                        colored_println(stdout, ThemeColor::Warn, AUTO_FETCH_LATEST_USED_CL_FAILED);
                     }
                 }
             }
@@ -554,7 +578,7 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
                 let job_name = used_job_name;
                 let ci = Some(build_number);
 
-                cli::cli_do_extract(&mut stdout, job_name, ci, extract_params, true).await?;
+                cli::cli_do_extract(stdout, job_name, ci, extract_params, true).await?;
             }
         }
         Commands::Watch {
@@ -562,32 +586,66 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
             ci,
             no_extract,
             extract_params,
-            url,
         } => {
             // fp watch
-            cli_try_first_login(&mut get_db(None), Some(&mut stdout)).await?;
+            cli_try_first_login(&mut get_db(None), Some(stdout)).await?;
 
             let (used_job_name, success_build_number) =
-                cli::cli_do_watch(&mut stdout, job_name, ci).await?;
+                cli::cli_do_watch(stdout, job_name, ci).await?;
 
             if !no_extract {
                 if let Some(build_number) = success_build_number {
                     let job_name = used_job_name;
                     let ci = Some(build_number);
 
-                    cli::cli_do_extract(&mut stdout, job_name, ci, extract_params, true).await?;
+                    cli::cli_do_extract(stdout, job_name, ci, extract_params, true).await?;
                 }
             }
+        }
+        Commands::Update {
+            auto_update,
+            no_auto_update,
+            never_check,
+            version,
+        } => {
+            // fp update
+            let mut db = get_db(None);
+            let mut want_update = true;
+
+            if no_auto_update {
+                db.set_auto_update_enabled(false);
+                colored_println(stdout, ThemeColor::Main, AUTO_UPDATE_DISABLED);
+                want_update = false;
+            }
+
+            if never_check {
+                db.set_never_check_version(true);
+                colored_println(stdout, ThemeColor::Warn, NEVER_CHECK_VERSION);
+                want_update = false;
+            }
+
+            if !want_update {
+                save_with_error_log(&db, None);
+                return Ok(());
+            }
+
+            db.set_never_check_version(false);
+            if auto_update {
+                db.set_auto_update_enabled(true);
+                colored_println(stdout, ThemeColor::Main, AUTO_UPDATE_ENABLED);
+            }
+
+            do_self_update_with_log(stdout, &mut db, version.as_deref());
         }
         Commands::Clean => {
             // fp clean
             delete_db_file(None);
         }
+        #[cfg(debug_assertions)]
         Commands::Debug => {
             // fp debug
             println!("Debug info:");
-            println!("COUNT: {:#?}", default_config::COUNT);
-            println!("RUN_COUNT: {:#?}", default_config::RUN_COUNT);
+
             println!(
                 "RECOMMEND_JOB_NAMES: {:#?}",
                 default_config::RECOMMEND_JOB_NAMES
@@ -609,6 +667,10 @@ async fn main_cli(command: Commands) -> Result<(), VfpError> {
                 default_config::CHECK_EXE_FILE_NAME
             );
             println!("JENKINS_URL: {:#?}", default_config::JENKINS_URL);
+            println!(
+                "QUERY_TOKEN_GITHUB: {:#?}",
+                default_config::QUERY_TOKEN_GITHUB
+            );
         }
     }
 
@@ -639,6 +701,26 @@ fn show_finished(title: Option<&str>) {
         "⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄All Finished {} ⠄⠄⠄",
         title
     );
+}
+
+fn show_upgradable_hit(stdout: &mut std::io::Stdout, latest_version: &str) {
+    colored_println(
+        stdout,
+        ThemeColor::Main,
+        formatx!(HINT_UPGRADABLE, latest_version, env!("CARGO_PKG_VERSION"))
+            .unwrap_or_default()
+            .as_str(),
+    );
+
+    colored_println(stdout, ThemeColor::Second, HINT_UPGRADE_OPERATION);
+    let mut rng = rand::thread_rng();
+    if rng.gen_range(0..100) < 10 {
+        // 10%
+        colored_println(stdout, ThemeColor::Second, HINT_AUTO_UPGRADE_OPERATION);
+    } else if rng.gen_range(0..100) < 56 {
+        // ~50%
+        colored_println(stdout, ThemeColor::Second, HINT_UPGRADE_SILENT_OPERATION);
+    }
 }
 
 fn run_instance_with_log(
@@ -702,9 +784,27 @@ fn run_instance_with_log(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::{fs, io};
 
     #[test]
-    fn lab() -> std::io::Result<()> {
+    fn lab() -> io::Result<()> {
+        let mut reader = fs::File::open("C:\\Workspace\\self-tools\\bin\\temp\\fp.exe")?;
+        let into_dir = PathBuf::from("C:\\Workspace\\self-tools\\bin\\temp");
+        let file_to_extract = PathBuf::from("fp.exe");
+        match fs::create_dir_all(&into_dir) {
+            Ok(_) => (),
+            Err(e) => {
+                if e.kind() != io::ErrorKind::AlreadyExists {
+                    return Err(e);
+                }
+            }
+        }
+        let file_name = file_to_extract
+            .file_name()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no filename"))?;
+        let out_path = into_dir.join(file_name);
+        let mut out_file = fs::File::create(out_path)?;
+        io::copy(&mut reader, &mut out_file)?;
         Ok(())
     }
 
