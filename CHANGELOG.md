@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.5.1] - 2025-07-24
+
 ### ⚙️ Changed
 
 - 优化 ChangeLog 流程。实现全流程自动化。应用 CHANGELOG 标准。
@@ -198,7 +200,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.1...HEAD
+
+[1.5.1]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.0...v1.5.1
 
 [1.3.2]: https://github.com/LviatYi/vertical-fire-platform/releases/tag/v1.3.2
 
