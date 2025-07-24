@@ -713,11 +713,11 @@ fn show_upgradable_hit(stdout: &mut std::io::Stdout, latest_version: &str) {
     );
 
     colored_println(stdout, ThemeColor::Second, HINT_UPGRADE_OPERATION);
-    let mut rng = rand::thread_rng();
-    if rng.gen_range(0..100) < 10 {
+    let mut rng = rand::rng();
+    if rng.random_range(0..100) < 10 {
         // 10%
         colored_println(stdout, ThemeColor::Second, HINT_AUTO_UPGRADE_OPERATION);
-    } else if rng.gen_range(0..100) < 56 {
+    } else if rng.random_range(0..100) < 56 {
         // ~50%
         colored_println(stdout, ThemeColor::Second, HINT_UPGRADE_SILENT_OPERATION);
     }

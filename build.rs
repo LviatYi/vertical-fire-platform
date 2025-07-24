@@ -1,6 +1,6 @@
 use std::env;
 use std::fs::File;
-use std::io::{BufRead, Write};
+use std::io::Write;
 use std::path::Path;
 
 fn main() {
