@@ -27,6 +27,8 @@ use crate::vfp_error::VfpError;
 use clap::{Parser, Subcommand};
 use formatx::formatx;
 use rand::Rng;
+use semver::Version;
+use std::error::Error;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -222,13 +224,20 @@ async fn main() {
 
         {
             let mut db = get_db(None);
+            let mut upgrade_info_usable = false;
             if !db.is_never_check_version() {
                 if let Some(version) = db.get_latest_remote_version() {
-                    if version.to_string().eq(env!("CARGO_PKG_VERSION")) {
+                    let curr_version = Version::parse(env!("CARGO_PKG_VERSION"));
+                    if let Ok(curr_version) = curr_version {
+                        if version.gt(&curr_version) {
+                            upgrade_info_usable = true;
+                            show_upgradable_hit(&mut stdout, version.to_string().as_str());
+                        }
+                    }
+
+                    if !upgrade_info_usable {
                         db.consume_update_status();
                         save_with_error_log(&db, None);
-                    } else {
-                        show_upgradable_hit(&mut stdout, version.to_string().as_str());
                     }
                 }
             }
