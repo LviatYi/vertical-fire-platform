@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 优化版本更新提示。
 
+### 🐛 Fixed
+
+- 启用 `compression-zip-deflate` 功能，以修复 self_update 无法解压的问题。 
+
 ## [1.5.2] - 2025-07-24
 
 ### 🐛 Fixed
