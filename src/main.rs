@@ -499,7 +499,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             db.set_jenkins_build_param(Some(build_params_to_save));
             save_with_error_log(&db, None);
 
-            let need_query_used_cl = build_params.get_shelve_changes().is_none();
+            let need_query_used_cl = build_params.get_change_list().is_none();
 
             request_build(&client, &job_name, &build_params)
                 .await
