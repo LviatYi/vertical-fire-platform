@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### ⚙️ Changed
+
+- 优化获取 CL 失败后的日志。
+
+### 🐛 Fixed
+
+- 当 `fp build` 未填写 Cl 需要自动获取信息时，使用了错误的谓词。 
+
 ## [1.5.3] - 2025-07-25
 
 ### ⚙️ Changed
