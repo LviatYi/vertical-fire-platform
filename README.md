@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.5.3  
+v1.5.4  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
