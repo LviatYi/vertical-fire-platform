@@ -568,19 +568,40 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 cli::cli_do_watch(stdout, Some(job_name.clone()), None).await?;
 
             if let (true, Some(build_number)) = (need_query_used_cl, success_build_number) {
-                if let Ok(workflow_run) = query_run_info(&client, &job_name, build_number).await {
-                    if let Some(changelist) = workflow_run.get_change_list_in_build_meta_data() {
-                        let params = db.get_mut_jenkins_build_param().unwrap();
-                        colored_println(
-                            stdout,
-                            ThemeColor::Second,
-                            &formatx!(AUTO_FETCH_LATEST_USED_CL, changelist).unwrap_or_default(),
-                        );
-                        params.set_change_list(Some(changelist));
-                        save_with_error_log(&db, None);
-                    } else {
-                        colored_println(stdout, ThemeColor::Warn, AUTO_FETCH_LATEST_USED_CL_FAILED);
+                let mut trial_count = 2;
+                loop {
+                    if let Ok(workflow_run) = query_run_info(&client, &job_name, build_number).await
+                    {
+                        if let Some(changelist) = workflow_run.get_change_list_in_build_meta_data()
+                        {
+                            let params = db.get_mut_jenkins_build_param().unwrap();
+                            colored_println(
+                                stdout,
+                                ThemeColor::Second,
+                                &formatx!(AUTO_FETCH_LATEST_USED_CL, changelist)
+                                    .unwrap_or_default(),
+                            );
+                            params.set_change_list(Some(changelist));
+                            save_with_error_log(&db, None);
+                            break;
+                        } else if trial_count == 0 {
+                            colored_println(
+                                stdout,
+                                ThemeColor::Warn,
+                                AUTO_FETCH_LATEST_USED_CL_FAILED,
+                            );
+                            break;
+                        }
                     }
+
+                    colored_println(
+                        stdout,
+                        ThemeColor::Second,
+                        AUTO_FETCH_LATEST_USED_CL_FAILED_AND_RETRY,
+                    );
+
+                    trial_count -= 1;
+                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
             }
 

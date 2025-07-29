@@ -109,6 +109,8 @@ pub const BUILD_USED_PARAMS: &str = "Build used params:";
 pub const AUTO_FETCH_LATEST_USED_CL: &str = "Auto fetch your latest used CL: {}";
 pub const AUTO_FETCH_LATEST_USED_CL_FAILED: &str =
     "Auto fetch used CL in latest build failed. The data may be invalid";
+pub const AUTO_FETCH_LATEST_USED_CL_FAILED_AND_RETRY: &str =
+    "Auto fetch used CL in latest build failed. Retrying...";
 pub const URL_OUTPUT: &str = "Url: ";
 pub const AUTO_UPDATE_ENABLED: &str = "Auto update enabled.";
 pub const AUTO_UPDATE_DISABLED: &str = "Auto update disabled.";

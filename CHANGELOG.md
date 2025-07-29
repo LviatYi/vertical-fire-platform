@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### 🚀 Added
+
+- 尝试在获取 CL 失败后，重试获取。
+
 ### ⚙️ Changed
 
 - 优化获取 CL 失败后的日志。
