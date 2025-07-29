@@ -647,30 +647,29 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             let mut db = get_db(None);
             let mut want_update = true;
 
-            if no_auto_update {
-                db.set_auto_update_enabled(false);
-                colored_println(stdout, ThemeColor::Main, AUTO_UPDATE_DISABLED);
-                want_update = false;
-            }
-
             if never_check {
                 db.set_never_check_version(true);
                 colored_println(stdout, ThemeColor::Warn, NEVER_CHECK_VERSION);
                 want_update = false;
             }
 
-            if !want_update {
-                save_with_error_log(&db, None);
-                return Ok(());
-            }
-
-            db.set_never_check_version(false);
-            if auto_update {
+            if no_auto_update {
+                db.set_auto_update_enabled(false);
+                colored_println(stdout, ThemeColor::Main, AUTO_UPDATE_DISABLED);
+            } else if auto_update {
                 db.set_auto_update_enabled(true);
+                db.set_never_check_version(false);
                 colored_println(stdout, ThemeColor::Main, AUTO_UPDATE_ENABLED);
+                want_update = false;
             }
 
-            do_self_update_with_log(stdout, &mut db, version.as_deref());
+            if want_update {
+                db.set_never_check_version(false);
+                do_self_update_with_log(stdout, &mut db, version.as_deref());
+            }
+            
+            save_with_error_log(&db, None);
+            return Ok(());
         }
         Commands::Clean => {
             // fp clean
