@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### ⚙️ Changed
+
+- 优化更新流程。
+- 允许无法查询 config.xml 时，仍然可以使用 `fp build`。
+  - 将自动传入所有缓存参数，其他则需要手动传入。
+
 ## [1.5.4] - 2025-07-29
 
 ### 🚀 Added

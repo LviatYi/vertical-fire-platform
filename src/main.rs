@@ -441,11 +441,20 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
 
             let job_name = db.get_interest_job_name().clone().unwrap();
 
-            let config_params = query_job_config(&client, &job_name).await.map_err(|e| {
+            let mut config_from_default: bool = false;
+            let config_params_result = query_job_config(&client, &job_name).await.map_err(|e| {
+                config_from_default = true;
                 VfpError::Custom(formatx!(ERR_QUERY_JOB_CONFIG, e.to_string()).unwrap_or_default())
-            })?;
+            });
 
-            let build_params_template = VfpJobBuildParam::from(config_params);
+            if let Err(ref e) = config_params_result {
+                colored_println(stdout, ThemeColor::Warn, &e.to_string());
+            }
+
+            let build_params_template = config_params_result
+                .map(VfpJobBuildParam::from)
+                .unwrap_or_default();
+
             let mut build_params = build_params_template.clone();
 
             let mut used_cl: Option<u32> = None;
@@ -455,13 +464,20 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 used_cl = db_params.get_change_list();
                 used_sl = db_params.get_shelve_changes();
 
-                let excluded = build_params.exclusive_merge_from(db_params);
-                if !excluded.is_empty() {
-                    colored_println(stdout, ThemeColor::Warn, DB_BUILD_PARAM_NOT_IN_USED);
+                if build_params.from_default {
+                    build_params.merge_from(db_params);
 
-                    excluded.iter().for_each(|(k, v)| {
-                        colored_println(stdout, ThemeColor::Second, &format!("{}: {}", k, v))
-                    })
+                    colored_println(stdout, ThemeColor::Warn, DB_BUILD_PARAM_DIRECTLY_ADOPTED);
+                    colored_println(stdout, ThemeColor::Second, HINT_USE_PARAM_OPERATION);
+                } else {
+                    let excluded = build_params.exclusive_merge_from(db_params);
+                    if !excluded.is_empty() {
+                        colored_println(stdout, ThemeColor::Warn, DB_BUILD_PARAM_NOT_IN_USED);
+
+                        excluded.iter().for_each(|(k, v)| {
+                            colored_println(stdout, ThemeColor::Second, &format!("{}: {}", k, v))
+                        })
+                    }
                 }
             }
 
@@ -667,7 +683,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 db.set_never_check_version(false);
                 do_self_update_with_log(stdout, &mut db, version.as_deref());
             }
-            
+
             save_with_error_log(&db, None);
             return Ok(());
         }

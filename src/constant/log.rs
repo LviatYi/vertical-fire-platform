@@ -75,6 +75,8 @@ pub const HINT_AUTO_UPGRADE_OPERATION: &str =
     "Use `fp update --auto-update` to enable auto update.";
 pub const HINT_UPGRADE_SILENT_OPERATION: &str =
     "Use `fp update --never-check` to disable update check and hints.";
+pub const HINT_USE_PARAM_OPERATION: &str =
+    "Use `fp build --param <PARAM_NAME> <PARAM_VALUE>` to set the parameter value.";
 
 pub const LOGIN_SUCCESS_BY_PWD: &str = "Login success by password!";
 pub const LOGIN_SUCCESS_BY_API_TOKEN: &str = "Login success by api token!";
@@ -104,6 +106,8 @@ pub const RUN_TASK_CONSOLE_OUTPUT_URL: &str = "Console output url: {}";
 pub const RUN_TASK_COMPLETED: &str = "Run Task Completed with Success.";
 pub const EXTRACT_TASK_COMPLETED: &str = "All Extract Completed.";
 pub const DB_BUILD_PARAM_NOT_IN_USED: &str = "Some build param from memery not in used.";
+pub const DB_BUILD_PARAM_DIRECTLY_ADOPTED: &str =
+    "Build param directly adopted because of template is invalid.";
 pub const REQUEST_BUILD_SUCCESS: &str = "Request build success.";
 pub const BUILD_USED_PARAMS: &str = "Build used params:";
 pub const AUTO_FETCH_LATEST_USED_CL: &str = "Auto fetch your latest used CL: {}";

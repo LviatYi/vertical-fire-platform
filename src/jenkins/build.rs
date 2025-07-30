@@ -13,6 +13,17 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VfpJobBuildParam {
     pub params: HashMap<String, Value>,
+
+    pub from_default: bool,
+}
+
+impl Default for VfpJobBuildParam {
+    fn default() -> Self {
+        Self {
+            params: HashMap::new(),
+            from_default: true,
+        }
+    }
 }
 
 impl VfpJobBuildParam {
@@ -27,6 +38,16 @@ impl VfpJobBuildParam {
     fn override_recommend_param(&mut self) -> &mut Self {
         self.set_enable_content_preview(true);
         self.set_simulate_android_guest_login(true);
+        self
+    }
+
+    /// # merge from
+    ///
+    /// merge the params from the other instance into self.
+    pub fn merge_from(&mut self, other: &Self) -> &mut Self {
+        for (k, v) in other.params.iter() {
+            self.params.insert(k.clone(), v.clone());
+        }
         self
     }
 
@@ -178,7 +199,10 @@ impl From<FlowDefinition> for VfpJobBuildParam {
             })
             .collect();
 
-        let mut result = Self { params };
+        let mut result = Self {
+            params,
+            from_default: false,
+        };
         result.override_recommend_param();
         result
     }
@@ -217,4 +241,16 @@ pub async fn request_build(
     .await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(dead_code)]
+mod tests {
+    #[test]
+    fn test_default_vfp_job_build_param() {
+        let param = super::VfpJobBuildParam::default();
+
+        assert!(param.params.is_empty());
+        assert!(param.from_default);
+    }
 }
