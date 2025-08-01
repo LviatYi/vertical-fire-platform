@@ -86,7 +86,7 @@ pub async fn watch(
                 &format!("{} ({})", NO_IN_PROGRESS_RUN_TASK_OF_USER, username),
             );
 
-            let ci = input_ci_for_watch(stdout, None, db, job_name).await;
+            let ci = input_ci_for_watch(stdout, job_name, None, db).await;
 
             if let Some(ci) = ci {
                 build_number = ci;

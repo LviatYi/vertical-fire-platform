@@ -174,7 +174,7 @@ mod tests {
         let mut latest: u32 = 1;
 
         let r = RepoDecoration::new(
-            &temp_root_dir_path.to_str().unwrap(),
+            temp_root_dir_path.to_str().unwrap(),
             "{ID}-Hash.{*}",
             "\\file.md",
             job_name,
@@ -186,7 +186,7 @@ mod tests {
             for _ in 0..max_create_count {
                 let mut rand: u32;
                 loop {
-                    rand = rand::thread_rng().gen_range(1u32..=1000);
+                    rand = rand::rng().random_range(1u32..=1000);
                     if unique_numbers.contains(&rand) {
                         continue;
                     } else {

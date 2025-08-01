@@ -2,7 +2,7 @@
 macro_rules! define_versioned_data_type {
     ($name:ident, $version:expr, { $($field:tt)* }) => {
         #[derive(Deserialize, Serialize, Default, Debug)]
-        pub struct $name{
+        pub(crate) struct $name{
 
             #[serde(
                 skip_deserializing,

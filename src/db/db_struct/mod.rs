@@ -4,21 +4,23 @@ use crate::db::db_struct::fp_db_v3::{FpDbV3, VERSION_FP_DB_V3};
 use crate::db::db_struct::fp_db_v4::{FpDbV4, VERSION_FP_DB_V4};
 use crate::db::db_struct::fp_db_v5::{FpDbV5, VERSION_FP_DB_V5};
 use crate::db::db_struct::fp_db_v6::{FpDbV6, VERSION_FP_DB_V6};
+use crate::db::db_struct::fp_db_v7::{FpDbV7, VERSION_FP_DB_V7};
 use crate::db::db_struct::versioned_data::{UpgradeValue, VersionedData};
 
 pub mod db_status;
 mod define_versioned_data_type;
-mod fp_db_v1;
-mod fp_db_v2;
-mod fp_db_v3;
-mod fp_db_v4;
-mod fp_db_v5;
-mod fp_db_v6;
+pub mod fp_db_v1;
+pub mod fp_db_v2;
+pub mod fp_db_v3;
+pub mod fp_db_v4;
+pub mod fp_db_v5;
+pub mod fp_db_v6;
+pub mod fp_db_v7;
 mod version_field;
 pub mod version_only;
 pub mod versioned_data;
 
-pub type LatestVersionData = FpDbV6;
+pub type LatestVersionData = FpDbV7;
 
 /// # parse content with upgrade
 ///
@@ -50,6 +52,9 @@ fn parse_content_by_version(
     content: &str,
 ) -> Result<Box<dyn VersionedData>, toml::de::Error> {
     match version {
+        VERSION_FP_DB_V7 => {
+            FpDbV7::parse_from_string(content).map(|v| Box::new(v) as Box<dyn VersionedData>)
+        }
         VERSION_FP_DB_V6 => {
             FpDbV6::parse_from_string(content).map(|v| Box::new(v) as Box<dyn VersionedData>)
         }

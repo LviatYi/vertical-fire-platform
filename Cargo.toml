@@ -33,6 +33,7 @@ base64 = "0.22.1"
 quick-xml = { version = "0.37.4", features = ["serialize"] }
 self_update = { version = "0.42.0", features = ["archive-zip", "compression-zip-deflate"] }
 semver = "1.0.26"
+sanitize-filename = "0.6.0"
 
 [[bin]]
 name = "fp"

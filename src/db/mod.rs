@@ -79,22 +79,6 @@ fn get_path_or_home_path(path: Option<&Path>) -> PathBuf {
 mod tests {
     use super::*;
 
-    impl PartialEq for DbDataProxy {
-        fn eq(&self, other: &Self) -> bool {
-            self.get_last_inner_version() == other.get_last_inner_version()
-                && self.get_last_player_count() == other.get_last_player_count()
-                && self.get_interest_job_name() == other.get_interest_job_name()
-                && self.get_extract_repo() == other.get_extract_repo()
-                && self.get_extract_locator_pattern() == other.get_extract_locator_pattern()
-                && self.get_extract_s_locator_template() == other.get_extract_s_locator_template()
-                && self.get_blast_path() == other.get_blast_path()
-                && self.get_jenkins_url() == other.get_jenkins_url()
-                && self.get_jenkins_username() == other.get_jenkins_username()
-                && self.get_jenkins_api_token() == other.get_jenkins_api_token()
-                && self.get_jenkins_pwd() == other.get_jenkins_pwd()
-        }
-    }
-
     #[test]
     fn test_get_db_not_exist() {
         let path = PathBuf::from("non_existent_path");
@@ -107,9 +91,10 @@ mod tests {
         let temp_file = tempfile::NamedTempFile::new().unwrap();
 
         let mut db = DbDataProxy::default();
+        let job_name = "test_job";
 
-        db.set_last_inner_version(Some(1));
-        db.set_last_player_count(Some(2));
+        db.set_last_inner_version(job_name, Some(1024));
+        db.set_last_player_count(job_name, Some(4));
 
         db.save(temp_file.path()).unwrap();
 
@@ -117,9 +102,14 @@ mod tests {
 
         assert_eq!(
             content,
-            r#"version = 4
-last_inner_version = 1
-last_player_count = 2
+            r#"version = 7
+never_check_version = false
+auto_update_enabled = false
+
+[[job_relative_data_arr]]
+job_name = "test_job"
+last_inner_version = 1024
+last_player_count = 4
 "#
         );
 

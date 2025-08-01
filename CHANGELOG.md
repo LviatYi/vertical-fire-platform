@@ -9,11 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+**[重大更新]** 此次更新旨在优化分支切换体验！
+
+### 🚀 Added
+
+- 调整记忆存储，根据 `job_name` 快速切换分支相关的偏好设置。
+
 ### ⚙️ Changed
 
 - 优化更新流程。
 - 允许无法查询 config.xml 时，仍然可以使用 `fp build`。
   - 将自动传入所有缓存参数，其他则需要手动传入。
+
+### ✅ Test
+
+- 补充了一些单元测试用例。
 
 ## [1.5.4] - 2025-07-29
 

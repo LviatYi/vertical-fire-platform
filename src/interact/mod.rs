@@ -238,15 +238,14 @@ pub fn input_pwd(
 /// * `db_val_directly_usable`: Whether the value from the memory can be used directly.
 /// * `hint`: The hint for the input.
 /// * `existing_inquire`: Whether the input path should exist.
-/// * `use_home_dir`: Whether to use the home directory as the default value.
 /// * `err_hint`: The hint for error occurs.
 pub fn input_path(
     param_val: Option<PathBuf>,
     db_val: Option<&PathBuf>,
+    default_path: Option<PathBuf>,
     db_val_directly_usable: bool,
     hint: &str,
     existing_inquire: bool,
-    use_home_dir: bool,
     err_hint: Option<&str>,
 ) -> InquireResult<PathBuf> {
     if let Some(val) = param_val {
@@ -261,12 +260,7 @@ pub fn input_path(
 
     let mut input = Text::from(hint);
 
-    let opt_default = if use_home_dir {
-        db_val.cloned().or(home_dir())
-    } else {
-        db_val.cloned()
-    };
-
+    let opt_default = db_val.cloned().or(default_path);
     let opt_default = opt_default.map(|db_val| db_val.to_string_lossy().into_owned());
     if let Some(ref default) = opt_default {
         input = input.with_default(default.as_ref());
@@ -300,6 +294,35 @@ pub fn input_path(
         str.parse::<PathBuf>()
             .map_err(|_| InquireError::Custom(Box::from(ERR_INVALID_PATH.to_string())))
     })
+}
+
+/// # input target path
+///
+/// Input a value representing the path to locate the target.
+///
+/// ### Arguments
+///
+/// * `param_val`: The value from the command line argument. If defined, return this value directly (priority in order of definition).
+/// * `db_val`: The value from the memory. If defined and `db_val_directly_usable` is true, return this value directly (priority in order of definition).
+/// * `job_name`: Job name.
+/// * `hint`: The hint for the input.
+/// * `err_hint`: The hint for error occurs.
+pub fn input_target_path(
+    param_val: Option<PathBuf>,
+    db_val: Option<&PathBuf>,
+    job_name: &str,
+    hint: &str,
+    err_hint: Option<&str>,
+) -> InquireResult<PathBuf> {
+    input_path(
+        param_val,
+        db_val,
+        home_dir().map(|p| p.join(sanitize_filename::sanitize(job_name))),
+        true,
+        hint,
+        false,
+        err_hint,
+    )
 }
 //endregion
 
@@ -432,6 +455,7 @@ where
 
 pub async fn input_ci_for_extract(
     stdout: &mut Stdout,
+    job_name: &str,
     param_val: Option<u32>,
     db: &DbDataProxy,
 ) -> Option<u32> {
@@ -444,7 +468,7 @@ pub async fn input_ci_for_extract(
         .get_sorted_ci_list()
         .first()
         .copied();
-    let last_used = *db.get_last_inner_version();
+    let last_used = db.get_last_inner_version(job_name);
 
     let mut options: Vec<String> = Vec::new();
 
@@ -454,7 +478,7 @@ pub async fn input_ci_for_extract(
 
     //region latest mine ci
     let mut latest_mine_ci: Option<u32> = None;
-    if let Some(job_name) = db.get_interest_job_name().clone() {
+    if let Some(job_name) = db.get_interest_job_name() {
         let mut jenkins_client_invalid = false;
         let client = db.try_get_jenkins_async_client(stdout, true).await;
 
@@ -464,7 +488,7 @@ pub async fn input_ci_for_extract(
             Ok(client) => {
                 let user_latest_info_result = query_user_latest_info(
                     &client,
-                    &job_name,
+                    job_name,
                     &(db.get_jenkins_username().clone().unwrap()),
                     None,
                 )
@@ -615,15 +639,15 @@ pub async fn input_ci_for_extract(
 /// When the user's relevant information cannot be queried, the watch target needs to be manually entered
 pub async fn input_ci_for_watch(
     stdout: &mut Stdout,
+    job_name: &str,
     param_val: Option<u32>,
     db: &DbDataProxy,
-    job_name: &str,
 ) -> Option<u32> {
     if param_val.is_some() {
         return param_val;
     }
 
-    let last_used = *db.get_last_inner_version();
+    let last_used = db.get_last_inner_version(job_name);
     let mut latest_global_in_progress: Option<u32> = None;
     let mut latest_global_success: Option<u32> = None;
 
@@ -708,7 +732,7 @@ pub async fn input_ci_for_watch(
             } else {
                 let input = Text::from(HINT_INPUT_CUSTOM)
                     .with_validator(move |v: &str| {
-                        if let Ok(_) = v.parse::<u32>() {
+                        if v.parse::<u32>().is_ok() {
                             Ok(Validation::Valid)
                         } else {
                             Ok(Validation::Invalid(ErrorMessage::Custom(
@@ -725,15 +749,18 @@ pub async fn input_ci_for_watch(
     }
 }
 
-pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> InquireResult<String> {
+pub fn input_job_name<'a>(
+    param_val: Option<String>,
+    db_val: impl Into<Option<&'a str>>,
+) -> InquireResult<String> {
     let mut origin_options: Vec<String> = default_config::RECOMMEND_JOB_NAMES
         .to_vec()
         .iter()
         .map(|v| v.to_string())
         .collect();
     let mut options: Vec<SelectionCustomizableOptionVal<String>>;
-    if let Some(last_used) = db_val.clone() {
-        if let Some(index) = origin_options.iter_mut().position(|v| (*v).eq(&last_used)) {
+    if let Some(last_used) = db_val.into() {
+        if let Some(index) = origin_options.iter_mut().position(|v| (*v).eq(last_used)) {
             let mut cut_off_at_index: Vec<String> = origin_options.split_off(index);
             let mut cut_off_back: Vec<SelectionCustomizableOptionVal<String>> = cut_off_at_index
                 .split_off(1)
@@ -762,7 +789,7 @@ pub fn input_job_name(param_val: Option<String>, db_val: &Option<String>) -> Inq
         } else {
             options = vec![SelectionCustomizableOptionVal::DataContain(
                 SelectionOptionVal::DataWithHintSuffix(
-                    last_used,
+                    last_used.to_string(),
                     format!("({})", HINT_LAST_USED_SUFFIX),
                 ),
             )];

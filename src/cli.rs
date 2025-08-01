@@ -7,8 +7,8 @@ use crate::extract::extract_operation_info::{
 use crate::extract::extract_params::ExtractParams;
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::interact::{
-    input_ci_for_extract, input_directly_with_default, input_job_name, input_path, input_pwd,
-    parse_without_input_with_default,
+    input_ci_for_extract, input_directly_with_default, input_job_name, input_pwd,
+    input_target_path, parse_without_input_with_default,
 };
 use crate::jenkins::query::{
     try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
@@ -37,79 +37,73 @@ pub async fn cli_do_extract(
 ) -> Result<(), VfpError> {
     let mut db = get_db(None);
 
-    if let Ok(val) = input_job_name(job_name, db.get_interest_job_name()) {
-        db.set_interest_job_name(Some(val));
-    } else {
-        return Err(VfpError::MissingParam(PARAM_JOB_NAME.to_string()));
-    }
+    let job_name = input_job_name(job_name, db.get_interest_job_name())
+        .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
 
-    db.set_extract_repo(Some(parse_without_input_with_default(
+    db.insert_job_name(job_name.as_str());
+
+    let used_extract_repo = parse_without_input_with_default(
         extract_params.build_target_repo_template,
         db.get_extract_repo().as_ref(),
         default_config::REPO_TEMPLATE,
-    )));
-
-    db.set_extract_locator_pattern(Some(parse_without_input_with_default(
+    );
+    let used_extract_locator_pattern = parse_without_input_with_default(
         extract_params.main_locator_pattern,
         db.get_extract_locator_pattern().as_ref(),
         default_config::LOCATOR_PATTERN,
-    )));
-
-    db.set_extract_s_locator_template(Some(parse_without_input_with_default(
+    );
+    let used_extract_s_locator_template = parse_without_input_with_default(
         extract_params.secondary_locator_template,
         db.get_extract_s_locator_template().as_ref(),
         default_config::LOCATOR_TEMPLATE,
-    )));
-
-    let ci_temp = input_ci_for_extract(stdout, ci, &db)
+    );
+    let used_inner_version = input_ci_for_extract(stdout,job_name.as_str(), ci, &db)
         .await
         .ok_or(VfpError::EmptyRepo)?;
-
-    db.set_last_inner_version(ci_temp.into());
-
-    db.set_last_player_count(Some(input_directly_with_default(
+    let used_player_count = input_directly_with_default(
         extract_params.count,
-        db.get_last_player_count().as_ref(),
+        db.get_last_player_count(job_name.as_str()).as_ref(),
         ignore_count_input,
         default_config::COUNT,
         false,
         HINT_PLAYER_COUNT,
         Some(ERR_NEED_A_NUMBER),
-    )));
+    );
+    let used_blast_path = input_target_path(
+        extract_params.dest,
+        db.get_blast_path(job_name.as_str()),
+        job_name.as_str(),
+        HINT_EXTRACT_TO,
+        Some(ERR_INVALID_PATH),
+    )
+    .map_err(|_| VfpError::MissingParam(PARAM_DEST.to_string()))?;
 
-    db.set_blast_path(Some(
-        input_path(
-            extract_params.dest,
-            db.get_blast_path().as_ref(),
-            true,
-            HINT_EXTRACT_TO,
-            false,
-            true,
-            Some(ERR_INVALID_PATH),
-        )
-        .map_err(|_| VfpError::MissingParam(PARAM_DEST.to_string()))?,
-    ));
+    db.set_extract_repo(used_extract_repo.into());
+    db.set_extract_locator_pattern(used_extract_locator_pattern.into());
+    db.set_extract_s_locator_template(used_extract_s_locator_template.into());
+    db.set_last_inner_version(job_name.as_str(), used_inner_version.into());
+    db.set_last_player_count(job_name.as_str(), used_player_count.into());
+    db.set_blast_path(job_name.as_str(), used_blast_path.clone().into());
 
     save_with_error_log(&db, None);
 
-    if let Some(path) = db.get_repo_decoration().get_full_path_by_ci(ci_temp) {
+    if let Some(path) = db
+        .get_repo_decoration()
+        .get_full_path_by_ci(used_inner_version)
+    {
         if let Some(file_name) = path.file_stem().and_then(|v| v.to_str()) {
-            let count = db.get_last_player_count().unwrap();
-            let pty_logger = pretty_log::VfpPrettyLogger::apply_for(stdout, count);
+            let pty_logger = pretty_log::VfpPrettyLogger::apply_for(stdout, used_player_count);
 
-            let mut working_status: Vec<ExtractOperationInfo> = (0..count)
+            let mut working_status: Vec<ExtractOperationInfo> = (0..used_player_count)
                 .map(|_| ExtractOperationInfo::default())
                 .collect();
 
             let mut handles = vec![];
             let (tx, rx) = std::sync::mpsc::channel::<(u32, OperationStepType, OperationStatus)>();
 
-            for i in 1..count + 1 {
+            for i in 1..used_player_count + 1 {
                 let tx = tx.clone();
-                let dest_with_origin_name = db
-                    .get_blast_path()
-                    .clone()
-                    .unwrap()
+                let dest_with_origin_name = used_blast_path
                     .as_path()
                     .join(format!("{}{}", file_name, i));
                 let path_t = path.clone();
@@ -176,7 +170,8 @@ pub async fn cli_do_extract(
                 handles.push(handle);
 
                 if let Some(item) = working_status.get((i - 1) as usize) {
-                    let _ = pty_logger.pretty_log_operation_status(stdout, i, count, item);
+                    let _ =
+                        pty_logger.pretty_log_operation_status(stdout, i, used_player_count, item);
                 };
             }
 
@@ -196,7 +191,12 @@ pub async fn cli_do_extract(
                         }
                     }
 
-                    let _ = pty_logger.pretty_log_operation_status(stdout, index - 1, count, item);
+                    let _ = pty_logger.pretty_log_operation_status(
+                        stdout,
+                        index - 1,
+                        used_player_count,
+                        item,
+                    );
                 }
             }
 

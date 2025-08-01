@@ -207,7 +207,7 @@ mod tests {
         for _ in 0..max_create_count {
             let mut rand: u32;
             loop {
-                rand = rand::thread_rng().gen_range(1u32..=1000);
+                rand = rand::rng().random_range(1u32..=1000);
                 if unique_numbers.contains(&rand) {
                     continue;
                 } else {

@@ -246,6 +246,12 @@ pub async fn request_build(
 #[cfg(test)]
 #[allow(dead_code)]
 mod tests {
+    impl PartialEq for super::VfpJobBuildParam {
+        fn eq(&self, other: &Self) -> bool {
+            self.params == other.params && self.from_default == other.from_default
+        }
+    }
+
     #[test]
     fn test_default_vfp_job_build_param() {
         let param = super::VfpJobBuildParam::default();

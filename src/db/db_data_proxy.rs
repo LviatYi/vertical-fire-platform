@@ -1,5 +1,7 @@
 use crate::constant::log::{LOGIN_SUCCESS_BY_API_TOKEN, LOGIN_SUCCESS_BY_PWD};
+use crate::constant::util::bring_element_to_first;
 use crate::db::db_struct::db_status::DBStatus;
+use crate::db::db_struct::fp_db_v7::JobRelativeData;
 use crate::db::db_struct::version_only::VersionOnly;
 use crate::db::db_struct::{parse_content_with_upgrade, LatestVersionData};
 use crate::extract::repo_decoration::RepoDecoration;
@@ -59,6 +61,16 @@ impl DbDataProxy {
         client
     }
 
+    pub fn get_interest_job_name(&self) -> Option<&str> {
+        self.try_get_job_relative_data(None)
+            .map(|data| data.job_name.as_ref())
+    }
+
+    pub fn insert_job_name(&mut self, val: &str) -> &mut Self {
+        self.try_get_job_relative_data_mut(Some(val));
+        self
+    }
+
     pub fn get_from_path(path: &Path) -> Option<Self> {
         match VersionOnly::get_state_from_path(path) {
             DBStatus::Exist(version) => {
@@ -101,10 +113,7 @@ impl DbDataProxy {
                     .as_ref()
                     .map(|s| s.as_ref())
                     .unwrap_or(default),
-                self.get_interest_job_name()
-                    .as_ref()
-                    .map(|s| s.as_ref())
-                    .unwrap_or(default),
+                self.get_interest_job_name().unwrap_or(default),
             )
         })
     }
@@ -118,30 +127,68 @@ impl DbDataProxy {
     }
 
     //region getter & setter
-    pub fn get_last_inner_version(&self) -> &Option<u32> {
-        &self.data.last_inner_version
+    fn try_get_job_relative_data(&self, job_name: Option<&str>) -> Option<&JobRelativeData> {
+        if let Some(name) = job_name {
+            self.data
+                .job_relative_data_arr
+                .iter()
+                .find(|data| data.job_name == name)
+        } else {
+            self.data.job_relative_data_arr.first()
+        }
     }
 
-    pub fn set_last_inner_version(&mut self, val: Option<u32>) -> &mut Self {
-        self.data.last_inner_version = val;
+    fn try_get_job_relative_data_mut(
+        &mut self,
+        job_name: Option<&str>,
+    ) -> Option<&mut JobRelativeData> {
+        if let Some(name) = job_name {
+            let index = self
+                .data
+                .job_relative_data_arr
+                .iter()
+                .position(|data| data.job_name == name);
+
+            if let Some(idx) = index {
+                bring_element_to_first(&mut self.data.job_relative_data_arr, idx);
+            } else {
+                self.data.job_relative_data_arr.insert(
+                    0,
+                    JobRelativeData {
+                        job_name: name.to_owned(),
+                        last_inner_version: None,
+                        last_player_count: None,
+                        blast_path: None,
+                        jenkins_build_params: None,
+                    },
+                );
+            }
+        }
+
+        self.data.job_relative_data_arr.first_mut()
+    }
+
+    pub fn get_last_inner_version(&self, job_name: &str) -> Option<u32> {
+        self.try_get_job_relative_data(Some(job_name))
+            .and_then(|data| data.last_inner_version)
+    }
+
+    pub fn set_last_inner_version(&mut self, job_name: &str, val: Option<u32>) -> &mut Self {
+        if let Some(data) = self.try_get_job_relative_data_mut(Some(job_name)) {
+            data.last_inner_version = val
+        }
         self
     }
 
-    pub fn get_last_player_count(&self) -> &Option<u32> {
-        &self.data.last_player_count
+    pub fn get_last_player_count(&self, job_name: &str) -> Option<u32> {
+        self.try_get_job_relative_data(Some(job_name))
+            .and_then(|data| data.last_player_count)
     }
 
-    pub fn set_last_player_count(&mut self, val: Option<u32>) -> &mut Self {
-        self.data.last_player_count = val;
-        self
-    }
-
-    pub fn get_interest_job_name(&self) -> &Option<String> {
-        &self.data.interest_job_name
-    }
-
-    pub fn set_interest_job_name(&mut self, val: Option<String>) -> &mut Self {
-        self.data.interest_job_name = val;
+    pub fn set_last_player_count(&mut self, job_name: &str, val: Option<u32>) -> &mut Self {
+        if let Some(data) = self.try_get_job_relative_data_mut(Some(job_name)) {
+            data.last_player_count = val
+        }
         self
     }
 
@@ -172,12 +219,15 @@ impl DbDataProxy {
         self
     }
 
-    pub fn get_blast_path(&self) -> &Option<PathBuf> {
-        &self.data.blast_path
+    pub fn get_blast_path(&self, job_name: &str) -> Option<&PathBuf> {
+        self.try_get_job_relative_data(Some(job_name))
+            .and_then(|data| data.blast_path.as_ref())
     }
 
-    pub fn set_blast_path(&mut self, val: Option<PathBuf>) -> &mut Self {
-        self.data.blast_path = val;
+    pub fn set_blast_path(&mut self, job_name: &str, val: Option<PathBuf>) -> &mut Self {
+        if let Some(data) = self.try_get_job_relative_data_mut(Some(job_name)) {
+            data.blast_path = val
+        }
         self
     }
 
@@ -222,16 +272,25 @@ impl DbDataProxy {
         self
     }
 
-    pub fn get_jenkins_build_param(&self) -> &Option<VfpJobBuildParam> {
-        &self.data.jenkins_build_params
+    pub fn get_jenkins_build_param(&self, job_name: &str) -> Option<&VfpJobBuildParam> {
+        self.try_get_job_relative_data(Some(job_name))
+            .and_then(|data| data.jenkins_build_params.as_ref())
     }
 
-    pub fn get_mut_jenkins_build_param(&mut self) -> Option<&mut VfpJobBuildParam> {
-        self.data.jenkins_build_params.as_mut()
+    pub fn get_mut_jenkins_build_param(&mut self, job_name: &str) -> Option<&mut VfpJobBuildParam> {
+        self.try_get_job_relative_data_mut(Some(job_name))
+            .and_then(|data| data.jenkins_build_params.as_mut())
     }
 
-    pub fn set_jenkins_build_param(&mut self, val: Option<VfpJobBuildParam>) -> &mut Self {
-        self.data.jenkins_build_params = val;
+    pub fn set_jenkins_build_param(
+        &mut self,
+        job_name: &str,
+        val: Option<VfpJobBuildParam>,
+    ) -> &mut Self {
+        if let Some(data) = self.try_get_job_relative_data_mut(Some(job_name)) {
+            data.jenkins_build_params = val;
+        }
+
         self
     }
 
@@ -270,16 +329,29 @@ impl DbDataProxy {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::path::PathBuf;
+    use crate::db::db_data_proxy::DbDataProxy;
+    use std::io::Write;
+    use std::path::{Path, PathBuf};
+
+    impl PartialEq for DbDataProxy {
+        fn eq(&self, other: &Self) -> bool {
+            self.data == other.data
+        }
+    }
 
     #[test]
-    fn test_get_old_file() {
+    fn test_get_file() {
         let mut file = tempfile::NamedTempFile::new().unwrap();
 
-        let content = r#"ci = 2025
-c = 9
-d = 'C:\Users\LviatYi\Desktop\Temp'
+        let content = r#"version = 7
+never_check_version = false
+auto_update_enabled = false
+
+[[job_relative_data_arr]]
+job_name = "test_job"
+last_inner_version = 1024
+last_player_count = 4
+blast_path = 'C:\\Users\\LviatYi\\Desktop\\Temp'
 "#;
 
         file.write_all(content.to_string().as_bytes()).unwrap();
@@ -291,11 +363,13 @@ d = 'C:\Users\LviatYi\Desktop\Temp'
 
         let config = config.unwrap();
 
-        assert_eq!(*config.get_last_inner_version(), Some(2025));
-        assert_eq!(*config.get_last_player_count(), Some(9));
+        let job_name = "test_job";
+
+        assert_eq!(config.get_last_inner_version(job_name), Some(1024));
+        assert_eq!(config.get_last_player_count(job_name), Some(4));
         assert_eq!(
-            *config.get_blast_path(),
-            Some(PathBuf::from("C:\\Users\\LviatYi\\Desktop\\Temp"))
+            config.get_blast_path(job_name),
+            Some(&PathBuf::from("C:\\Users\\LviatYi\\Desktop\\Temp"))
         );
 
         assert!(config.get_extract_locator_pattern().is_none());
@@ -306,32 +380,5 @@ d = 'C:\Users\LviatYi\Desktop\Temp'
         let config = DbDataProxy::get_from_path(Path::new("Z:\\NOT_EXIST"));
 
         assert!(config.is_none());
-    }
-
-    #[test]
-    fn test_get_file_version_2() {
-        let mut file = tempfile::NamedTempFile::new().unwrap();
-
-        let content = r#"version = 2
-last_inner_version = 2025
-last_player_count = 9
-blast_path = "C:\\Users\\LviatYi\\Desktop\\Temp"
-"#;
-
-        file.write_all(content.to_string().as_bytes()).unwrap();
-        file.flush().unwrap();
-
-        let config = DbDataProxy::get_from_path(file.path());
-
-        assert!(config.is_some());
-
-        let config = config.unwrap();
-        assert_eq!(*config.get_last_inner_version(), Some(2025));
-        assert_eq!(*config.get_last_player_count(), Some(9));
-        assert_eq!(
-            *config.get_blast_path(),
-            Some(PathBuf::from("C:\\Users\\LviatYi\\Desktop\\Temp"))
-        );
-        assert_eq!(*config.get_extract_locator_pattern(), None);
     }
 }

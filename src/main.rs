@@ -28,7 +28,6 @@ use clap::{Parser, Subcommand};
 use formatx::formatx;
 use rand::Rng;
 use semver::Version;
-use std::error::Error;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -65,6 +64,10 @@ enum Commands {
     },
     /// Run game instance.
     Run {
+        /// job name.
+        #[arg(short, long)]
+        job_name: Option<String>,
+
         #[arg(short, long)]
         /// target path be extracted.
         dest: Option<PathBuf>,
@@ -281,6 +284,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             cli::cli_do_extract(stdout, job_name, ci, extract_params, false).await?;
         }
         Commands::Run {
+            job_name,
             dest,
             count,
             index,
@@ -291,13 +295,16 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             server,
         } => {
             // fp run
-            let dest = input_path(
+            let db = get_db(None);
+
+            let job_name = input_job_name(job_name, db.get_interest_job_name())
+                .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
+
+            let dest = input_target_path(
                 dest,
-                get_db(None).get_blast_path().as_ref(),
-                true,
+                db.get_blast_path(job_name.as_str()),
+                job_name.as_str(),
                 HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH,
-                false,
-                true,
                 Some(ERR_INVALID_PATH),
             )
             .map_err(|_| {
@@ -422,10 +429,10 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 })?;
             }
 
-            db.set_interest_job_name(Some(
-                input_job_name(job_name, db.get_interest_job_name())
-                    .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?,
-            ));
+            let job_name = input_job_name(job_name, db.get_interest_job_name())
+                .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
+
+            db.insert_job_name(job_name.as_str());
 
             let param_pairs: Vec<(String, serde_json::Value)> = params
                 .chunks(2)
@@ -438,8 +445,6 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                     }
                 })
                 .collect();
-
-            let job_name = db.get_interest_job_name().clone().unwrap();
 
             let mut config_from_default: bool = false;
             let config_params_result = query_job_config(&client, &job_name).await.map_err(|e| {
@@ -460,7 +465,9 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             let mut used_cl: Option<u32> = None;
             let mut used_sl: Option<Shelves> = None;
 
-            if let Some(ref db_params) = db.get_jenkins_build_param() {
+            let db_latest_build_param = db.get_jenkins_build_param(job_name.as_ref());
+
+            if let Some(ref db_params) = db_latest_build_param {
                 used_cl = db_params.get_change_list();
                 used_sl = db_params.get_shelve_changes();
 
@@ -483,9 +490,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
 
             build_params.set_change_list(input_cl(
                 cl,
-                &(db.get_jenkins_build_param()
-                    .as_ref()
-                    .and_then(|db| db.get_change_list())),
+                &db_latest_build_param.and_then(|db| db.get_change_list()),
             ));
 
             let sl = sl
@@ -493,9 +498,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 .and_then(|v| Shelves::from_str(&v).ok());
             build_params.set_shelve_changes(input_sl(
                 sl,
-                &(db.get_jenkins_build_param()
-                    .as_ref()
-                    .and_then(|db| db.get_shelve_changes())),
+                &db_latest_build_param.and_then(|db| db.get_shelve_changes()),
             ));
 
             param_pairs.into_iter().for_each(|(k, v)| {
@@ -512,7 +515,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 build_params_to_save.set_shelve_changes(used_sl);
             }
 
-            db.set_jenkins_build_param(Some(build_params_to_save));
+            db.set_jenkins_build_param(job_name.as_ref(), Some(build_params_to_save));
             save_with_error_log(&db, None);
 
             let need_query_used_cl = build_params.get_change_list().is_none();
@@ -590,7 +593,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                     {
                         if let Some(changelist) = workflow_run.get_change_list_in_build_meta_data()
                         {
-                            let params = db.get_mut_jenkins_build_param().unwrap();
+                            let params = db.get_mut_jenkins_build_param(job_name.as_str()).unwrap();
                             colored_println(
                                 stdout,
                                 ThemeColor::Second,
