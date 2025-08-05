@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.6.1] - 2025-08-05
+
 ### ⚙️ Changed
 
 - 保持记忆文件中，job 相关的存储项目上限为 8 个。
@@ -255,7 +257,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.1...HEAD
+
+[1.6.1]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.0...v1.6.1
 
 [1.6.0]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.4...v1.6.0
 
