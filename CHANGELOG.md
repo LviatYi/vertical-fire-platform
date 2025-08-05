@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### ⚙️ Changed
+
+- 保持记忆文件中，job 相关的存储项目上限为 8 个。
+
 ## [1.6.0] - 2025-08-05
 
 **[重大更新]** 此次更新旨在优化分支切换体验！

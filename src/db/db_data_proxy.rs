@@ -152,6 +152,18 @@ impl DbDataProxy {
         self.data.latest_remote_version = None;
     }
 
+    fn keep_job_relative_data_count(&mut self) -> &mut Self {
+        if self.data.job_relative_data_arr.len()
+            > crate::default_config::MAX_JOB_RELATIVE_DATA_COUNT
+        {
+            self.data
+                .job_relative_data_arr
+                .truncate(crate::default_config::MAX_JOB_RELATIVE_DATA_COUNT);
+        }
+
+        self
+    }
+
     //region getter & setter
     fn try_get_job_relative_data(&self, job_name: Option<&str>) -> Option<&JobRelativeData> {
         if let Some(name) = job_name {
@@ -188,6 +200,8 @@ impl DbDataProxy {
                         jenkins_build_params: None,
                     },
                 );
+
+                self.keep_job_relative_data_count();
             }
         }
 
