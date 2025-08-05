@@ -61,9 +61,21 @@ impl DbDataProxy {
         client
     }
 
+    /// # get interest job name
+    ///
+    /// get the job name that is currently of interest.
+    /// "interest" means the job that was last operated on(write).
     pub fn get_interest_job_name(&self) -> Option<&str> {
         self.try_get_job_relative_data(None)
             .map(|data| data.job_name.as_ref())
+    }
+
+    pub fn get_all_job_names(&self) -> Vec<String> {
+        self.data
+            .job_relative_data_arr
+            .iter()
+            .map(|data| data.job_name.clone())
+            .collect()
     }
 
     pub fn insert_job_name(&mut self, val: &str) -> &mut Self {
@@ -75,9 +87,23 @@ impl DbDataProxy {
         match VersionOnly::get_state_from_path(path) {
             DBStatus::Exist(version) => {
                 let content = std::fs::read_to_string(path).ok()?;
-                parse_content_with_upgrade(version, &content)
-                    .map(|d| d.into())
-                    .ok()
+                #[cfg(debug_assertions)]
+                {
+                    match parse_content_with_upgrade(version, &content).map(|d| d.into()) {
+                        Ok(result) => Some(result),
+                        Err(e) => {
+                            eprintln!("Failed to parse or upgrade the database content: {}", e);
+                            None
+                        }
+                    }
+                }
+
+                #[cfg(not(debug_assertions))]
+                {
+                    parse_content_with_upgrade(version, &content)
+                        .map(|d| d.into())
+                        .ok()
+                }
             }
             DBStatus::NotExist => None,
         }

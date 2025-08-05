@@ -14,6 +14,7 @@ use std::str::FromStr;
 pub struct VfpJobBuildParam {
     pub params: HashMap<String, Value>,
 
+    #[serde(skip)]
     pub from_default: bool,
 }
 

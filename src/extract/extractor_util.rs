@@ -222,7 +222,7 @@ mod tests {
         }
 
         let sorted_ci_package_names =
-            get_sorted_main_locators(temp_root_dir.into_path(), "{ID}-Hash.{*}");
+            get_sorted_main_locators(temp_root_dir.path().into(), "{ID}-Hash.{*}");
         let ci = extract_ci_by_main_locator("{ID}-Hash.{*}", &sorted_ci_package_names[0]);
 
         assert_eq!(ci.unwrap(), max_ci);

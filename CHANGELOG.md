@@ -20,10 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化更新流程。
 - 允许无法查询 config.xml 时，仍然可以使用 `fp build`。
   - 将自动传入所有缓存参数，其他则需要手动传入。
+- 修改 job_name 的输入方式，以参考记忆进行提示。 
 
 ### ✅ Test
 
 - 补充了一些单元测试用例。
+- 实践了一种新的测试范式：使用 `#[cfg(debug_assertions)]` 属性嵌入 debug 环境中的测试代码。
 
 ## [1.5.4] - 2025-07-29
 

@@ -30,14 +30,14 @@ use std::io::Stdout;
 /// Contains Inquire(input requests) and console output.
 pub async fn cli_do_extract(
     stdout: &mut Stdout,
-    job_name: Option<String>,
+    job_name_param: Option<String>,
     ci: Option<u32>,
     extract_params: ExtractParams,
     ignore_count_input: bool,
 ) -> Result<(), VfpError> {
     let mut db = get_db(None);
 
-    let job_name = input_job_name(job_name, db.get_interest_job_name())
+    let job_name = input_job_name(job_name_param, &db)
         .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
 
     db.insert_job_name(job_name.as_str());
@@ -57,7 +57,7 @@ pub async fn cli_do_extract(
         db.get_extract_s_locator_template().as_ref(),
         default_config::LOCATOR_TEMPLATE,
     );
-    let used_inner_version = input_ci_for_extract(stdout,job_name.as_str(), ci, &db)
+    let used_inner_version = input_ci_for_extract(stdout, job_name.as_str(), ci, &db)
         .await
         .ok_or(VfpError::EmptyRepo)?;
     let used_player_count = input_directly_with_default(
@@ -366,7 +366,7 @@ pub async fn cli_do_watch(
         .map_err(|_| VfpError::JenkinsClientInvalid)?;
 
     let used_job_name = Some(
-        input_job_name(job_name, db.get_interest_job_name())
+        input_job_name(job_name, &db)
             .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?,
     );
 

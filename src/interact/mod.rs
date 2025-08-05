@@ -317,7 +317,7 @@ pub fn input_target_path(
     input_path(
         param_val,
         db_val,
-        home_dir().map(|p| p.join(sanitize_filename::sanitize(job_name))),
+        home_dir().map(|p| p.join(format!("blast_{}", sanitize_filename::sanitize(job_name)))),
         true,
         hint,
         false,
@@ -749,65 +749,29 @@ pub async fn input_ci_for_watch(
     }
 }
 
-pub fn input_job_name<'a>(
-    param_val: Option<String>,
-    db_val: impl Into<Option<&'a str>>,
-) -> InquireResult<String> {
-    let mut origin_options: Vec<String> = default_config::RECOMMEND_JOB_NAMES
-        .to_vec()
-        .iter()
-        .map(|v| v.to_string())
-        .collect();
-    let mut options: Vec<SelectionCustomizableOptionVal<String>>;
-    if let Some(last_used) = db_val.into() {
-        if let Some(index) = origin_options.iter_mut().position(|v| (*v).eq(last_used)) {
-            let mut cut_off_at_index: Vec<String> = origin_options.split_off(index);
-            let mut cut_off_back: Vec<SelectionCustomizableOptionVal<String>> = cut_off_at_index
-                .split_off(1)
-                .iter()
-                .map(|v| SelectionCustomizableOptionVal::from_data(v.to_string()))
-                .collect();
-
-            options = cut_off_at_index
-                .into_iter()
-                .map(|v| {
-                    SelectionCustomizableOptionVal::from_with_hint(
-                        v,
-                        &format!("({})", HINT_LAST_USED_SUFFIX),
-                    )
-                })
-                .collect();
-
-            options.append(
-                &mut origin_options
-                    .into_iter()
-                    .map(|v| SelectionCustomizableOptionVal::from_data(v.to_string()))
-                    .collect(),
-            );
-
-            options.append(&mut cut_off_back);
-        } else {
-            options = vec![SelectionCustomizableOptionVal::DataContain(
-                SelectionOptionVal::DataWithHintSuffix(
-                    last_used.to_string(),
-                    format!("({})", HINT_LAST_USED_SUFFIX),
-                ),
-            )];
-            options.append(
-                &mut origin_options
-                    .into_iter()
-                    .map(SelectionCustomizableOptionVal::from_data)
-                    .collect(),
-            );
+pub fn input_job_name(param_val: Option<String>, db: &DbDataProxy) -> InquireResult<String> {
+    let mut optional_job_names: Vec<String> = db.get_all_job_names();
+    for recommend in default_config::RECOMMEND_JOB_NAMES.map(|v| v.into()) {
+        if !optional_job_names.contains(&recommend) {
+            optional_job_names.push(recommend);
         }
-    } else {
-        options = origin_options
-            .into_iter()
-            .map(SelectionCustomizableOptionVal::from_data)
-            .collect();
     }
 
-    options.push(SelectionCustomizableOptionVal::Custom);
+    let options: Vec<SelectionCustomizableOptionVal<String>> = optional_job_names
+        .into_iter()
+        .enumerate()
+        .map(|(idx, item)| {
+            if idx == 0 {
+                SelectionCustomizableOptionVal::from_with_hint(
+                    item.clone(),
+                    &format!("({})", HINT_LAST_USED_SUFFIX),
+                )
+            } else {
+                SelectionCustomizableOptionVal::from_data(item.clone())
+            }
+        })
+        .chain(std::iter::once(SelectionCustomizableOptionVal::Custom))
+        .collect();
 
     match input_by_selection_various(
         param_val,

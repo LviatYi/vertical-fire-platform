@@ -44,7 +44,6 @@ impl VersionedData for FpDbV7 {
 }
 
 #[cfg(test)]
-#[cfg(test)]
 #[allow(dead_code)]
 mod tests {
     use super::*;

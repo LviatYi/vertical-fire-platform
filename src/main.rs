@@ -297,7 +297,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             // fp run
             let db = get_db(None);
 
-            let job_name = input_job_name(job_name, db.get_interest_job_name())
+            let job_name = input_job_name(job_name, &db)
                 .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
 
             let dest = input_target_path(
@@ -429,7 +429,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 })?;
             }
 
-            let job_name = input_job_name(job_name, db.get_interest_job_name())
+            let job_name = input_job_name(job_name, &db)
                 .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
 
             db.insert_job_name(job_name.as_str());
