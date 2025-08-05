@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.6.0] - 2025-08-05
+
 **[重大更新]** 此次更新旨在优化分支切换体验！
 
 ### 🚀 Added
@@ -249,7 +251,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.4...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.0...HEAD
+
+[1.6.0]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.4...v1.6.0
 
 [1.5.4]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.5.3...v1.5.4
 
