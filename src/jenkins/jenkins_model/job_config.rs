@@ -83,6 +83,26 @@ pub struct ChoiceParameterWrapper {
     pub content: Vec<ChoiceParameter>,
 }
 
+impl ChoiceParameterWrapper {
+    pub fn get_all_choices(&self) -> Vec<String> {
+        let mut result = Vec::new();
+        for choice in &self.content {
+            match choice {
+                ChoiceParameter::String(value) => {
+                    if !value.is_empty() {
+                        result.push(value.clone());
+                    }
+                }
+                ChoiceParameter::Array(strings_value) => {
+                    result.extend(strings_value.strings.iter().cloned());
+                }
+            }
+        }
+
+        result
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub enum ChoiceParameter {
     #[serde(rename = "string")]

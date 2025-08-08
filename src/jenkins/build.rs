@@ -1,7 +1,5 @@
 use crate::jenkins::jenkins_endpoint::job_config::JobConfig;
-use crate::jenkins::jenkins_model::job_config::{
-    ChoiceParameter, FlowDefinition, ParameterDefinition,
-};
+use crate::jenkins::jenkins_model::job_config::{FlowDefinition, ParameterDefinition};
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::VfpJenkinsClient;
 use crate::vfp_error::VfpError;
@@ -166,31 +164,35 @@ impl From<FlowDefinition> for VfpJobBuildParam {
         let params = value
             .get_parameters()
             .iter()
-            .map(|param| match param {
-                ParameterDefinition::String {
-                    name,
-                    default_value,
-                    ..
-                } => (
-                    name.clone(),
-                    Value::String(default_value.clone().unwrap_or_default()),
-                ),
-                ParameterDefinition::Bool {
-                    name,
-                    default_value,
-                    ..
-                } => (name.clone(), Value::Bool(*default_value)),
-                ParameterDefinition::Choice { name, choices, .. } => {
-                    let first = choices.content.first().cloned();
-                    match first {
-                        Some(ChoiceParameter::String(param)) => {
-                            (name.clone(), Value::String(param))
-                        }
-                        Some(ChoiceParameter::Array(items)) => (
+            .map(|param| {
+                let necessary = param.is_necessary();
+                match param {
+                    ParameterDefinition::String {
+                        name,
+                        default_value,
+                        ..
+                    } => (
+                        name.clone(),
+                        Value::String(default_value.clone().unwrap_or_default()),
+                    ),
+                    ParameterDefinition::Bool {
+                        name,
+                        default_value,
+                        ..
+                    } => (name.clone(), Value::Bool(*default_value)),
+                    ParameterDefinition::Choice { name, choices, .. } => {
+                        let default_choice = if necessary {
+                            choices
+                                .get_all_choices()
+                                .into_iter()
+                                .find(|item| !item.is_empty())
+                        } else {
+                            choices.get_all_choices().into_iter().next()
+                        };
+                        (
                             name.clone(),
-                            Value::String(items.strings.first().cloned().unwrap_or_default()),
-                        ),
-                        None => (name.clone(), Value::String(String::new())),
+                            Value::String(default_choice.unwrap_or_default()),
+                        )
                     }
                 }
             })

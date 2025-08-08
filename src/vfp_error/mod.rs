@@ -1,7 +1,7 @@
-use crate::LoginMethod;
 use crate::constant::log::*;
 use crate::constant::util::get_hidden_sensitive_string;
-use crate::pretty_log::{ThemeColor, colored_println};
+use crate::pretty_log::{colored_println, ThemeColor};
+use crate::LoginMethod;
 use formatx::formatx;
 use inquire::InquireError;
 use jenkins_sdk::JenkinsError;
@@ -110,7 +110,7 @@ impl Display for VfpError {
             }
             VfpError::SelfUpdateError(e) => e.to_string(),
             VfpError::JobConfigParseError { e, .. } => {
-                formatx!(ERR_JOB_CONFIG_PARSE_FAILED, e).unwrap_or_default()
+                formatx!(ERR_QUERY_JOB_CONFIG, e).unwrap_or_default()
             }
         };
         write!(f, "{}", str)
@@ -120,7 +120,7 @@ impl Display for VfpError {
 impl VfpError {
     pub fn colored_println(&self, stdout: &mut Stdout) {
         match self {
-            VfpError::JobConfigParseError { e, content } => {
+            VfpError::JobConfigParseError { content, .. } => {
                 colored_println(stdout, ThemeColor::Error, self.to_string().as_str());
                 colored_println(
                     stdout,

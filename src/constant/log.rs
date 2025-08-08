@@ -42,7 +42,6 @@ pub const ERR_VERSION_PARSE_FAILED: &str = "Failed to parse version. {}";
 pub const ERR_VERSION_NOT_SUPPORT_UPDATE: &str =
     "This version does not support update. Please upgrade to a newer version great than {}.";
 pub const ERR_UPDATE_FAILED: &str = "Update failed. {}";
-pub const ERR_JOB_CONFIG_PARSE_FAILED: &str = "Failed to parse job config. {}";
 
 pub const HINT_JOB_NAME: &str = "use job:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";

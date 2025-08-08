@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### 🚀 Added
+
+- 新增了对包含 Choice 参数的 Jenkins Job 的支持。
+    - 现在可以在 `fp build` 时，自动获取并填充 Choice 参数。
+
+### ⚙️ Changed
+
+- 优化代码结构。
+
+### ✅ Test
+
+- 维护了针对 JobConfig 的单元测试。
+
 ## [1.6.1] - 2025-08-05
 
 ### ⚙️ Changed
@@ -27,8 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 优化更新流程。
 - 允许无法查询 config.xml 时，仍然可以使用 `fp build`。
-  - 将自动传入所有缓存参数，其他则需要手动传入。
-- 修改 job_name 的输入方式，以参考记忆进行提示。 
+    - 将自动传入所有缓存参数，其他则需要手动传入。
+- 修改 job_name 的输入方式，以参考记忆进行提示。
 
 ### ✅ Test
 
@@ -47,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
-- 当 `fp build` 未填写 Cl 需要自动获取信息时，使用了错误的谓词。 
+- 当 `fp build` 未填写 Cl 需要自动获取信息时，使用了错误的谓词。
 
 ## [1.5.3] - 2025-07-25
 
@@ -57,7 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
-- 启用 `compression-zip-deflate` 功能，以修复 self_update 无法解压的问题。 
+- 启用 `compression-zip-deflate` 功能，以修复 self_update 无法解压的问题。
 
 ## [1.5.2] - 2025-07-24
 

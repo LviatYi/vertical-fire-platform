@@ -16,12 +16,12 @@ use crate::db::db_data_proxy::DbDataProxy;
 use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
-use crate::jenkins::build::{VfpJobBuildParam, query_job_config, request_build};
+use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
 use crate::jenkins::jenkins_model::shelves::Shelves;
-use crate::jenkins::query::{VfpJenkinsClient, query_builds_in_job, query_run_info};
+use crate::jenkins::query::{query_builds_in_job, query_run_info, VfpJenkinsClient};
 use crate::jenkins::util::get_jenkins_workflow_run_url;
-use crate::pretty_log::{ThemeColor, colored_println};
-use crate::run::{RunStatus, kill_by_pid, run_instance, set_server};
+use crate::pretty_log::{colored_println, ThemeColor};
+use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
 use crate::update::{do_self_update_with_log, fetch_and_try_auto_update};
 use crate::vfp_error::VfpError;
 use clap::{Parser, Subcommand};
@@ -228,20 +228,20 @@ async fn main() {
         {
             let mut db = get_db(None);
             let mut upgrade_info_usable = false;
-            if !db.is_never_check_version() {
-                if let Some(version) = db.get_latest_remote_version() {
-                    let curr_version = Version::parse(env!("CARGO_PKG_VERSION"));
-                    if let Ok(curr_version) = curr_version {
-                        if version.gt(&curr_version) {
-                            upgrade_info_usable = true;
-                            show_upgradable_hit(&mut stdout, version.to_string().as_str());
-                        }
+            if !db.is_never_check_version()
+                && let Some(version) = db.get_latest_remote_version()
+            {
+                let curr_version = Version::parse(env!("CARGO_PKG_VERSION"));
+                if let Ok(curr_version) = curr_version {
+                    if version.gt(&curr_version) {
+                        upgrade_info_usable = true;
+                        show_upgradable_hit(&mut stdout, version.to_string().as_str());
                     }
+                }
 
-                    if !upgrade_info_usable {
-                        db.consume_update_status();
-                        save_with_error_log(&db, None);
-                    }
+                if !upgrade_info_usable {
+                    db.consume_update_status();
+                    save_with_error_log(&db, None);
                 }
             }
         }
@@ -325,16 +325,16 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             );
 
             if single {
-                if let Some(server) = server {
-                    if let Err(e) = set_server(
+                if let Some(server) = server
+                    && let Err(e) = set_server(
                         &dest,
                         &package_file_name,
                         count_or_index,
                         default_config::MENDING_FILE_PATH,
                         &server,
-                    ) {
-                        println!("{}", e);
-                    }
+                    )
+                {
+                    colored_println(stdout, ThemeColor::Error, e.as_str());
                 }
 
                 run_instance_with_log(
@@ -347,16 +347,16 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 );
             } else {
                 for i in 1..count_or_index + 1 {
-                    if let Some(server) = server.clone() {
-                        if let Err(e) = set_server(
+                    if let Some(server) = server.clone()
+                        && let Err(e) = set_server(
                             &dest,
                             &package_file_name,
                             i,
                             default_config::MENDING_FILE_PATH,
                             &server,
-                        ) {
-                            println!("{}", e);
-                        }
+                        )
+                    {
+                        colored_println(stdout, ThemeColor::Error, e.as_str());
                     }
 
                     run_instance_with_log(
@@ -430,10 +430,10 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 .collect();
 
             let mut config_from_default: bool = false;
-            let config_params_result = query_job_config(&client, &job_name).await.map_err(|e| {
-                config_from_default = true;
-                VfpError::Custom(formatx!(ERR_QUERY_JOB_CONFIG, e.to_string()).unwrap_or_default())
-            });
+            let config_params_result =
+                query_job_config(&client, &job_name).await.inspect_err(|_| {
+                    config_from_default = true;
+                });
 
             if let Err(ref e) = config_params_result {
                 e.colored_println(stdout);
@@ -510,8 +510,8 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                         formatx!(ERR_REQUEST_BUILD_FAILED, e.to_string()).unwrap_or_default(),
                     )
                 })?;
-            colored_println(stdout, ThemeColor::Success, REQUEST_BUILD_SUCCESS);
 
+            colored_println(stdout, ThemeColor::Success, REQUEST_BUILD_SUCCESS);
             colored_println(stdout, ThemeColor::Main, BUILD_USED_PARAMS);
 
             let mut sorted_params_for_show: Vec<(&String, &serde_json::Value)> =
@@ -837,7 +837,7 @@ mod tests {
         }
         let file_name = file_to_extract
             .file_name()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no filename"))?;
+            .ok_or_else(|| io::Error::other("no filename"))?;
         let out_path = into_dir.join(file_name);
         let mut out_file = fs::File::create(out_path)?;
         io::copy(&mut reader, &mut out_file)?;

@@ -1,21 +1,17 @@
 use crate::constant::log::*;
 use crate::db::db_data_proxy::DbDataProxy;
 use crate::db::{get_db, save_with_error_log};
-use crate::pretty_log::{ThemeColor, colored_println};
+use crate::pretty_log::{colored_println, ThemeColor};
 use crate::vfp_error::VfpError;
 use crate::{default_config, update};
 use formatx::formatx;
-use self_update::Status;
 use self_update::update::UpdateStatus;
+use self_update::Status;
 use semver::Version;
 
 /// # self update
 ///
 /// Do self update.
-///
-/// # self update
-///
-/// Do self udpate.
 ///
 /// ### Returns
 ///
@@ -163,5 +159,5 @@ pub fn do_self_update_with_log(
     }
 
     db.consume_update_status();
-    save_with_error_log(&db, None);
+    save_with_error_log(db, None);
 }
