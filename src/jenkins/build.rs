@@ -180,19 +180,14 @@ impl From<FlowDefinition> for VfpJobBuildParam {
                     ..
                 } => (name.clone(), Value::Bool(*default_value)),
                 ParameterDefinition::Choice { name, choices, .. } => {
-                    let first = choices.first().cloned();
+                    let first = choices.content.first().cloned();
                     match first {
                         Some(ChoiceParameter::String(param)) => {
-                            (name.clone(), Value::String(param.string))
+                            (name.clone(), Value::String(param))
                         }
-                        Some(ChoiceParameter::Array { string_array: arr }) => (
+                        Some(ChoiceParameter::Array(items)) => (
                             name.clone(),
-                            Value::String(
-                                arr.first()
-                                    .cloned()
-                                    .map(|item| item.string)
-                                    .unwrap_or_default(),
-                            ),
+                            Value::String(items.strings.first().cloned().unwrap_or_default()),
                         ),
                         None => (name.clone(), Value::String(String::new())),
                     }
