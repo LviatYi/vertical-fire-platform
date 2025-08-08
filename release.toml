@@ -1,12 +1,13 @@
 tag-name = "v{{version}}"
 sign-tag = false
-push = true
+push = false
 verify = false
 shared-version = true
 consolidate-commits = true
 pre-release-commit-message = "chore(release): v{{version}}"
 pre-release-replacements = [
     { file = "README.md", search = "v.*\\s*\\nby LviatYi", replace = "v{{version}}  \nby LviatYi" },
+    { file = "README.md", search = "https://github.com/LviatYi/vertical-fire-platform/releases/download/.*-x86_64-pc-windows-msvc.zip", replace = "https://github.com/LviatYi/vertical-fire-platform/releases/download/v{{version}}/vfp-v{{version}}-x86_64-pc-windows-msvc.zip" },
     { file = "CHANGELOG.md", search = "[Uu]nreleased", replace = "{{version}}" },
     { file = "CHANGELOG.md", search = "\\.\\.\\.HEAD", replace = "...{{tag_name}}", exactly = 1 },
     { file = "CHANGELOG.md", search = "ReleaseDate", replace = "{{date}}" },
