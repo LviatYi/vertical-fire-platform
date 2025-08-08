@@ -81,13 +81,14 @@ impl Display for XmlRichText {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let XmlRichText { content } = self;
         {
-            for i in 0..content.len() {
-                write!(f, "{}", content[i])?;
-                if i < content.len() - 1 {
+            let mut first = true;
+            for elem in &self.content {
+                if !first {
                     write!(f, " ")?;
                 }
+                write!(f, "{elem}")?;
+                first = false;
             }
-
             Ok(())
         }
     }
@@ -109,17 +110,15 @@ impl Display for XmlRichTextElem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             XmlRichTextElem::Content(text) => write!(f, "{}", text),
-            XmlRichTextElem::Span { style, content } => {
-                if let Some(ref content) = content {
-                    if let Some(ref style) = style {
-                        write!(f, "<span style='{}'>{}</span>", style, content)
-                    } else {
-                        write!(f, "<span>{}</span>", content)
-                    }
-                } else {
-                    Ok(())
+            XmlRichTextElem::Span { style, content } => match (content, style) {
+                (None, _) => Ok(()),
+                (Some(ref content), None) => {
+                    write!(f, "<span>{}</span>", content)
                 }
-            }
+                (Some(ref content), Some(ref style)) => {
+                    write!(f, "<span style='{}'>{}</span>", style, content)
+                }
+            },
         }
     }
 }
