@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.6.2] - 2025-08-08
+
 ### 🚀 Added
 
 - 新增了对包含 Choice 参数的 Jenkins Job 的支持。
@@ -270,7 +272,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.1...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.2...HEAD
+
+[1.6.2]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.1...v1.6.2
 
 [1.6.1]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.0...v1.6.1
 
