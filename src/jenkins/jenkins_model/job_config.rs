@@ -1,31 +1,40 @@
 use serde::Deserialize;
 use std::fmt::Display;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct FlowDefinition {
-    #[serde(rename = "properties")]
     properties: FlowDefinitionProperties,
 }
 
-#[derive(Debug, Deserialize)]
+impl FlowDefinition {
+    pub fn get_parameters(&self) -> &Vec<ParameterDefinition> {
+        &self
+            .properties
+            .parameters_definition_property
+            .wrapper
+            .parameters
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
 struct FlowDefinitionProperties {
     #[serde(rename = "hudson.model.ParametersDefinitionProperty")]
     pub parameters_definition_property: ParameterDefinitions,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 struct ParameterDefinitions {
     #[serde(rename = "parameterDefinitions")]
     pub wrapper: ParameterDefinitionsWrapper,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 struct ParameterDefinitionsWrapper {
-    #[serde(rename = "$value")]
+    #[serde(rename = "$value", default)]
     pub parameters: Vec<ParameterDefinition>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[allow(dead_code)]
 pub enum ParameterDefinition {
     #[serde(rename = "hudson.model.StringParameterDefinition")]
@@ -48,50 +57,86 @@ pub enum ParameterDefinition {
     Choice {
         name: String,
         description: Option<XmlRichText>,
-        choices: Vec<ChoiceParameter>,
+        choices: ChoiceParameterWrapper,
     },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+impl ParameterDefinition {
+    pub fn is_necessary(&self) -> bool {
+        match self {
+            ParameterDefinition::String { description, .. } => {
+                description.as_ref().is_some_and(|desc| desc.is_necessary())
+            }
+            ParameterDefinition::Bool { description, .. } => {
+                description.as_ref().is_some_and(|desc| desc.is_necessary())
+            }
+            ParameterDefinition::Choice { description, .. } => {
+                description.as_ref().is_some_and(|desc| desc.is_necessary())
+            }
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+pub struct ChoiceParameterWrapper {
+    #[serde(rename = "$value", default)]
+    pub content: Vec<ChoiceParameter>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub enum ChoiceParameter {
     #[serde(rename = "string")]
-    String(StringParameter),
+    String(String),
     #[serde(rename = "a")]
-    Array {
-        string_array: Vec<StringParameter>,
-    },
+    Array(StringsValue),
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct StringParameter {
-    pub string: String,
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct StringsValue {
+    #[serde(rename = "string", default)]
+    pub strings: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct XmlRichText {
-    #[serde(rename = "$value")]
-    pub content: Option<Vec<XmlRichTextElem>>,
+    #[serde(rename = "$value", default)]
+    pub content: Vec<XmlRichTextElem>,
+}
+
+impl XmlRichText {
+    pub fn is_necessary(&self) -> bool {
+        self.content.iter().any(|item| {
+            if let XmlRichTextElem::Span {
+                style: Some(text), ..
+            } = item
+                && text.contains("color:red")
+            {
+                true
+            } else {
+                false
+            }
+        })
+    }
 }
 
 impl Display for XmlRichText {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let XmlRichText { content } = self;
         {
-            if let Some(ref content) = content {
-                for i in 0..content.len() {
-                    write!(f, "{}", content[i])?;
-                    if i < content.len() - 1 {
-                        write!(f, " ")?;
-                    }
+            let mut first = true;
+            for elem in content {
+                if !first {
+                    write!(f, " ")?;
                 }
+                write!(f, "{elem}")?;
+                first = false;
             }
-
             Ok(())
         }
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub enum XmlRichTextElem {
     #[serde(rename = "$text")]
     Content(String),
@@ -107,35 +152,23 @@ impl Display for XmlRichTextElem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             XmlRichTextElem::Content(text) => write!(f, "{}", text),
-            XmlRichTextElem::Span { style, content } => {
-                if let Some(ref content) = content {
-                    if let Some(ref style) = style {
-                        write!(f, "<span style='{}'>{}</span>", style, content)
-                    } else {
-                        write!(f, "<span>{}</span>", content)
-                    }
-                } else {
-                    Ok(())
+            XmlRichTextElem::Span { content, style } => match (content, style) {
+                (None, _) => Ok(()),
+                (Some(content), None) => {
+                    write!(f, "<span>{}</span>", content)
                 }
-            }
+                (Some(content), Some(style)) => {
+                    write!(f, "<span style='{}'>{}</span>", style, content)
+                }
+            },
         }
-    }
-}
-
-impl FlowDefinition {
-    pub fn get_parameters(&self) -> &Vec<ParameterDefinition> {
-        &self
-            .properties
-            .parameters_definition_property
-            .wrapper
-            .parameters
     }
 }
 
 #[cfg(test)]
 #[allow(dead_code)]
 mod tests {
-    use crate::jenkins::jenkins_model::job_config::FlowDefinition;
+    use crate::jenkins::jenkins_model::job_config::*;
     use serde::Deserialize;
 
     #[test]
@@ -171,6 +204,9 @@ mod tests {
     }
 
     #[test]
+    fn xml_de_high_level_lab() {}
+
+    #[test]
     fn test_deserialize_config_xml() {
         let content = r#"<?xml version='1.1' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
@@ -180,38 +216,33 @@ mod tests {
     <hudson.model.ParametersDefinitionProperty>
       <parameterDefinitions>
         <hudson.model.StringParameterDefinition>
-          <name>Changelist</name>
+          <name>StringValueWithoutDesc</name>
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>
         <hudson.model.StringParameterDefinition>
-          <name>CustomServer</name>
-          <description>Custom Server</description>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>ShelvedChange</name>
+          <name>StringValueWithDesc</name>
+          <description>description of StringValueWithDesc</description>
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>
         <hudson.model.BooleanParameterDefinition>
-          <name>ECP</name>
-          <description>description of ECP</description>
-          <defaultValue>false</defaultValue>
+          <name>SomeBoolValue1</name>
+          <description>description of SomeBoolValue1</description>
+          <defaultValue>true</defaultValue>
         </hudson.model.BooleanParameterDefinition>
         <hudson.model.BooleanParameterDefinition>
-          <name>SAG</name>
-          <description>description of SAG</description>
+          <name>SomeBoolValue2</name>
+          <description>description of SomeBoolValue2</description>
           <defaultValue>false</defaultValue>
         </hudson.model.BooleanParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
-    <jenkins.model.BuildDiscarderProperty>
-      <strategy class="hudson.tasks.LogRotator">
-        <daysToKeep>-1</daysToKeep>
-        <numToKeep>100</numToKeep>
-        <artifactDaysToKeep>-1</artifactDaysToKeep>
-        <artifactNumToKeep>-1</artifactNumToKeep>
-      </strategy>
-    </jenkins.model.BuildDiscarderProperty>
+    <otherNode>
+      <prop class="OtherNode">
+        <someVal>-1</someVal>
+        <someVal2>100</someVal2>
+        <someVal3>-1</someVal3>
+      </prop>
+    </otherNode>
   </properties>
   <triggers/>
   <disabled>false</disabled>
@@ -220,7 +251,49 @@ mod tests {
 
         match quick_xml::de::from_str::<FlowDefinition>(content) {
             Ok(result) => {
-                println!("{:#?}", result);
+                assert_eq!(
+                    result
+                        .properties
+                        .parameters_definition_property
+                        .wrapper
+                        .parameters,
+                    vec![
+                        ParameterDefinition::String {
+                            name: "StringValueWithoutDesc".to_string(),
+                            description: None,
+                            trim: Some(true),
+                            default_value: None
+                        },
+                        ParameterDefinition::String {
+                            name: "StringValueWithDesc".to_string(),
+                            description: Some(XmlRichText {
+                                content: vec![XmlRichTextElem::Content(
+                                    "description of StringValueWithDesc".to_string()
+                                )]
+                            }),
+                            trim: Some(true),
+                            default_value: None
+                        },
+                        ParameterDefinition::Bool {
+                            name: "SomeBoolValue1".to_string(),
+                            description: Some(XmlRichText {
+                                content: vec![XmlRichTextElem::Content(
+                                    "description of SomeBoolValue1".to_string()
+                                )],
+                            }),
+                            default_value: true
+                        },
+                        ParameterDefinition::Bool {
+                            name: "SomeBoolValue2".to_string(),
+                            description: Some(XmlRichText {
+                                content: vec![XmlRichTextElem::Content(
+                                    "description of SomeBoolValue2".to_string()
+                                )],
+                            }),
+                            default_value: false
+                        },
+                    ]
+                );
             }
             Err(e) => {
                 println!("Error: {:?}", e);
@@ -230,7 +303,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_config_xml_with_rich_text_description() {
+    fn test_string_choice() {
         let content = r#"<?xml version='1.1' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
   <description></description>
@@ -238,54 +311,24 @@ mod tests {
   <properties>
     <hudson.model.ParametersDefinitionProperty>
       <parameterDefinitions>
-        <hudson.model.StringParameterDefinition>
-          <name>Changelist</name>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>CustomServer</name>
-          <description>Custom Server</description>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.BooleanParameterDefinition>
-          <name>ECP</name>
-          <description>description of ECP</description>
-          <defaultValue>false</defaultValue>
-        </hudson.model.BooleanParameterDefinition>
-        <hudson.model.BooleanParameterDefinition>
-          <name>SAG</name>
-          <description>description of SAG</description>
-          <defaultValue>false</defaultValue>
-        </hudson.model.BooleanParameterDefinition>
         <hudson.model.ChoiceParameterDefinition>
-          <name>TestType</name>
-          <description><span style='color:red'> Please select TestType before build.</span></description>
+          <name>Choice</name>
+          <description><span style='color:red'>Some desc about choice type</span></description>
           <choices>
             <string/>
             <string>Content</string>
             <string>Other</string>
           </choices>
         </hudson.model.ChoiceParameterDefinition>
-        <hudson.model.ChoiceParameterDefinition>
-          <name>JuiceEnvironment</name>
-          <description/>
-          <choices class="java.util.Arrays$ArrayList">
-          <a class="string-array">
-            <string>Autosmoke</string>
-            <string>EARO_QA</string>
-          </a>
-          </choices>
-        </hudson.model.ChoiceParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
-    <jenkins.model.BuildDiscarderProperty>
-      <strategy class="hudson.tasks.LogRotator">
-        <daysToKeep>-1</daysToKeep>
-        <numToKeep>100</numToKeep>
-        <artifactDaysToKeep>-1</artifactDaysToKeep>
-        <artifactNumToKeep>-1</artifactNumToKeep>
-      </strategy>
-    </jenkins.model.BuildDiscarderProperty>
+    <otherNode>
+      <prop class="OtherNode">
+        <someVal>-1</someVal>
+        <someVal2>100</someVal2>
+        <someVal3>-1</someVal3>
+      </prop>
+    </otherNode>
   </properties>
   <triggers/>
   <disabled>false</disabled>
@@ -294,7 +337,94 @@ mod tests {
 
         match quick_xml::de::from_str::<FlowDefinition>(content) {
             Ok(result) => {
-                println!("{:#?}", result);
+                assert_eq!(
+                    result
+                        .properties
+                        .parameters_definition_property
+                        .wrapper
+                        .parameters,
+                    vec![ParameterDefinition::Choice {
+                        name: "Choice".to_string(),
+                        description: Some(XmlRichText {
+                            content: vec![XmlRichTextElem::Span {
+                                style: None,
+                                content: Some("Some desc about choice type".to_string())
+                            }]
+                        }),
+                        choices: ChoiceParameterWrapper {
+                            content: vec![
+                                ChoiceParameter::String("".to_string()),
+                                ChoiceParameter::String("Content".to_string()),
+                                ChoiceParameter::String("Other".to_string())
+                            ]
+                        }
+                    }]
+                );
+            }
+            Err(e) => {
+                println!("Error: {:?}", e);
+                panic!();
+            }
+        }
+    }
+
+    #[test]
+    fn test_array_choice() {
+        let content = r#"<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>Choice</name>
+          <description><span style='color:red'>Some desc about choice type</span></description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>hello</string>
+              <string>world</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+    <otherNode>
+      <prop class="OtherNode">
+        <someVal>-1</someVal>
+        <someVal2>100</someVal2>
+        <someVal3>-1</someVal3>
+      </prop>
+    </otherNode>
+  </properties>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
+"#;
+
+        match quick_xml::de::from_str::<FlowDefinition>(content) {
+            Ok(result) => {
+                assert_eq!(
+                    result
+                        .properties
+                        .parameters_definition_property
+                        .wrapper
+                        .parameters,
+                    vec![ParameterDefinition::Choice {
+                        name: "Choice".to_string(),
+                        description: Some(XmlRichText {
+                            content: vec![XmlRichTextElem::Span {
+                                style: None,
+                                content: Some("Some desc about choice type".to_string())
+                            }]
+                        }),
+                        choices: ChoiceParameterWrapper {
+                            content: vec![ChoiceParameter::Array(StringsValue {
+                                strings: vec!["hello".to_string(), "world".to_string()]
+                            }),]
+                        }
+                    }]
+                );
             }
             Err(e) => {
                 println!("Error: {:?}", e);
@@ -310,7 +440,7 @@ mod tests {
         <hudson.model.ParametersDefinitionProperty>
             <parameterDefinitions>
                 <hudson.model.BooleanParameterDefinition>
-                    <name>IsUseCore</name>
+                    <name>SomeBoolValue</name>
                     <description/>
                     <defaultValue>true</defaultValue>
                 </hudson.model.BooleanParameterDefinition>
@@ -321,7 +451,52 @@ mod tests {
 
         match quick_xml::de::from_str::<FlowDefinition>(content) {
             Ok(result) => {
-                println!("{:#?}", result);
+                assert_eq!(
+                    result
+                        .properties
+                        .parameters_definition_property
+                        .wrapper
+                        .parameters,
+                    vec![ParameterDefinition::Bool {
+                        name: "SomeBoolValue".to_string(),
+                        description: Some(XmlRichText { content: vec![] }),
+                        default_value: true
+                    }]
+                );
+            }
+            Err(e) => {
+                println!("Error: {:?}", e);
+                panic!();
+            }
+        }
+
+        let content = r##"<flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
+    <properties>
+        <hudson.model.ParametersDefinitionProperty>
+            <parameterDefinitions>
+                <hudson.model.BooleanParameterDefinition>
+                    <name>SomeBoolValue</name>
+                    <defaultValue>true</defaultValue>
+                </hudson.model.BooleanParameterDefinition>
+            </parameterDefinitions>
+        </hudson.model.ParametersDefinitionProperty>
+    </properties>
+</flow-definition>"##;
+
+        match quick_xml::de::from_str::<FlowDefinition>(content) {
+            Ok(result) => {
+                assert_eq!(
+                    result
+                        .properties
+                        .parameters_definition_property
+                        .wrapper
+                        .parameters,
+                    vec![ParameterDefinition::Bool {
+                        name: "SomeBoolValue".to_string(),
+                        description: None,
+                        default_value: true
+                    }]
+                );
             }
             Err(e) => {
                 println!("Error: {:?}", e);

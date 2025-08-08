@@ -1,7 +1,7 @@
+use crate::LoginMethod;
 use crate::constant::log::*;
 use crate::constant::util::get_hidden_sensitive_string;
-use crate::pretty_log::{colored_println, ThemeColor};
-use crate::LoginMethod;
+use crate::pretty_log::{ThemeColor, colored_println};
 use formatx::formatx;
 use inquire::InquireError;
 use jenkins_sdk::JenkinsError;
@@ -31,6 +31,10 @@ pub enum VfpError {
     },
     VersionParseFailed(String),
     SelfUpdateError(self_update::errors::Error),
+    JobConfigParseError {
+        e: String,
+        content: String,
+    },
 }
 
 impl From<InquireError> for VfpError {
@@ -103,8 +107,11 @@ impl Display for VfpError {
             } => formatx!(WATCHING_RUN_TASK_FAILURE, build_number, job_name).unwrap_or_default(),
             VfpError::VersionParseFailed(ver) => {
                 formatx!(ERR_VERSION_PARSE_FAILED, ver).unwrap_or_default()
-            },
+            }
             VfpError::SelfUpdateError(e) => e.to_string(),
+            VfpError::JobConfigParseError { e, .. } => {
+                formatx!(ERR_JOB_CONFIG_PARSE_FAILED, e).unwrap_or_default()
+            }
         };
         write!(f, "{}", str)
     }
@@ -112,6 +119,31 @@ impl Display for VfpError {
 
 impl VfpError {
     pub fn colored_println(&self, stdout: &mut Stdout) {
-        colored_println(stdout, ThemeColor::Error, self.to_string().as_str());
+        match self {
+            VfpError::JobConfigParseError { e, content } => {
+                colored_println(stdout, ThemeColor::Error, self.to_string().as_str());
+                colored_println(
+                    stdout,
+                    ThemeColor::Second,
+                    formatx!(HINT_JOB_CONFIG_CONTENT, content)
+                        .unwrap_or_default()
+                        .as_str(),
+                );
+            }
+            VfpError::RunTaskBuildFailed { log, run_url, .. } => {
+                colored_println(stdout, ThemeColor::Error, self.to_string().as_str());
+                colored_println(stdout, ThemeColor::Main, log.as_str());
+                colored_println(
+                    stdout,
+                    ThemeColor::Warn,
+                    formatx!(RUN_TASK_CONSOLE_OUTPUT_URL, run_url)
+                        .unwrap_or_default()
+                        .as_str(),
+                );
+            }
+            _ => {
+                colored_println(stdout, ThemeColor::Error, self.to_string().as_str());
+            }
+        }
     }
 }

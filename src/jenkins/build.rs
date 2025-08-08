@@ -4,6 +4,7 @@ use crate::jenkins::jenkins_model::job_config::{
 };
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::VfpJenkinsClient;
+use crate::vfp_error::VfpError;
 use jenkins_sdk::{JenkinsError, TriggerBuild};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -180,19 +181,14 @@ impl From<FlowDefinition> for VfpJobBuildParam {
                     ..
                 } => (name.clone(), Value::Bool(*default_value)),
                 ParameterDefinition::Choice { name, choices, .. } => {
-                    let first = choices.first().cloned();
+                    let first = choices.content.first().cloned();
                     match first {
                         Some(ChoiceParameter::String(param)) => {
-                            (name.clone(), Value::String(param.string))
+                            (name.clone(), Value::String(param))
                         }
-                        Some(ChoiceParameter::Array { string_array: arr }) => (
+                        Some(ChoiceParameter::Array(items)) => (
                             name.clone(),
-                            Value::String(
-                                arr.first()
-                                    .cloned()
-                                    .map(|item| item.string)
-                                    .unwrap_or_default(),
-                            ),
+                            Value::String(items.strings.first().cloned().unwrap_or_default()),
                         ),
                         None => (name.clone(), Value::String(String::new())),
                     }
@@ -212,7 +208,7 @@ impl From<FlowDefinition> for VfpJobBuildParam {
 pub async fn query_job_config(
     client: &VfpJenkinsClient,
     job_name: &str,
-) -> Result<FlowDefinition, JenkinsError> {
+) -> Result<FlowDefinition, VfpError> {
     let content = jenkins_sdk::AsyncRawQuery::raw_query(
         &JobConfig {
             job_name: job_name.to_string(),
@@ -223,7 +219,10 @@ pub async fn query_job_config(
 
     match quick_xml::de::from_str::<FlowDefinition>(&content) {
         Ok(result) => Ok(result),
-        Err(e) => Err(JenkinsError::RequestError(e.to_string())),
+        Err(e) => Err(VfpError::JobConfigParseError {
+            e: e.to_string(),
+            content,
+        }),
     }
 }
 
