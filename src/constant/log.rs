@@ -42,6 +42,7 @@ pub const ERR_VERSION_PARSE_FAILED: &str = "Failed to parse version. {}";
 pub const ERR_VERSION_NOT_SUPPORT_UPDATE: &str =
     "This version does not support update. Please upgrade to a newer version great than {}.";
 pub const ERR_UPDATE_FAILED: &str = "Update failed. {}";
+pub const ERR_JOB_CONFIG_PARSE_FAILED: &str = "Failed to parse job config. {}";
 
 pub const HINT_JOB_NAME: &str = "use job:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
@@ -77,6 +78,7 @@ pub const HINT_UPGRADE_SILENT_OPERATION: &str =
     "Use `fp update --never-check` to disable update check and hints.";
 pub const HINT_USE_PARAM_OPERATION: &str =
     "Use `fp build --param <PARAM_NAME> <PARAM_VALUE>` to set the parameter value.";
+pub const HINT_JOB_CONFIG_CONTENT: &str = "config content: \n{}";
 
 pub const LOGIN_SUCCESS_BY_PWD: &str = "Login success by password!";
 pub const LOGIN_SUCCESS_BY_API_TOKEN: &str = "Login success by api token!";

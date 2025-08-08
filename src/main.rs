@@ -16,12 +16,12 @@ use crate::db::db_data_proxy::DbDataProxy;
 use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
-use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
+use crate::jenkins::build::{VfpJobBuildParam, query_job_config, request_build};
 use crate::jenkins::jenkins_model::shelves::Shelves;
-use crate::jenkins::query::{query_builds_in_job, query_run_info, VfpJenkinsClient};
+use crate::jenkins::query::{VfpJenkinsClient, query_builds_in_job, query_run_info};
 use crate::jenkins::util::get_jenkins_workflow_run_url;
-use crate::pretty_log::{colored_println, ThemeColor};
-use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
+use crate::pretty_log::{ThemeColor, colored_println};
+use crate::run::{RunStatus, kill_by_pid, run_instance, set_server};
 use crate::update::{do_self_update_with_log, fetch_and_try_auto_update};
 use crate::vfp_error::VfpError;
 use clap::{Parser, Subcommand};
@@ -246,25 +246,8 @@ async fn main() {
             }
         }
 
-        match main_cli(command, &mut stdout).await {
-            Ok(_) => {}
-            Err(err) => match &err {
-                e @ VfpError::RunTaskBuildFailed { log, run_url, .. } => {
-                    e.colored_println(&mut stdout);
-
-                    colored_println(&mut stdout, ThemeColor::Main, log.as_str());
-                    colored_println(
-                        &mut stdout,
-                        ThemeColor::Warn,
-                        formatx!(RUN_TASK_CONSOLE_OUTPUT_URL, run_url)
-                            .unwrap_or_default()
-                            .as_str(),
-                    );
-                }
-                _ => {
-                    err.colored_println(&mut stdout);
-                }
-            },
+        if let Err(err) = main_cli(command, &mut stdout).await {
+            err.colored_println(&mut stdout);
         }
 
         fetch_and_try_auto_update(&mut stdout);
