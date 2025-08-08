@@ -20,7 +20,7 @@ struct ParameterDefinitions {
 
 #[derive(Debug, Deserialize, PartialEq)]
 struct ParameterDefinitionsWrapper {
-    #[serde(rename = "$value")]
+    #[serde(rename = "$value", default)]
     pub parameters: Vec<ParameterDefinition>,
 }
 
@@ -53,7 +53,7 @@ pub enum ParameterDefinition {
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct ChoiceParameterWrapper {
-    #[serde(rename = "$value")]
+    #[serde(rename = "$value", default)]
     pub content: Vec<ChoiceParameter>,
 }
 
@@ -67,26 +67,24 @@ pub enum ChoiceParameter {
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct StringsValue {
-    #[serde(rename = "string")]
+    #[serde(rename = "string", default)]
     pub strings: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct XmlRichText {
-    #[serde(rename = "$value")]
-    pub content: Option<Vec<XmlRichTextElem>>,
+    #[serde(rename = "$value", default)]
+    pub content: Vec<XmlRichTextElem>,
 }
 
 impl Display for XmlRichText {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let XmlRichText { content } = self;
         {
-            if let Some(ref content) = content {
-                for i in 0..content.len() {
-                    write!(f, "{}", content[i])?;
-                    if i < content.len() - 1 {
-                        write!(f, " ")?;
-                    }
+            for i in 0..content.len() {
+                write!(f, "{}", content[i])?;
+                if i < content.len() - 1 {
+                    write!(f, " ")?;
                 }
             }
 
@@ -238,9 +236,9 @@ mod tests {
                         ParameterDefinition::String {
                             name: "StringValueWithDesc".to_string(),
                             description: Some(XmlRichText {
-                                content: Some(vec![XmlRichTextElem::Content(
+                                content: vec![XmlRichTextElem::Content(
                                     "description of StringValueWithDesc".to_string()
-                                )])
+                                )]
                             }),
                             trim: Some(true),
                             default_value: None
@@ -248,18 +246,18 @@ mod tests {
                         ParameterDefinition::Bool {
                             name: "SomeBoolValue1".to_string(),
                             description: Some(XmlRichText {
-                                content: Some(vec![XmlRichTextElem::Content(
+                                content: vec![XmlRichTextElem::Content(
                                     "description of SomeBoolValue1".to_string()
-                                )]),
+                                )],
                             }),
                             default_value: true
                         },
                         ParameterDefinition::Bool {
                             name: "SomeBoolValue2".to_string(),
                             description: Some(XmlRichText {
-                                content: Some(vec![XmlRichTextElem::Content(
+                                content: vec![XmlRichTextElem::Content(
                                     "description of SomeBoolValue2".to_string()
-                                )]),
+                                )],
                             }),
                             default_value: false
                         },
@@ -317,10 +315,10 @@ mod tests {
                     vec![ParameterDefinition::Choice {
                         name: "Choice".to_string(),
                         description: Some(XmlRichText {
-                            content: Some(vec![XmlRichTextElem::Span {
+                            content: vec![XmlRichTextElem::Span {
                                 style: None,
                                 content: Some("Some desc about choice type".to_string())
-                            }])
+                            }]
                         }),
                         choices: ChoiceParameterWrapper {
                             content: vec![
@@ -384,10 +382,10 @@ mod tests {
                     vec![ParameterDefinition::Choice {
                         name: "Choice".to_string(),
                         description: Some(XmlRichText {
-                            content: Some(vec![XmlRichTextElem::Span {
+                            content: vec![XmlRichTextElem::Span {
                                 style: None,
                                 content: Some("Some desc about choice type".to_string())
-                            }])
+                            }]
                         }),
                         choices: ChoiceParameterWrapper {
                             content: vec![ChoiceParameter::Array(StringsValue {
@@ -430,7 +428,7 @@ mod tests {
                         .parameters,
                     vec![ParameterDefinition::Bool {
                         name: "SomeBoolValue".to_string(),
-                        description: Some(XmlRichText { content: None }),
+                        description: Some(XmlRichText { content: vec![] }),
                         default_value: true
                     }]
                 );
