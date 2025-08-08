@@ -6,6 +6,16 @@ pub struct FlowDefinition {
     properties: FlowDefinitionProperties,
 }
 
+impl FlowDefinition {
+    pub fn get_parameters(&self) -> &Vec<ParameterDefinition> {
+        &self
+            .properties
+            .parameters_definition_property
+            .wrapper
+            .parameters
+    }
+}
+
 #[derive(Debug, Deserialize, PartialEq)]
 struct FlowDefinitionProperties {
     #[serde(rename = "hudson.model.ParametersDefinitionProperty")]
@@ -51,6 +61,22 @@ pub enum ParameterDefinition {
     },
 }
 
+impl ParameterDefinition {
+    pub fn is_necessary(&self) -> bool {
+        match self {
+            ParameterDefinition::String { description, .. } => {
+                description.as_ref().is_some_and(|desc| desc.is_necessary())
+            }
+            ParameterDefinition::Bool { description, .. } => {
+                description.as_ref().is_some_and(|desc| desc.is_necessary())
+            }
+            ParameterDefinition::Choice { description, .. } => {
+                description.as_ref().is_some_and(|desc| desc.is_necessary())
+            }
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct ChoiceParameterWrapper {
     #[serde(rename = "$value", default)]
@@ -77,12 +103,28 @@ pub struct XmlRichText {
     pub content: Vec<XmlRichTextElem>,
 }
 
+impl XmlRichText {
+    pub fn is_necessary(&self) -> bool {
+        self.content.iter().any(|item| {
+            if let XmlRichTextElem::Span {
+                style: Some(text), ..
+            } = item
+                && text.contains("color:red")
+            {
+                true
+            } else {
+                false
+            }
+        })
+    }
+}
+
 impl Display for XmlRichText {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let XmlRichText { content } = self;
         {
             let mut first = true;
-            for elem in &self.content {
+            for elem in content {
                 if !first {
                     write!(f, " ")?;
                 }
@@ -110,26 +152,16 @@ impl Display for XmlRichTextElem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             XmlRichTextElem::Content(text) => write!(f, "{}", text),
-            XmlRichTextElem::Span { style, content } => match (content, style) {
+            XmlRichTextElem::Span { content, style } => match (content, style) {
                 (None, _) => Ok(()),
-                (Some(ref content), None) => {
+                (Some(content), None) => {
                     write!(f, "<span>{}</span>", content)
                 }
-                (Some(ref content), Some(ref style)) => {
+                (Some(content), Some(style)) => {
                     write!(f, "<span style='{}'>{}</span>", style, content)
                 }
             },
         }
-    }
-}
-
-impl FlowDefinition {
-    pub fn get_parameters(&self) -> &Vec<ParameterDefinition> {
-        &self
-            .properties
-            .parameters_definition_property
-            .wrapper
-            .parameters
     }
 }
 
