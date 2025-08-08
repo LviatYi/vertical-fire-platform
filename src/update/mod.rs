@@ -1,12 +1,12 @@
 use crate::constant::log::*;
 use crate::db::db_data_proxy::DbDataProxy;
 use crate::db::{get_db, save_with_error_log};
-use crate::pretty_log::{colored_println, ThemeColor};
+use crate::pretty_log::{ThemeColor, colored_println};
 use crate::vfp_error::VfpError;
 use crate::{default_config, update};
 use formatx::formatx;
-use self_update::update::UpdateStatus;
 use self_update::Status;
+use self_update::update::UpdateStatus;
 use semver::Version;
 
 /// # self update
@@ -99,7 +99,7 @@ pub fn fetch_and_try_auto_update(stdout: &mut std::io::Stdout) {
     }
 
     save_with_error_log(&db, None);
-    
+
     if db.has_latest_version() && db.is_auto_update_enabled() {
         colored_println(stdout, ThemeColor::Second, AUTO_UPDATE_ENABLED);
 
@@ -112,21 +112,20 @@ pub fn do_self_update_with_log(
     db: &mut DbDataProxy,
     specified_version: Option<&str>,
 ) {
-    if let Some(specified_version) = specified_version {
-        if let Ok(version) = Version::parse(specified_version) {
-            if version.lt(&Version::parse(default_config::OLDEST_SUPPORT_UPDATE_VERSION).unwrap()) {
-                colored_println(
-                    stdout,
-                    ThemeColor::Error,
-                    &formatx!(
-                        ERR_VERSION_NOT_SUPPORT_UPDATE,
-                        default_config::OLDEST_SUPPORT_UPDATE_VERSION
-                    )
-                    .unwrap_or_default(),
-                );
-                return;
-            }
-        }
+    if let Some(specified_version) = specified_version
+        && let Ok(version) = Version::parse(specified_version)
+        && version.lt(&Version::parse(default_config::OLDEST_SUPPORT_UPDATE_VERSION).unwrap())
+    {
+        colored_println(
+            stdout,
+            ThemeColor::Error,
+            &formatx!(
+                ERR_VERSION_NOT_SUPPORT_UPDATE,
+                default_config::OLDEST_SUPPORT_UPDATE_VERSION
+            )
+            .unwrap_or_default(),
+        );
+        return;
     }
 
     match update::self_update(specified_version) {

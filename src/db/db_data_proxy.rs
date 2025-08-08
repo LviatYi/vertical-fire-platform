@@ -45,15 +45,13 @@ impl DbDataProxy {
         )
         .await;
 
-        if show_client_type {
-            if let Ok(ref client) = client {
-                match client {
-                    VfpJenkinsClient::ApiTokenClient(_) => {
-                        colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_API_TOKEN)
-                    }
-                    VfpJenkinsClient::PwdClient(_) => {
-                        colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_PWD)
-                    }
+        if show_client_type && let Ok(ref client) = client {
+            match client {
+                VfpJenkinsClient::ApiTokenClient(_) => {
+                    colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_API_TOKEN)
+                }
+                VfpJenkinsClient::PwdClient(_) => {
+                    colored_println(stdout, ThemeColor::Second, LOGIN_SUCCESS_BY_PWD)
                 }
             }
         }

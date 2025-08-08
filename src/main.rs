@@ -436,7 +436,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             });
 
             if let Err(ref e) = config_params_result {
-                colored_println(stdout, ThemeColor::Warn, &e.to_string());
+                e.colored_println(stdout);
             }
 
             let build_params_template = config_params_result
@@ -450,7 +450,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
 
             let db_latest_build_param = db.get_jenkins_build_param(job_name.as_ref());
 
-            if let Some(ref db_params) = db_latest_build_param {
+            if let Some(db_params) = db_latest_build_param {
                 used_cl = db_params.get_change_list();
                 used_sl = db_params.get_shelve_changes();
 
@@ -541,23 +541,23 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 .map(|b| b.builds)
             {
                 for build in builds {
-                    if let Ok(run) = query_run_info(&client, &job_name, build.number).await {
-                        if run.is_mine(db.get_jenkins_username().as_ref().unwrap()) {
-                            colored_println(
-                                stdout,
-                                ThemeColor::Second,
-                                &format!(
-                                    "{} {}",
-                                    URL_OUTPUT,
-                                    get_jenkins_workflow_run_url(
-                                        db.get_jenkins_url().as_ref().unwrap(),
-                                        &job_name,
-                                        build.number,
-                                    )
-                                ),
-                            );
-                            break;
-                        }
+                    if let Ok(run) = query_run_info(&client, &job_name, build.number).await
+                        && run.is_mine(db.get_jenkins_username().as_ref().unwrap())
+                    {
+                        colored_println(
+                            stdout,
+                            ThemeColor::Second,
+                            &format!(
+                                "{} {}",
+                                URL_OUTPUT,
+                                get_jenkins_workflow_run_url(
+                                    db.get_jenkins_url().as_ref().unwrap(),
+                                    &job_name,
+                                    build.number,
+                                )
+                            ),
+                        );
+                        break;
                     }
                 }
             }
