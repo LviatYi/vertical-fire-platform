@@ -16,7 +16,6 @@ pub mod fp_db_v4;
 pub mod fp_db_v5;
 pub mod fp_db_v6;
 pub mod fp_db_v7;
-mod version_field;
 pub mod version_only;
 pub mod versioned_data;
 
