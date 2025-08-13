@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### 🚀 Added
+
+- 新增 AppState 进行全局状态管理。
+
+### ⚙️ Changed
+
+- 优化 StdOut 取用模式。
+- 优化 DbDataProxy 取用模式，避免未来开发中竞态读写问题。
+
 ## [1.6.2] - 2025-08-08
 
 ### 🚀 Added
