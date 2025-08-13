@@ -1,3 +1,4 @@
+use crate::app_state::AppState;
 use crate::constant::log::*;
 use crate::db::db_data_proxy::DbDataProxy;
 use crate::default_config;
@@ -12,7 +13,6 @@ use inquire::error::InquireResult;
 use inquire::validator::{ErrorMessage, Validation};
 use inquire::{InquireError, Password, PasswordDisplayMode, Select, Text};
 use std::fmt::{Display, Formatter};
-use std::io::Stdout;
 use std::path::PathBuf;
 
 //region parse directly
@@ -454,15 +454,15 @@ where
 //endregion
 
 pub async fn input_ci_for_extract(
-    stdout: &mut Stdout,
+    app_state: &mut AppState,
     job_name: &str,
     param_val: Option<u32>,
-    db: &DbDataProxy,
 ) -> Option<u32> {
     if param_val.is_some() {
         return param_val;
     }
 
+    let db = app_state.get_mut_db();
     let latest = db
         .get_repo_decoration()
         .get_sorted_ci_list()
@@ -478,12 +478,20 @@ pub async fn input_ci_for_extract(
 
     //region latest mine ci
     let mut latest_mine_ci: Option<u32> = None;
+    let db = app_state.get_db();
     if let Some(job_name) = db.get_interest_job_name() {
         let mut jenkins_client_invalid = false;
-        let client = db.try_get_jenkins_async_client(stdout, true).await;
+        let client = db
+            .try_get_jenkins_async_client(&mut app_state.get_stdout(), true)
+            .await;
 
-        colored_println(stdout, ThemeColor::Second, QUERYING_USER_LATEST_CI);
+        colored_println(
+            &mut app_state.get_stdout(),
+            ThemeColor::Second,
+            QUERYING_USER_LATEST_CI,
+        );
 
+        let db = app_state.get_db();
         match client {
             Ok(client) => {
                 let user_latest_info_result = query_user_latest_info(
@@ -547,7 +555,11 @@ pub async fn input_ci_for_extract(
                                     .as_str();
                             }
 
-                            colored_println(stdout, ThemeColor::Second, &opt_hint);
+                            colored_println(
+                                &mut app_state.get_stdout(),
+                                ThemeColor::Second,
+                                &opt_hint,
+                            );
                         }
                     },
 
@@ -561,9 +573,13 @@ pub async fn input_ci_for_extract(
             }
         }
 
-        clean_one_line(stdout);
+        clean_one_line(&mut app_state.get_stdout());
         if jenkins_client_invalid {
-            colored_println(stdout, ThemeColor::Error, ERR_JENKINS_CLIENT_INVALID);
+            colored_println(
+                &mut app_state.get_stdout(),
+                ThemeColor::Error,
+                ERR_JENKINS_CLIENT_INVALID,
+            );
         }
     }
     //endregion
@@ -578,6 +594,7 @@ pub async fn input_ci_for_extract(
     }
     //endregion
 
+    let db = app_state.get_db();
     let exist_ci_list = db.get_repo_decoration().get_sorted_ci_list();
 
     //region last used ci
@@ -638,15 +655,15 @@ pub async fn input_ci_for_extract(
 ///
 /// When the user's relevant information cannot be queried, the watch target needs to be manually entered
 pub async fn input_ci_for_watch(
-    stdout: &mut Stdout,
+    app_state: &mut AppState,
     job_name: &str,
     param_val: Option<u32>,
-    db: &DbDataProxy,
 ) -> Option<u32> {
     if param_val.is_some() {
         return param_val;
     }
 
+    let db = app_state.get_mut_db();
     let last_used = db.get_last_inner_version(job_name);
     let mut latest_global_in_progress: Option<u32> = None;
     let mut latest_global_success: Option<u32> = None;
@@ -658,7 +675,11 @@ pub async fn input_ci_for_watch(
     let mut options: Vec<String> = Vec::new();
 
     //region global latest ci
-    if let Ok(client) = db.try_get_jenkins_async_client(stdout, false).await {
+    let db = app_state.get_db();
+    if let Ok(client) = db
+        .try_get_jenkins_async_client(&mut app_state.get_stdout(), false)
+        .await
+    {
         let builds = crate::jenkins::query::query_builds_in_job(
             &client,
             job_name,

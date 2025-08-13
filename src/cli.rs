@@ -1,6 +1,5 @@
+use crate::app_state::AppState;
 use crate::constant::log::*;
-use crate::db::db_data_proxy::DbDataProxy;
-use crate::db::{get_db, save_with_error_log};
 use crate::extract::extract_operation_info::{
     ExtractOperationInfo, OperationStatus, OperationStepType,
 };
@@ -11,17 +10,16 @@ use crate::interact::{
     input_target_path, parse_without_input_with_default,
 };
 use crate::jenkins::query::{
-    try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
-    VfpJenkinsClient,
+    VfpJenkinsClient, try_get_jenkins_async_client_by_api_token,
+    try_get_jenkins_async_client_by_pwd,
 };
 use crate::jenkins::watch::watch;
-use crate::pretty_log::{colored_println, toast, ThemeColor};
+use crate::pretty_log::{ThemeColor, colored_println, toast};
 use crate::vfp_error::VfpError;
 use crate::{default_config, pretty_log};
 use crossterm::execute;
 use crossterm::style::Color;
 use formatx::formatx;
-use std::io::Stdout;
 
 /// # cli do extract
 ///
@@ -29,18 +27,19 @@ use std::io::Stdout;
 ///
 /// Contains Inquire(input requests) and console output.
 pub async fn cli_do_extract(
-    stdout: &mut Stdout,
+    app_state: &mut AppState,
     job_name_param: Option<String>,
     ci: Option<u32>,
     extract_params: ExtractParams,
     ignore_count_input: bool,
 ) -> Result<(), VfpError> {
-    let mut db = get_db(None);
+    let db = app_state.get_mut_db();
 
     let job_name = input_job_name(job_name_param, &db)
         .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
 
     db.insert_job_name(job_name.as_str());
+    let db = app_state.get_db();
 
     let used_extract_repo = parse_without_input_with_default(
         extract_params.build_target_repo_template,
@@ -57,9 +56,12 @@ pub async fn cli_do_extract(
         db.get_extract_s_locator_template().as_ref(),
         default_config::LOCATOR_TEMPLATE,
     );
-    let used_inner_version = input_ci_for_extract(stdout, job_name.as_str(), ci, &db)
+
+    let used_inner_version = input_ci_for_extract(app_state, job_name.as_str(), ci)
         .await
         .ok_or(VfpError::EmptyRepo)?;
+
+    let db = app_state.get_mut_db();
     let used_player_count = input_directly_with_default(
         extract_params.count,
         db.get_last_player_count(job_name.as_str()).as_ref(),
@@ -85,14 +87,19 @@ pub async fn cli_do_extract(
     db.set_last_player_count(job_name.as_str(), used_player_count.into());
     db.set_blast_path(job_name.as_str(), used_blast_path.clone().into());
 
-    save_with_error_log(&db, None);
+    app_state.commit(false);
+
+    let db = app_state.get_db();
 
     if let Some(path) = db
         .get_repo_decoration()
         .get_full_path_by_ci(used_inner_version)
     {
         if let Some(file_name) = path.file_stem().and_then(|v| v.to_str()) {
-            let pty_logger = pretty_log::VfpPrettyLogger::apply_for(stdout, used_player_count);
+            let pty_logger = pretty_log::VfpPrettyLogger::apply_for(
+                &mut app_state.get_stdout(),
+                used_player_count,
+            );
 
             let mut working_status: Vec<ExtractOperationInfo> = (0..used_player_count)
                 .map(|_| ExtractOperationInfo::default())
@@ -170,8 +177,12 @@ pub async fn cli_do_extract(
                 handles.push(handle);
 
                 if let Some(item) = working_status.get((i - 1) as usize) {
-                    let _ =
-                        pty_logger.pretty_log_operation_status(stdout, i, used_player_count, item);
+                    let _ = pty_logger.pretty_log_operation_status(
+                        &mut app_state.get_stdout(),
+                        i,
+                        used_player_count,
+                        item,
+                    );
                 };
             }
 
@@ -192,7 +203,7 @@ pub async fn cli_do_extract(
                     }
 
                     let _ = pty_logger.pretty_log_operation_status(
-                        stdout,
+                        &mut app_state.get_stdout(),
                         index - 1,
                         used_player_count,
                         item,
@@ -207,7 +218,7 @@ pub async fn cli_do_extract(
             toast("Extract", vec![EXTRACT_TASK_COMPLETED]);
         } else {
             let _ = execute!(
-                stdout,
+                &mut app_state.get_stdout(),
                 crossterm::style::SetForegroundColor(Color::Red),
                 crossterm::style::Print(format!(
                     "{}\n",
@@ -217,7 +228,7 @@ pub async fn cli_do_extract(
         }
     } else {
         let _ = execute!(
-            stdout,
+            &mut app_state.get_stdout(),
             crossterm::style::SetForegroundColor(Color::Red),
             crossterm::style::Print(format!(
                 "{}\n",
@@ -225,7 +236,7 @@ pub async fn cli_do_extract(
             ))
         );
     }
-    let _ = execute!(stdout, crossterm::style::ResetColor);
+    let _ = execute!(&mut app_state.get_stdout(), crossterm::style::ResetColor);
 
     Ok(())
 }
@@ -245,13 +256,14 @@ pub async fn cli_do_extract(
 /// * `api_token`: jenkins api token from cli param.
 /// * `pwd`: jenkins password from cli param.
 pub async fn cli_do_login(
-    db: &mut DbDataProxy,
+    app_state: &mut AppState,
     simplified: bool,
     url: Option<impl AsRef<str>>,
     username: Option<impl AsRef<str>>,
     api_token: Option<impl AsRef<str>>,
     pwd: Option<impl AsRef<str>>,
 ) -> Result<VfpJenkinsClient, VfpError> {
+    let db = app_state.get_mut_db();
     db.set_jenkins_url(Some(input_directly_with_default(
         url.map(|v| v.as_ref().to_string()),
         db.get_jenkins_url().as_ref().filter(|v| !v.is_empty()),
@@ -273,7 +285,8 @@ pub async fn cli_do_login(
 
     db.set_jenkins_username(Some(username));
 
-    save_with_error_log(db, None);
+    app_state.commit(false);
+    let db = app_state.get_mut_db();
 
     let login_method = inquire::Select::new(
         HINT_SELECT_LOGIN_METHOD,
@@ -328,7 +341,7 @@ pub async fn cli_do_login(
 
     match client {
         Ok(client) => {
-            save_with_error_log(&db, None);
+            app_state.commit(false);
             Ok(client)
         }
         Err(e) => {
@@ -354,29 +367,30 @@ pub async fn cli_do_login(
 ///
 /// Contains Inquire(input requests) and console output.
 pub async fn cli_do_watch(
-    stdout: &mut Stdout,
+    app_state: &mut AppState,
     job_name: Option<String>,
     ci: Option<u32>,
 ) -> Result<(Option<String>, Option<u32>), VfpError> {
     let mut success_build_number = None;
-    let db = get_db(None);
+    let db = app_state.get_db();
     let client = db
-        .try_get_jenkins_async_client(stdout, true)
+        .try_get_jenkins_async_client(&mut app_state.get_stdout(), true)
         .await
         .map_err(|_| VfpError::JenkinsClientInvalid)?;
 
+    let db = app_state.get_mut_db();
     let used_job_name = Some(
         input_job_name(job_name, &db)
             .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?,
     );
 
-    let result = watch(stdout, client, &db, &used_job_name.clone().unwrap(), ci).await;
+    let result = watch(app_state, client, &used_job_name.clone().unwrap(), ci).await;
 
     match result {
         Ok(build_number) => {
             success_build_number = Some(build_number);
             colored_println(
-                stdout,
+                &mut app_state.get_stdout(),
                 ThemeColor::Success,
                 &formatx!(
                     WATCHING_RUN_TASK_SUCCESS,
@@ -394,13 +408,11 @@ pub async fn cli_do_watch(
     Ok((used_job_name, success_build_number))
 }
 
-pub async fn cli_try_first_login(
-    db: &mut DbDataProxy,
-    stdout: Option<&mut Stdout>,
-) -> Result<(), VfpError> {
+pub async fn cli_try_first_login(app_state: &mut AppState, silence: bool) -> Result<(), VfpError> {
+    let db = app_state.get_db();
     if db.user_never_login() {
         match cli_do_login(
-            db,
+            app_state,
             false,
             None::<String>,
             None::<String>,
@@ -410,8 +422,12 @@ pub async fn cli_try_first_login(
         .await
         {
             Ok(_) => {
-                if let Some(stdout) = stdout {
-                    colored_println(stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT);
+                if !silence {
+                    colored_println(
+                        &mut app_state.get_stdout(),
+                        ThemeColor::Success,
+                        JENKINS_LOGIN_RESULT,
+                    );
                 }
                 Ok(())
             }

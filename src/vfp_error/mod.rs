@@ -6,7 +6,7 @@ use formatx::formatx;
 use inquire::InquireError;
 use jenkins_sdk::JenkinsError;
 use std::fmt::Display;
-use std::io::Stdout;
+use std::io::Write;
 use std::ops::Add;
 
 #[derive(Debug)]
@@ -118,7 +118,7 @@ impl Display for VfpError {
 }
 
 impl VfpError {
-    pub fn colored_println(&self, stdout: &mut Stdout) {
+    pub fn colored_println<W: Write>(&self, stdout: &mut W) {
         match self {
             VfpError::JobConfigParseError { content, .. } => {
                 colored_println(stdout, ThemeColor::Error, self.to_string().as_str());

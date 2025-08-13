@@ -6,13 +6,13 @@ use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
 use crossterm::terminal::{Clear, ClearType};
 use formatx::formatx;
 use std::io;
-use std::io::{Stdout, Write};
+use std::io::Write;
 use win_toast_notify::WinToastNotify;
 
 pub struct VfpPrettyLogger;
 
 impl VfpPrettyLogger {
-    pub fn apply_for(stdout: &mut Stdout, line_count: u32) -> Self {
+    pub fn apply_for<W: Write>(stdout: &mut W, line_count: u32) -> Self {
         for _i in 0..line_count {
             println!();
         }
@@ -22,9 +22,9 @@ impl VfpPrettyLogger {
         Self
     }
 
-    pub fn pretty_log_operation_status(
+    pub fn pretty_log_operation_status<W: Write>(
         &self,
-        stdout: &mut Stdout,
+        stdout: &mut W,
         index: u32,
         all_count: u32,
         status: &ExtractOperationInfo,
@@ -164,7 +164,7 @@ impl ThemeColor {
     }
 }
 
-pub fn colored_print(stdout: &mut Stdout, color: ThemeColor, content: &str) {
+pub fn colored_print<W: Write>(stdout: &mut W, color: ThemeColor, content: &str) {
     let _ = execute!(
         stdout,
         SetForegroundColor(color.to_color()),
@@ -173,7 +173,7 @@ pub fn colored_print(stdout: &mut Stdout, color: ThemeColor, content: &str) {
     );
 }
 
-pub fn colored_println(stdout: &mut Stdout, color: ThemeColor, content: &str) {
+pub fn colored_println<W: Write>(stdout: &mut W, color: ThemeColor, content: &str) {
     let _ = execute!(
         stdout,
         SetForegroundColor(color.to_color()),
@@ -182,7 +182,7 @@ pub fn colored_println(stdout: &mut Stdout, color: ThemeColor, content: &str) {
     );
 }
 
-pub fn clean_one_line(stdout: &mut Stdout) {
+pub fn clean_one_line<W: Write>(stdout: &mut W) {
     let _ = execute!(stdout, MoveUp(1), Clear(ClearType::CurrentLine),);
 }
 

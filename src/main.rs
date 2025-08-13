@@ -1,3 +1,4 @@
+mod app_state;
 mod cli;
 mod constant;
 mod db;
@@ -10,10 +11,9 @@ mod run;
 mod update;
 mod vfp_error;
 
+use crate::app_state::AppState;
 use crate::cli::{cli_do_login, cli_try_first_login};
 use crate::constant::log::*;
-use crate::db::db_data_proxy::DbDataProxy;
-use crate::db::{delete_db_file, get_db, save_with_error_log};
 use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
 use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
@@ -29,6 +29,7 @@ use formatx::formatx;
 use rand::Rng;
 use semver::Version;
 use std::fmt::Display;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
@@ -219,14 +220,15 @@ impl Display for LoginMethod {
 
 #[tokio::main]
 async fn main() {
-    let mut stdout = std::io::stdout();
     let cli = Cli::parse();
+    let mut app_state = AppState::new(None);
+
     if let Some(command) = cli.command {
         let command_name = command.to_string();
         show_welcome(Some(command_name.as_str()));
 
         {
-            let mut db = get_db(None);
+            let db = app_state.get_mut_db();
             let mut upgrade_info_usable = false;
             if !db.is_never_check_version()
                 && let Some(version) = db.get_latest_remote_version()
@@ -235,28 +237,31 @@ async fn main() {
                 if let Ok(curr_version) = curr_version {
                     if version.gt(&curr_version) {
                         upgrade_info_usable = true;
-                        show_upgradable_hit(&mut stdout, version.to_string().as_str());
+                        show_upgradable_hit(
+                            &mut app_state.get_stdout(),
+                            version.to_string().as_str(),
+                        );
                     }
                 }
 
                 if !upgrade_info_usable {
-                    db.consume_update_status();
-                    save_with_error_log(&db, None);
+                    app_state.get_mut_db().consume_update_status();
+                    app_state.commit(false);
                 }
             }
         }
 
-        if let Err(err) = main_cli(command, &mut stdout).await {
-            err.colored_println(&mut stdout);
+        if let Err(err) = main_cli(&mut app_state, command).await {
+            err.colored_println(&mut app_state.get_stdout());
         }
 
-        fetch_and_try_auto_update(&mut stdout);
+        fetch_and_try_auto_update(&mut app_state);
 
         show_finished(Some(command_name.as_str()));
     }
 }
 
-async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(), VfpError> {
+async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), VfpError> {
     match command {
         Commands::Extract {
             job_name,
@@ -264,7 +269,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             extract_params,
         } => {
             // fp extract
-            cli::cli_do_extract(stdout, job_name, ci, extract_params, false).await?;
+            cli::cli_do_extract(app_state, job_name, ci, extract_params, false).await?;
         }
         Commands::Run {
             job_name,
@@ -278,7 +283,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             server,
         } => {
             // fp run
-            let db = get_db(None);
+            let db = app_state.get_db();
 
             let job_name = input_job_name(job_name, &db)
                 .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
@@ -334,7 +339,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                         &server,
                     )
                 {
-                    colored_println(stdout, ThemeColor::Error, e.as_str());
+                    colored_println(&mut app_state.get_stdout(), ThemeColor::Error, e.as_str());
                 }
 
                 run_instance_with_log(
@@ -356,7 +361,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                             &server,
                         )
                     {
-                        colored_println(stdout, ThemeColor::Error, e.as_str());
+                        colored_println(&mut app_state.get_stdout(), ThemeColor::Error, e.as_str());
                     }
 
                     run_instance_with_log(
@@ -377,9 +382,12 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             pwd,
         } => {
             // fp login
-            let mut db: DbDataProxy = get_db(None);
-            cli_do_login(&mut db, false, url, username, api_token, pwd).await?;
-            colored_println(stdout, ThemeColor::Success, JENKINS_LOGIN_RESULT);
+            cli_do_login(app_state, false, url, username, api_token, pwd).await?;
+            colored_println(
+                &mut app_state.get_stdout(),
+                ThemeColor::Success,
+                JENKINS_LOGIN_RESULT,
+            );
         }
         Commands::Build {
             job_name,
@@ -395,12 +403,11 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 return Err(VfpError::Custom(ERR_NEED_EVEN_PARAM.to_string()));
             }
 
-            let mut db = get_db(None);
+            cli_try_first_login(app_state, false).await?;
 
-            cli_try_first_login(&mut db, Some(stdout)).await?;
-
+            let db = app_state.get_db();
             let mut client = db
-                .try_get_jenkins_async_client(stdout, true)
+                .try_get_jenkins_async_client(&mut app_state.get_stdout(), true)
                 .await
                 .map_err(|_| VfpError::JenkinsClientInvalid)?;
             if let VfpJenkinsClient::PwdClient(ref mut client) = client {
@@ -412,6 +419,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 })?;
             }
 
+            let db = app_state.get_mut_db();
             let job_name = input_job_name(job_name, &db)
                 .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
 
@@ -436,9 +444,10 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 });
 
             if let Err(ref e) = config_params_result {
-                e.colored_println(stdout);
+                e.colored_println(&mut app_state.get_stdout());
             }
 
+            let db = app_state.get_db();
             let build_params_template = config_params_result
                 .map(VfpJobBuildParam::from)
                 .unwrap_or_default();
@@ -457,15 +466,32 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 if build_params.from_default {
                     build_params.merge_from(db_params);
 
-                    colored_println(stdout, ThemeColor::Warn, DB_BUILD_PARAM_DIRECTLY_ADOPTED);
-                    colored_println(stdout, ThemeColor::Second, HINT_USE_PARAM_OPERATION);
+                    colored_println(
+                        &mut app_state.get_stdout(),
+                        ThemeColor::Warn,
+                        DB_BUILD_PARAM_DIRECTLY_ADOPTED,
+                    );
+                    colored_println(
+                        &mut app_state.get_stdout(),
+                        ThemeColor::Second,
+                        HINT_USE_PARAM_OPERATION,
+                    );
                 } else {
                     let excluded = build_params.exclusive_merge_from(db_params);
                     if !excluded.is_empty() {
-                        colored_println(stdout, ThemeColor::Warn, DB_BUILD_PARAM_NOT_IN_USED);
+                        colored_println(
+                            &mut app_state.get_stdout(),
+                            ThemeColor::Warn,
+                            DB_BUILD_PARAM_NOT_IN_USED,
+                        );
 
+                        let mut stdout = app_state.get_stdout();
                         excluded.iter().for_each(|(k, v)| {
-                            colored_println(stdout, ThemeColor::Second, &format!("{}: {}", k, v))
+                            colored_println(
+                                &mut stdout,
+                                ThemeColor::Second,
+                                &format!("{}: {}", k, v),
+                            )
                         })
                     }
                 }
@@ -473,7 +499,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
 
             build_params.set_change_list(input_cl(
                 cl,
-                &db_latest_build_param.and_then(|db| db.get_change_list()),
+                &db_latest_build_param.and_then(|build_param| build_param.get_change_list()),
             ));
 
             let sl = sl
@@ -481,7 +507,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 .and_then(|v| Shelves::from_str(&v).ok());
             build_params.set_shelve_changes(input_sl(
                 sl,
-                &db_latest_build_param.and_then(|db| db.get_shelve_changes()),
+                &db_latest_build_param.and_then(|build_param| build_param.get_shelve_changes()),
             ));
 
             param_pairs.into_iter().for_each(|(k, v)| {
@@ -498,8 +524,9 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 build_params_to_save.set_shelve_changes(used_sl);
             }
 
+            let db = app_state.get_mut_db();
             db.set_jenkins_build_param(job_name.as_ref(), Some(build_params_to_save));
-            save_with_error_log(&db, None);
+            app_state.commit(false);
 
             let need_query_used_cl = build_params.get_change_list().is_none();
 
@@ -511,8 +538,16 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                     )
                 })?;
 
-            colored_println(stdout, ThemeColor::Success, REQUEST_BUILD_SUCCESS);
-            colored_println(stdout, ThemeColor::Main, BUILD_USED_PARAMS);
+            colored_println(
+                &mut app_state.get_stdout(),
+                ThemeColor::Success,
+                REQUEST_BUILD_SUCCESS,
+            );
+            colored_println(
+                &mut app_state.get_stdout(),
+                ThemeColor::Main,
+                BUILD_USED_PARAMS,
+            );
 
             let mut sorted_params_for_show: Vec<(&String, &serde_json::Value)> =
                 build_params.params.iter().collect();
@@ -533,9 +568,14 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 }
             });
             sorted_params_for_show.iter().for_each(|(k, v)| {
-                colored_println(stdout, ThemeColor::Main, &format!("{}: {}", k, v));
+                colored_println(
+                    &mut app_state.get_stdout(),
+                    ThemeColor::Main,
+                    &format!("{}: {}", k, v),
+                );
             });
 
+            let db = app_state.get_db();
             if let Ok(builds) = query_builds_in_job(&client, &job_name, Some(3))
                 .await
                 .map(|b| b.builds)
@@ -545,7 +585,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                         && run.is_mine(db.get_jenkins_username().as_ref().unwrap())
                     {
                         colored_println(
-                            stdout,
+                            &mut app_state.get_stdout(),
                             ThemeColor::Second,
                             &format!(
                                 "{} {}",
@@ -567,7 +607,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             }
 
             let (used_job_name, success_build_number) =
-                cli::cli_do_watch(stdout, Some(job_name.clone()), None).await?;
+                cli::cli_do_watch(app_state, Some(job_name.clone()), None).await?;
 
             if let (true, Some(build_number)) = (need_query_used_cl, success_build_number) {
                 let mut trial_count = 2;
@@ -576,19 +616,20 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                     {
                         if let Some(changelist) = workflow_run.get_change_list_in_build_meta_data()
                         {
+                            let db = app_state.get_mut_db();
                             let params = db.get_mut_jenkins_build_param(job_name.as_str()).unwrap();
+                            params.set_change_list(Some(changelist));
                             colored_println(
-                                stdout,
+                                &mut app_state.get_stdout(),
                                 ThemeColor::Second,
                                 &formatx!(AUTO_FETCH_LATEST_USED_CL, changelist)
                                     .unwrap_or_default(),
                             );
-                            params.set_change_list(Some(changelist));
-                            save_with_error_log(&db, None);
+                            app_state.commit(false);
                             break;
                         } else if trial_count == 0 {
                             colored_println(
-                                stdout,
+                                &mut app_state.get_stdout(),
                                 ThemeColor::Warn,
                                 AUTO_FETCH_LATEST_USED_CL_FAILED,
                             );
@@ -597,7 +638,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                     }
 
                     colored_println(
-                        stdout,
+                        &mut app_state.get_stdout(),
                         ThemeColor::Second,
                         AUTO_FETCH_LATEST_USED_CL_FAILED_AND_RETRY,
                     );
@@ -615,7 +656,7 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
                 let job_name = used_job_name;
                 let ci = Some(build_number);
 
-                cli::cli_do_extract(stdout, job_name, ci, extract_params, true).await?;
+                cli::cli_do_extract(app_state, job_name, ci, extract_params, true).await?;
             }
         }
         Commands::Watch {
@@ -625,17 +666,17 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             extract_params,
         } => {
             // fp watch
-            cli_try_first_login(&mut get_db(None), Some(stdout)).await?;
+            cli_try_first_login(app_state, false).await?;
 
             let (used_job_name, success_build_number) =
-                cli::cli_do_watch(stdout, job_name, ci).await?;
+                cli::cli_do_watch(app_state, job_name, ci).await?;
 
             if !no_extract {
                 if let Some(build_number) = success_build_number {
                     let job_name = used_job_name;
                     let ci = Some(build_number);
 
-                    cli::cli_do_extract(stdout, job_name, ci, extract_params, true).await?;
+                    cli::cli_do_extract(app_state, job_name, ci, extract_params, true).await?;
                 }
             }
         }
@@ -646,36 +687,48 @@ async fn main_cli(command: Commands, stdout: &mut std::io::Stdout) -> Result<(),
             version,
         } => {
             // fp update
-            let mut db = get_db(None);
+            let db = app_state.get_mut_db();
             let mut want_update = true;
 
             if never_check {
                 db.set_never_check_version(true);
-                colored_println(stdout, ThemeColor::Warn, NEVER_CHECK_VERSION);
+                colored_println(
+                    &mut app_state.get_stdout(),
+                    ThemeColor::Warn,
+                    NEVER_CHECK_VERSION,
+                );
                 want_update = false;
             }
 
             if no_auto_update {
-                db.set_auto_update_enabled(false);
-                colored_println(stdout, ThemeColor::Main, AUTO_UPDATE_DISABLED);
+                app_state.get_mut_db().set_auto_update_enabled(false);
+                colored_println(
+                    &mut app_state.get_stdout(),
+                    ThemeColor::Main,
+                    AUTO_UPDATE_DISABLED,
+                );
             } else if auto_update {
-                db.set_auto_update_enabled(true);
-                db.set_never_check_version(false);
-                colored_println(stdout, ThemeColor::Main, AUTO_UPDATE_ENABLED);
+                app_state.get_mut_db().set_auto_update_enabled(true);
+                app_state.get_mut_db().set_never_check_version(false);
+                colored_println(
+                    &mut app_state.get_stdout(),
+                    ThemeColor::Main,
+                    AUTO_UPDATE_ENABLED,
+                );
                 want_update = false;
             }
 
             if want_update {
-                db.set_never_check_version(false);
-                do_self_update_with_log(stdout, &mut db, version.as_deref());
+                app_state.get_mut_db().set_never_check_version(false);
+                do_self_update_with_log(app_state, version.as_deref());
             }
 
-            save_with_error_log(&db, None);
+            app_state.commit(false);
             return Ok(());
         }
         Commands::Clean => {
             // fp clean
-            delete_db_file(None);
+            app_state.clean();
         }
         #[cfg(debug_assertions)]
         Commands::Debug => {
@@ -739,7 +792,7 @@ fn show_finished(title: Option<&str>) {
     );
 }
 
-fn show_upgradable_hit(stdout: &mut std::io::Stdout, latest_version: &str) {
+fn show_upgradable_hit<W: Write>(stdout: &mut W, latest_version: &str) {
     colored_println(
         stdout,
         ThemeColor::Main,

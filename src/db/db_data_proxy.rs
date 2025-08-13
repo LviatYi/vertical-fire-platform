@@ -11,7 +11,7 @@ use crate::pretty_log::{colored_println, ThemeColor};
 use base64::Engine;
 use jenkins_sdk::JenkinsError;
 use std::fs::File;
-use std::io::{Stdout, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
@@ -32,9 +32,9 @@ impl From<LatestVersionData> for DbDataProxy {
 }
 
 impl DbDataProxy {
-    pub async fn try_get_jenkins_async_client(
+    pub async fn try_get_jenkins_async_client<W: Write>(
         &self,
-        stdout: &mut Stdout,
+        stdout: &mut W,
         show_client_type: bool,
     ) -> Result<VfpJenkinsClient, JenkinsError> {
         let client = try_get_jenkins_async_client(

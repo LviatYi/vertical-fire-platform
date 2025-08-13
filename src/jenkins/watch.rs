@@ -1,5 +1,5 @@
+use crate::app_state::AppState;
 use crate::constant::log::*;
-use crate::db::db_data_proxy::DbDataProxy;
 use crate::interact::input_ci_for_watch;
 use crate::jenkins::jenkins_model::reasoned_run_status::ReasonedRunStatus;
 use crate::jenkins::jenkins_model::run_status::RunStatus;
@@ -12,7 +12,6 @@ use crate::vfp_error::VfpError;
 use chrono::Local;
 use formatx::formatx;
 use jenkins_sdk::JenkinsError;
-use std::io::Stdout;
 
 async fn get_reasoned_run_status(
     client: &VfpJenkinsClient,
@@ -47,20 +46,21 @@ async fn get_reasoned_run_status(
 ///
 /// if Ok(build_number), the run task is success. You can take the build_number to do something.
 pub async fn watch(
-    stdout: &mut Stdout,
+    app_state: &mut AppState,
     client: VfpJenkinsClient,
-    db: &DbDataProxy,
     job_name: &str,
     ci: Option<u32>,
 ) -> Result<u32, VfpError> {
     let build_number;
+    let db = app_state.get_db();
     if ci.is_none() {
         let username = db
             .get_jenkins_username()
             .as_ref()
             .ok_or(VfpError::MissingParam(PARAM_USERNAME.to_string()))?;
 
-        let latest_info = query_user_latest_info(&client, job_name, username, None).await?;
+        let latest_info =
+            query_user_latest_info(&client, job_name, username.as_str(), None).await?;
 
         if let Some(in_progress) = latest_info.in_progress {
             build_number = in_progress.number;
@@ -80,13 +80,14 @@ pub async fn watch(
         } else if let Some(latest_success) = latest_info.latest_success {
             return Ok(latest_success.number);
         } else {
+            let username = username.clone();
             colored_println(
-                stdout,
+                &mut app_state.get_stdout(),
                 ThemeColor::Main,
                 &format!("{} ({})", NO_IN_PROGRESS_RUN_TASK_OF_USER, username),
             );
 
-            let ci = input_ci_for_watch(stdout, job_name, None, db).await;
+            let ci = input_ci_for_watch(app_state, job_name, None).await;
 
             if let Some(ci) = ci {
                 build_number = ci;
@@ -99,7 +100,7 @@ pub async fn watch(
     }
 
     colored_println(
-        stdout,
+        &mut app_state.get_stdout(),
         ThemeColor::Warn,
         &formatx!(
             WATCHING_RUN_TASK_IN_PROGRESS_PREPARE,
@@ -110,13 +111,13 @@ pub async fn watch(
     );
 
     colored_println(
-        stdout,
+        &mut app_state.get_stdout(),
         ThemeColor::Second,
         &format!(
             "{} {}",
             URL_OUTPUT,
             get_jenkins_workflow_run_url(
-                db.get_jenkins_url().as_ref().unwrap(),
+                app_state.get_db().get_jenkins_url().as_ref().unwrap(),
                 job_name,
                 build_number
             )
@@ -129,14 +130,14 @@ pub async fn watch(
             get_reasoned_run_status(&client, job_name, build_number).await?;
 
         if clean_able {
-            clean_one_line(stdout);
+            clean_one_line(&mut app_state.get_stdout());
         }
         clean_able = true;
 
         match get_reasoned_run_status {
             ReasonedRunStatus::Processing => {
                 colored_println(
-                    stdout,
+                    &mut app_state.get_stdout(),
                     ThemeColor::Warn,
                     &formatx!(
                         WATCHING_RUN_TASK_IN_PROGRESS,
@@ -151,6 +152,7 @@ pub async fn watch(
                 return Ok(build_number);
             }
             ReasonedRunStatus::Failure(log) => {
+                let db = app_state.get_db();
                 return Err(VfpError::RunTaskBuildFailed {
                     build_number,
                     job_name: job_name.to_string(),
@@ -160,7 +162,7 @@ pub async fn watch(
                         build_number,
                     ),
                     log,
-                })
+                });
             }
         }
 

@@ -1,12 +1,11 @@
+use crate::app_state::AppState;
 use crate::constant::log::*;
-use crate::db::db_data_proxy::DbDataProxy;
-use crate::db::{get_db, save_with_error_log};
-use crate::pretty_log::{colored_println, ThemeColor};
+use crate::pretty_log::{ThemeColor, colored_println};
 use crate::vfp_error::VfpError;
 use crate::{default_config, update};
 use formatx::formatx;
-use self_update::update::UpdateStatus;
 use self_update::Status;
+use self_update::update::UpdateStatus;
 use semver::Version;
 
 /// # self update
@@ -76,9 +75,8 @@ pub fn fetch_latest_version() -> Result<UpdateStatus, VfpError> {
     Ok(UpdateStatus::UpToDate)
 }
 
-pub fn fetch_and_try_auto_update(stdout: &mut std::io::Stdout) {
-    let mut db = get_db(None);
-
+pub fn fetch_and_try_auto_update(app_state: &mut AppState) {
+    let db = app_state.get_mut_db();
     if db.is_never_check_version() {
         return;
     }
@@ -94,26 +92,26 @@ pub fn fetch_and_try_auto_update(stdout: &mut std::io::Stdout) {
         }
     }
 
-    save_with_error_log(&db, None);
-
+    app_state.commit(false);
+    let db = app_state.get_db();
     if db.has_latest_version() && db.is_auto_update_enabled() {
-        colored_println(stdout, ThemeColor::Second, AUTO_UPDATE_ENABLED);
+        colored_println(
+            &mut app_state.get_stdout(),
+            ThemeColor::Second,
+            AUTO_UPDATE_ENABLED,
+        );
 
-        do_self_update_with_log(stdout, &mut db, None);
+        do_self_update_with_log(app_state, None);
     }
 }
 
-pub fn do_self_update_with_log(
-    stdout: &mut std::io::Stdout,
-    db: &mut DbDataProxy,
-    specified_version: Option<&str>,
-) {
+pub fn do_self_update_with_log(app_state: &mut AppState, specified_version: Option<&str>) {
     if let Some(specified_version) = specified_version
         && let Ok(version) = Version::parse(specified_version)
         && version.lt(&Version::parse(default_config::OLDEST_SUPPORT_UPDATE_VERSION).unwrap())
     {
         colored_println(
-            stdout,
+            &mut app_state.get_stdout(),
             ThemeColor::Error,
             &formatx!(
                 ERR_VERSION_NOT_SUPPORT_UPDATE,
@@ -127,11 +125,15 @@ pub fn do_self_update_with_log(
     match update::self_update(specified_version) {
         Ok(update_result) => match update_result {
             None => {
-                colored_println(stdout, ThemeColor::Success, CURRENT_VERSION_UP_TO_DATE);
+                colored_println(
+                    &mut app_state.get_stdout(),
+                    ThemeColor::Success,
+                    CURRENT_VERSION_UP_TO_DATE,
+                );
             }
             Some(v) => {
                 colored_println(
-                    stdout,
+                    &mut app_state.get_stdout(),
                     ThemeColor::Success,
                     formatx!(UPGRADE_TO_VERSION_SUCCESS, v)
                         .unwrap_or_default()
@@ -141,7 +143,7 @@ pub fn do_self_update_with_log(
         },
         Err(e) => {
             colored_println(
-                stdout,
+                &mut app_state.get_stdout(),
                 ThemeColor::Error,
                 formatx!(ERR_UPDATE_FAILED, e.to_string())
                     .unwrap_or_default()
@@ -149,15 +151,15 @@ pub fn do_self_update_with_log(
             );
 
             colored_println(
-                stdout,
+                &mut app_state.get_stdout(),
                 ThemeColor::Second,
                 DISABLE_AUTO_UPDATE_BECAUSE_OF_UPDATE_FAILED,
             );
 
-            db.set_auto_update_enabled(false);
+            app_state.get_mut_db().set_auto_update_enabled(false);
         }
     }
 
-    db.consume_update_status();
-    save_with_error_log(db, None);
+    app_state.get_mut_db().consume_update_status();
+    app_state.commit(false);
 }
