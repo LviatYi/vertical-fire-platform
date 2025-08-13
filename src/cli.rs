@@ -33,14 +33,15 @@ pub async fn cli_do_extract(
     extract_params: ExtractParams,
     ignore_count_input: bool,
 ) -> Result<(), VfpError> {
-    let db = app_state.get_mut_db();
+    let job_name = {
+        let db = app_state.get_mut_db();
+        let result = input_job_name(job_name_param, db)
+            .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
+        db.insert_job_name(result.as_str());
+        result
+    };
 
-    let job_name = input_job_name(job_name_param, &db)
-        .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
-
-    db.insert_job_name(job_name.as_str());
     let db = app_state.get_db();
-
     let used_extract_repo = parse_without_input_with_default(
         extract_params.build_target_repo_template,
         db.get_extract_repo().as_ref(),
@@ -56,12 +57,11 @@ pub async fn cli_do_extract(
         db.get_extract_s_locator_template().as_ref(),
         default_config::LOCATOR_TEMPLATE,
     );
-
     let used_inner_version = input_ci_for_extract(app_state, job_name.as_str(), ci)
         .await
         .ok_or(VfpError::EmptyRepo)?;
 
-    let db = app_state.get_mut_db();
+    let db = app_state.get_db();
     let used_player_count = input_directly_with_default(
         extract_params.count,
         db.get_last_player_count(job_name.as_str()).as_ref(),
@@ -80,18 +80,20 @@ pub async fn cli_do_extract(
     )
     .map_err(|_| VfpError::MissingParam(PARAM_DEST.to_string()))?;
 
-    db.set_extract_repo(used_extract_repo.into());
-    db.set_extract_locator_pattern(used_extract_locator_pattern.into());
-    db.set_extract_s_locator_template(used_extract_s_locator_template.into());
-    db.set_last_inner_version(job_name.as_str(), used_inner_version.into());
-    db.set_last_player_count(job_name.as_str(), used_player_count.into());
-    db.set_blast_path(job_name.as_str(), used_blast_path.clone().into());
+    {
+        let db = app_state.get_mut_db();
+        db.set_extract_repo(used_extract_repo.into());
+        db.set_extract_locator_pattern(used_extract_locator_pattern.into());
+        db.set_extract_s_locator_template(used_extract_s_locator_template.into());
+        db.set_last_inner_version(job_name.as_str(), used_inner_version.into());
+        db.set_last_player_count(job_name.as_str(), used_player_count.into());
+        db.set_blast_path(job_name.as_str(), used_blast_path.clone().into());
+    }
 
     app_state.commit(false);
 
-    let db = app_state.get_db();
-
-    if let Some(path) = db
+    if let Some(path) = app_state
+        .get_db()
         .get_repo_decoration()
         .get_full_path_by_ci(used_inner_version)
     {
