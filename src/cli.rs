@@ -10,11 +10,11 @@ use crate::interact::{
     input_target_path, parse_without_input_with_default,
 };
 use crate::jenkins::query::{
-    VfpJenkinsClient, try_get_jenkins_async_client_by_api_token,
-    try_get_jenkins_async_client_by_pwd,
+    try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
+    VfpJenkinsClient,
 };
 use crate::jenkins::watch::watch;
-use crate::pretty_log::{ThemeColor, colored_println, toast};
+use crate::pretty_log::{colored_println, toast, ThemeColor};
 use crate::vfp_error::VfpError;
 use crate::{default_config, pretty_log};
 use crossterm::execute;
@@ -373,7 +373,6 @@ pub async fn cli_do_watch(
     job_name: Option<String>,
     ci: Option<u32>,
 ) -> Result<(Option<String>, Option<u32>), VfpError> {
-    let mut success_build_number = None;
     let db = app_state.get_db();
     let client = db
         .try_get_jenkins_async_client(&mut app_state.get_stdout(), true)
@@ -388,9 +387,8 @@ pub async fn cli_do_watch(
 
     let result = watch(app_state, client, &used_job_name.clone().unwrap(), ci).await;
 
-    match result {
+    let success_build_number = match result {
         Ok(build_number) => {
-            success_build_number = Some(build_number);
             colored_println(
                 &mut app_state.get_stdout(),
                 ThemeColor::Success,
@@ -403,9 +401,10 @@ pub async fn cli_do_watch(
             );
 
             toast("Watch", vec![RUN_TASK_COMPLETED]);
+            Some(build_number)
         }
         Err(e) => return Err(e),
-    }
+    };
 
     Ok((used_job_name, success_build_number))
 }
