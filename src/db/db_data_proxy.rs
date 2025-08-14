@@ -128,15 +128,15 @@ impl DbDataProxy {
                 self.get_extract_repo()
                     .as_ref()
                     .map(|s| s.as_ref())
-                    .unwrap_or(default),
+                    .unwrap_or(crate::default_config::REPO_TEMPLATE),
                 self.get_extract_locator_pattern()
                     .as_ref()
                     .map(|s| s.as_ref())
-                    .unwrap_or(default),
+                    .unwrap_or(crate::default_config::LOCATOR_PATTERN),
                 self.get_extract_s_locator_template()
                     .as_ref()
                     .map(|s| s.as_ref())
-                    .unwrap_or(default),
+                    .unwrap_or(crate::default_config::LOCATOR_TEMPLATE),
                 self.get_interest_job_name().unwrap_or(default),
             )
         })
