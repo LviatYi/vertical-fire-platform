@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化 StdOut 取用模式。
 - 优化 DbDataProxy 取用模式，避免未来开发中竞态读写问题。
 
+### 🐛 Fixed
+
+- 修复了 RepoDecoration 中，未使用 default_config 默认值填充空值的问题。该问题曾导致首次使用 fp 时，未能定位到远程文件仓库。
+
 ## [1.6.2] - 2025-08-08
 
 ### 🚀 Added
