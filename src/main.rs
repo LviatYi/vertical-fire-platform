@@ -234,14 +234,11 @@ async fn main() {
                 && let Some(version) = db.get_latest_remote_version()
             {
                 let curr_version = Version::parse(env!("CARGO_PKG_VERSION"));
-                if let Ok(curr_version) = curr_version {
-                    if version.gt(&curr_version) {
-                        upgrade_info_usable = true;
-                        show_upgradable_hit(
-                            &mut app_state.get_stdout(),
-                            version.to_string().as_str(),
-                        );
-                    }
+                if let Ok(curr_version) = curr_version
+                    && version.gt(&curr_version)
+                {
+                    upgrade_info_usable = true;
+                    show_upgradable_hit(&mut app_state.get_stdout(), version.to_string().as_str());
                 }
 
                 if !upgrade_info_usable {
@@ -671,13 +668,11 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             let (used_job_name, success_build_number) =
                 cli::cli_do_watch(app_state, job_name, ci).await?;
 
-            if !no_extract {
-                if let Some(build_number) = success_build_number {
-                    let job_name = used_job_name;
-                    let ci = Some(build_number);
+            if !no_extract && let Some(build_number) = success_build_number {
+                let job_name = used_job_name;
+                let ci = Some(build_number);
 
-                    cli::cli_do_extract(app_state, job_name, ci, extract_params, true).await?;
-                }
+                cli::cli_do_extract(app_state, job_name, ci, extract_params, true).await?;
             }
         }
         Commands::Update {
