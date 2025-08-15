@@ -22,7 +22,7 @@ macro_rules! define_versioned_data_type {
         where
             S: Serializer,
         {
-            crate::db::db_struct::version_only::serialize_version($version, _field, serializer)
+            $crate::db::db_struct::version_only::serialize_version($version, _field, serializer)
         }
     };
 }

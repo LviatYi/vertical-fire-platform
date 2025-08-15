@@ -4,10 +4,10 @@ use crate::interact::input_ci_for_watch;
 use crate::jenkins::jenkins_model::reasoned_run_status::ReasonedRunStatus;
 use crate::jenkins::jenkins_model::run_status::RunStatus;
 use crate::jenkins::query::{
-    query_run_info, query_run_log, query_user_latest_info, VfpJenkinsClient,
+    VfpJenkinsClient, query_run_info, query_run_log, query_user_latest_info,
 };
 use crate::jenkins::util::get_jenkins_workflow_run_url;
-use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
+use crate::pretty_log::{ThemeColor, clean_one_line, colored_println};
 use crate::vfp_error::VfpError;
 use chrono::Local;
 use formatx::formatx;
@@ -53,7 +53,10 @@ pub async fn watch(
 ) -> Result<u32, VfpError> {
     let build_number;
     let db = app_state.get_db();
-    if ci.is_none() {
+
+    if let Some(ci) = ci {
+        build_number = ci;
+    } else {
         let username = db
             .get_jenkins_username()
             .as_ref()
@@ -95,8 +98,6 @@ pub async fn watch(
                 return Err(VfpError::Custom(ERR_NO_VALID_RUN_TASK.to_string()));
             }
         }
-    } else {
-        build_number = ci.unwrap();
     }
 
     colored_println(
