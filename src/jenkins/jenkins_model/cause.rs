@@ -5,9 +5,9 @@ use serde::Deserialize;
 #[serde(tag = "_class")]
 pub enum Cause {
     #[serde(rename = "hudson.model.Cause$UserIdCause")]
-    UserIdCause(UserIdCause),
+    UserId(UserIdCause),
     #[serde(rename = "com.sonyericsson.rebuild.RebuildCause")]
-    RebuildCause,
+    Rebuild,
     #[serde(other)]
     Unknown,
 }

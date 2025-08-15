@@ -27,15 +27,15 @@ where
 impl WorkflowRun {
     pub fn is_mine(&self, my_user_id: &str) -> bool {
         for action in &self.actions {
-            if let MaybeWorkflowAction::WorkflowAction(WorkflowAction::Causes { causes }) = action {
-                if causes.iter().any(|cause| {
+            if let MaybeWorkflowAction::WorkflowAction(WorkflowAction::Causes { causes }) = action
+                && causes.iter().any(|cause| {
                     matches!(cause,
-                        Cause::UserIdCause(user_id_cause)
+                        Cause::UserId(user_id_cause)
                         if user_id_cause.is_mine(my_user_id)
                     )
-                }) {
-                    return true;
-                }
+                })
+            {
+                return true;
             }
         }
 

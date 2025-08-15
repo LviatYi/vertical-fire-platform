@@ -45,8 +45,8 @@ pub(crate) fn get_hidden_sensitive_string(str: &str, sensitive_mode: SensitiveMo
 ///
 /// * `vec`: The mutable vector containing the elements.
 /// * `idx`: The index of the element to bring to the first position.  
-///     if `idx` is 0 or out of bounds, the vector remains unchanged.
-pub(crate) fn bring_element_to_first<E>(vec: &mut Vec<E>, idx: usize) {
+///   if `idx` is 0 or out of bounds, the vector remains unchanged.
+pub(crate) fn bring_element_to_first<E>(vec: &mut [E], idx: usize) {
     if idx > 0 && idx < vec.len() {
         let sub_slice = &mut vec[0..=idx];
         sub_slice.rotate_right(1);

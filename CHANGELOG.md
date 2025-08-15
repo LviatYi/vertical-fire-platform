@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.6.3] - 2025-08-14
+
 ### 🚀 Added
 
 - 新增 AppState 进行全局状态管理。
@@ -285,7 +287,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.2...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.3...HEAD
+
+[1.6.3]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.2...v1.6.3
 
 [1.6.2]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.1...v1.6.2
 

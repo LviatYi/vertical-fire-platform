@@ -286,7 +286,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             // fp run
             let db = app_state.get_db();
 
-            let job_name = input_job_name(job_name, &db)
+            let job_name = input_job_name(job_name, db)
                 .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
 
             let dest = input_target_path(
@@ -421,7 +421,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             }
 
             let db = app_state.get_mut_db();
-            let job_name = input_job_name(job_name, &db)
+            let job_name = input_job_name(job_name, db)
                 .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
 
             db.insert_job_name(job_name.as_str());

@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug, PartialEq,Default)]
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Default)]
 pub enum RunStatus {
     #[serde(rename = "SUCCESS")]
     Success,

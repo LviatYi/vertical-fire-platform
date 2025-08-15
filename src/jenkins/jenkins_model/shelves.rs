@@ -11,7 +11,7 @@ impl FromStr for Shelves {
         let mut v: u32 = 0;
         let mut result = Vec::new();
         for char in s.to_string().chars() {
-            if !char.is_digit(10) {
+            if !char.is_ascii_digit() {
                 if v != 0 {
                     result.push(v);
                     v = 0;

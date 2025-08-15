@@ -60,7 +60,7 @@ impl VersionedData for FpDbV3 {
 
 fn find_job_name_template_head_in_old_extract_repo(old_extract_repo: &str) -> usize {
     old_extract_repo
-        .rfind(&['/', '\\'])
+        .rfind(['/', '\\'])
         .map(|v| v + 1)
         .unwrap_or(0)
 }

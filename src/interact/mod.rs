@@ -167,10 +167,8 @@ where
         return Ok(val);
     }
 
-    if db_val_directly_usable {
-        if let Some(val) = db_val {
-            return Ok(val.clone());
-        }
+    if db_val_directly_usable && let Some(val) = db_val {
+        return Ok(val.clone());
     }
 
     let mut input = Text::from(hint);
@@ -252,10 +250,8 @@ pub fn input_path(
         return Ok(val);
     }
 
-    if db_val_directly_usable {
-        if let Some(val) = db_val {
-            return Ok(val.clone());
-        }
+    if db_val_directly_usable && let Some(val) = db_val {
+        return Ok(val.clone());
     }
 
     let mut input = Text::from(hint);
@@ -440,10 +436,8 @@ where
         return Ok(val.into());
     }
 
-    if db_val_directly_usable {
-        if let Some(val) = db_val {
-            return Ok(val.clone().into());
-        }
+    if db_val_directly_usable && let Some(val) = db_val {
+        return Ok(val.clone().into());
     }
 
     match Select::new(hint, options).prompt() {
@@ -598,11 +592,11 @@ pub async fn input_ci_for_extract(
     let exist_ci_list = db.get_repo_decoration().get_sorted_ci_list();
 
     //region last used ci
-    if let Some(ref last_used) = last_used {
-        if exist_ci_list.is_ci_exist(last_used) {
-            options.push(format!("{}({})", last_used, HINT_LAST_USED_SUFFIX));
-            last_used_index = options.len() - 1;
-        }
+    if let Some(ref last_used) = last_used
+        && exist_ci_list.is_ci_exist(last_used)
+    {
+        options.push(format!("{}({})", last_used, HINT_LAST_USED_SUFFIX));
+        last_used_index = options.len() - 1;
     }
     //endregion
 

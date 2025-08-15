@@ -96,7 +96,7 @@ pub fn extract_ci_by_main_locator(pattern: &str, locator: &str) -> Option<u32> {
 pub fn clean_dir(dest: &Path) -> Result<Option<u128>, String> {
     if dest.is_dir() {
         let start_time = std::time::Instant::now();
-        if fs::remove_dir_all(&dest).is_err() {
+        if fs::remove_dir_all(dest).is_err() {
             Err(formatx!(
                 constant::log::ERR_DIR_IN_USE,
                 dest.to_str().unwrap_or(constant::log::ERR_INVALID_PATH)
@@ -127,10 +127,10 @@ pub fn extract_zip_file(from: &Path, dest: &Path) -> Result<u128, String> {
             if file.is_dir() {
                 fs::create_dir_all(dest.join(out_path)).unwrap();
             } else {
-                if let Some(p) = out_path.parent() {
-                    if !p.exists() {
-                        fs::create_dir_all(dest.join(p)).unwrap();
-                    }
+                if let Some(p) = out_path.parent()
+                    && !p.exists()
+                {
+                    fs::create_dir_all(dest.join(p)).unwrap();
                 }
 
                 let _ = fs::File::create(dest.join(out_path)).map(|mut outfile| {

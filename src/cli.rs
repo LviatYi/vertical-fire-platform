@@ -381,7 +381,7 @@ pub async fn cli_do_watch(
 
     let db = app_state.get_mut_db();
     let used_job_name = Some(
-        input_job_name(job_name, &db)
+        input_job_name(job_name, db)
             .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?,
     );
 
