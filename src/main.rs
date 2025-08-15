@@ -145,6 +145,10 @@ enum Commands {
 
         #[command(flatten)]
         extract_params: ExtractParams,
+
+        /// the Jenkins run task URL.
+        #[arg(short, long)]
+        url: Option<String>,
     },
     /// Request start a Jenkins build task.
     Build {
@@ -661,6 +665,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             ci,
             no_extract,
             extract_params,
+            url,
         } => {
             // fp watch
             cli_try_first_login(app_state, false).await?;

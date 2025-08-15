@@ -18,6 +18,7 @@ pub enum VfpError {
         url: String,
         username: String,
         key: String,
+        #[allow(dead_code)]
         e: JenkinsError,
     },
     JenkinsClientInvalid,
@@ -91,7 +92,7 @@ impl Display for VfpError {
                         )
                     }
                 }
-                .unwrap_or_default();
+                    .unwrap_or_default();
 
                 ERR_JENKINS_CLIENT_INVALID_SIMPLE
                     .to_string()
