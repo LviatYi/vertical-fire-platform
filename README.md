@@ -19,7 +19,6 @@ by LviatYi
 
 更新计划 | Road Map:
 
-- [ ] 提供中心化的配置文件读写方式，以提供全局可见支持与读写声明周期管理。
 - [ ] 提供统一的 jenkins 任务查询方式，以优化查询速度。
 - [ ] 疑似因 token 过期而无法查询 build 完成后 run task 的 P4CL 参数。
 - [ ] 添加 `fp info`，以允许查询 Jenkins Build Task 的状态。
