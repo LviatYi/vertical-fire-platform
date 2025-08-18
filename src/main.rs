@@ -18,6 +18,7 @@ use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
 use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
 use crate::jenkins::jenkins_model::shelves::Shelves;
+use crate::jenkins::jenkins_url_factor::JenkinsUrlFactor;
 use crate::jenkins::query::{query_builds_in_job, query_run_info, VfpJenkinsClient};
 use crate::jenkins::util::get_jenkins_workflow_run_url;
 use crate::pretty_log::{colored_println, ThemeColor};
@@ -62,6 +63,10 @@ enum Commands {
 
         #[command(flatten)]
         extract_params: ExtractParams,
+
+        /// the Jenkins run task URL.
+        #[arg(short, long)]
+        url: Option<String>,
     },
     /// Run game instance.
     Run {
@@ -265,11 +270,20 @@ async fn main() {
 async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), VfpError> {
     match command {
         Commands::Extract {
-            job_name,
-            ci,
+            mut job_name,
+            mut ci,
             extract_params,
+            url,
         } => {
             // fp extract
+            let url_factor = url.and_then(|str| JenkinsUrlFactor::from_url(str.as_str()).ok());
+            job_name = job_name.or(url_factor
+                .as_ref()
+                .and_then(|factor| factor.get_job_name().map(|str| str.to_string())));
+            ci = ci.or(url_factor
+                .as_ref()
+                .and_then(|factor| factor.get_build_number()));
+
             cli::cli_do_extract(app_state, job_name, ci, extract_params, false).await?;
         }
         Commands::Run {
@@ -661,13 +675,21 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             }
         }
         Commands::Watch {
-            job_name,
-            ci,
+            mut job_name,
+            mut ci,
             no_extract,
             extract_params,
             url,
         } => {
             // fp watch
+            let url_factor = url.and_then(|str| JenkinsUrlFactor::from_url(str.as_str()).ok());
+            job_name = job_name.or(url_factor
+                .as_ref()
+                .and_then(|factor| factor.get_job_name().map(|str| str.to_string())));
+            ci = ci.or(url_factor
+                .as_ref()
+                .and_then(|factor| factor.get_build_number()));
+
             cli_try_first_login(app_state, false).await?;
 
             let (used_job_name, success_build_number) =

@@ -11,10 +11,11 @@ use url::Url;
 #[derive(Debug)]
 pub struct JenkinsUrlFactor {
     url: Url,
-    pub scheme_domain: Option<Range<usize>>,
-    pub views: Vec<Range<usize>>,
-    pub job_name: Option<Range<usize>>,
-    pub build_number: Option<u32>,
+
+    scheme_domain: Option<Range<usize>>,
+    views: Vec<Range<usize>>,
+    job_name: Option<Range<usize>>,
+    build_number: Option<u32>,
 }
 
 impl JenkinsUrlFactor {

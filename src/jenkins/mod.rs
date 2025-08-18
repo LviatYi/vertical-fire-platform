@@ -1,11 +1,11 @@
 pub mod build;
 pub mod jenkins_endpoint;
 pub mod jenkins_model;
+pub mod jenkins_url_factor;
 mod pwd_jenkins_async_client;
 pub mod query;
 pub mod util;
 pub mod watch;
-mod jenkins_url_factor;
 
 #[cfg(test)]
 mod tests {
