@@ -118,6 +118,7 @@ impl AppState {
                 ThemeColor::Success,
                 crate::constant::log::OPEN_DB_SUCCESS,
             );
+            return Ok(());
         }
 
         Err(VfpError::OpenDbFailed(HINT_NO_VALID_PATH.to_string()))

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
-**[重大更新]** 此次更新旨在利用正则表达式优化参数传递体验！
+此次更新旨在利用正则表达式优化参数传递体验！
 
 ### 🚀 Added
 
