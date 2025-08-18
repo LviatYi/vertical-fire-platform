@@ -51,14 +51,17 @@ Windows 通过 Path 环境变量来指定可执行文件的路径。在命令行
 Path 中的路径中查找这个文件。  
 如果你希望像示例那样，简单地输入 `fp` 来运行程序，那么你需要程序所在的路径添加到 Path 中。
 
+你可以输入这个命令 将程序所在的路径添加到 Path 环境变量中
+
 ```shell
-// 你可以输入这个命令 将程序所在的路径添加到 Path 环境变量中
 setx path "%path%;PATH_TO_FP_ROOT_DIR"
 ```
 
 当然，你需要自己替换 `PATH_TO_FP_ROOT_DIR`。它应该是一个路径，下面包含 fp.exe.
 
 ## Commands ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
+
+总的来说，在任何场景下，你都可以在命令末尾添加 `-h` 或 `--help` 来获取帮助信息。
 
 ### Extract
 
@@ -83,10 +86,11 @@ Extract 提供了以下参数：
 - **-j, --job-name <JOB_NAME>** 任务名。
 - **-#, --ci <CI>** 包 ID。用于定位包。
 - **-c, --count <COUNT>** 期望数量。指定解压数量。
+- **-d, --dest <DEST>** 解压目标路径。
+- **-u, --url <URL>** Jenkins Run Task 全称 URL。可以自动解析 **-j** 与 **-#**，但具有更低的优先级。
 - **--repo <BUILD_TARGET_REPO_TEMPLATE>** [仅调试] 包仓库模板。在这其中搜索包。
 - **--locator-pattern <MAIN_LOCATOR_PATTERN>** [仅调试] 主定位器模式。
 - **--s-locator-template <SECONDARY_LOCATOR_TEMPLATE>** [仅调试] 次定位器模板。
-- **-d, --dest <DEST>** 解压目标路径。
 
 ---
 
@@ -188,6 +192,7 @@ fp watch
 
 - **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
 - **-#, --ci <CI>** 包 ID。用于定位包。
+- **-u, --url <URL>** Jenkins Run Task 全称 URL。可以自动解析 **-j** 与 **-#**，但具有更低的优先级。
 - **--no-extract** 在所需的操作成功后，不要执行自动解压。
 
 此外，若执行 extract ，则可以额外使用 `fp extract` 的所有参数。
