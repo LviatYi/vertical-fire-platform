@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.6.4] - 2025-08-18
+
 此次更新旨在利用正则表达式优化参数传递体验！
 
 ### 🚀 Added
@@ -294,7 +296,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.3...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.4...HEAD
+
+[1.6.4]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.3...v1.6.4
 
 [1.6.3]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.2...v1.6.3
 
