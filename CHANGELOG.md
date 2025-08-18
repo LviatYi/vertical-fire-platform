@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+**[重大更新]** 此次更新旨在利用正则表达式优化参数传递体验！
+
+### 🚀 Added
+
+- 对 `fp extract`、`fp watch` 添加 `-u` 参数的支持，现在可以通过 `-u` 或 `--url` 直接传入 URL，藉此解析 job_name 与 ci。
+
 ## [1.6.3] - 2025-08-14
 
 ### 🚀 Added
