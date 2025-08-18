@@ -1,7 +1,7 @@
+use crate::LoginMethod;
 use crate::constant::log::*;
 use crate::constant::util::get_hidden_sensitive_string;
-use crate::pretty_log::{colored_println, ThemeColor};
-use crate::LoginMethod;
+use crate::pretty_log::{ThemeColor, colored_println};
 use formatx::formatx;
 use inquire::InquireError;
 use jenkins_sdk::JenkinsError;
@@ -36,6 +36,7 @@ pub enum VfpError {
         e: String,
         content: String,
     },
+    OpenDbFailed(String),
 }
 
 impl From<InquireError> for VfpError {
@@ -92,7 +93,7 @@ impl Display for VfpError {
                         )
                     }
                 }
-                    .unwrap_or_default();
+                .unwrap_or_default();
 
                 ERR_JENKINS_CLIENT_INVALID_SIMPLE
                     .to_string()
@@ -113,6 +114,7 @@ impl Display for VfpError {
             VfpError::JobConfigParseError { e, .. } => {
                 formatx!(ERR_QUERY_JOB_CONFIG, e).unwrap_or_default()
             }
+            VfpError::OpenDbFailed(path) => formatx!(ERR_OPEN_FILE_FAILED,path).unwrap_or_default(),
         };
         write!(f, "{}", str)
     }

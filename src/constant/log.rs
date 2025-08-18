@@ -42,6 +42,7 @@ pub const ERR_VERSION_PARSE_FAILED: &str = "Failed to parse version. {}";
 pub const ERR_VERSION_NOT_SUPPORT_UPDATE: &str =
     "This version does not support update. Please upgrade to a newer version great than {}.";
 pub const ERR_UPDATE_FAILED: &str = "Update failed. {}";
+pub const ERR_OPEN_FILE_FAILED: &str = "Failed to open file at {} .";
 
 pub const HINT_JOB_NAME: &str = "use job:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
@@ -78,6 +79,7 @@ pub const HINT_UPGRADE_SILENT_OPERATION: &str =
 pub const HINT_USE_PARAM_OPERATION: &str =
     "Use `fp build --param <PARAM_NAME> <PARAM_VALUE>` to set the parameter value.";
 pub const HINT_JOB_CONFIG_CONTENT: &str = "config content: \n{}";
+pub const HINT_NO_VALID_PATH: &str = "no valid path";
 
 pub const LOGIN_SUCCESS_BY_PWD: &str = "Login success by password!";
 pub const LOGIN_SUCCESS_BY_API_TOKEN: &str = "Login success by api token!";
@@ -123,6 +125,7 @@ pub const UPGRADE_TO_VERSION_SUCCESS: &str = "Upgrade to version {} success!";
 pub const CURRENT_VERSION_UP_TO_DATE: &str = "Current version is up to date.";
 pub const DISABLE_AUTO_UPDATE_BECAUSE_OF_UPDATE_FAILED: &str = "Auto-Update disabled.";
 pub const NEVER_CHECK_VERSION: &str = "Never check version.";
+pub const OPEN_DB_SUCCESS: &str = "Open memory file success.";
 
 pub const PARAM_JOB_NAME: &str = "job name";
 pub const PARAM_DEST: &str = "path as destination";

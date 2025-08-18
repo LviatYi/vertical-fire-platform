@@ -16,13 +16,13 @@ use crate::cli::{cli_do_login, cli_try_first_login};
 use crate::constant::log::*;
 use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
-use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
+use crate::jenkins::build::{VfpJobBuildParam, query_job_config, request_build};
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::jenkins_url_factor::JenkinsUrlFactor;
-use crate::jenkins::query::{query_builds_in_job, query_run_info, VfpJenkinsClient};
+use crate::jenkins::query::{VfpJenkinsClient, query_builds_in_job, query_run_info};
 use crate::jenkins::util::get_jenkins_workflow_run_url;
-use crate::pretty_log::{colored_println, ThemeColor};
-use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
+use crate::pretty_log::{ThemeColor, colored_println};
+use crate::run::{RunStatus, kill_by_pid, run_instance, set_server};
 use crate::update::{do_self_update_with_log, fetch_and_try_auto_update};
 use crate::vfp_error::VfpError;
 use clap::{Parser, Subcommand};
@@ -207,6 +207,8 @@ enum Commands {
     },
     /// Clean cache.
     Clean,
+    /// Open memory file directly.
+    Db,
     #[cfg(debug_assertions)]
     /// Show debug info.
     Debug,
@@ -752,6 +754,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             // fp clean
             app_state.clean();
         }
+        Commands::Db => app_state.open_db_file()?,
         #[cfg(debug_assertions)]
         Commands::Debug => {
             // fp debug

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🚀 Added
 
 - 对 `fp extract`、`fp watch` 添加 `-u` 参数的支持，现在可以通过 `-u` 或 `--url` 直接传入 URL，藉此解析 job_name 与 ci。
+- 可通过 `fp db` 命令，直接访问记忆文件。这是个危险的举动，如果改动，你可能会丢失数据。请提前做好备份~
 
 ## [1.6.3] - 2025-08-14
 

@@ -1,6 +1,8 @@
+use crate::constant::log::HINT_NO_VALID_PATH;
 use crate::db::DB_FILE_NAME;
 use crate::db::db_data_proxy::DbDataProxy;
 use crate::pretty_log::{ThemeColor, colored_println};
+use crate::vfp_error::VfpError;
 use dirs::home_dir;
 use formatx::formatx;
 use std::cell::OnceCell;
@@ -102,6 +104,23 @@ impl AppState {
         });
 
         let _ = self.db.take();
+    }
+
+    pub fn open_db_file(&self) -> Result<(), VfpError> {
+        if let Some(path) =
+            get_default_db_file_path(&get_path_or_home_path(self.db_path.as_deref()))
+        {
+            open::that(&path).map_err(|_| {
+                VfpError::OpenDbFailed(path.to_str().map(|str| str.to_string()).unwrap_or_default())
+            })?;
+            colored_println(
+                &mut self.stdout.lock(),
+                ThemeColor::Success,
+                crate::constant::log::OPEN_DB_SUCCESS,
+            );
+        }
+
+        Err(VfpError::OpenDbFailed(HINT_NO_VALID_PATH.to_string()))
     }
 
     fn ensure_init(&self) -> &DbDataProxy {
