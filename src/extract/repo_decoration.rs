@@ -143,12 +143,37 @@ mod tests {
     use super::*;
     use crate::default_config::{LOCATOR_PATTERN, LOCATOR_TEMPLATE, REPO_TEMPLATE};
     use rand::Rng;
-    use std::collections::HashSet;
+    use std::fs;
     use std::fs::File;
     use std::io::Write;
-    use std::panic::AssertUnwindSafe;
-    use std::{fs, panic};
-    use tempfile::tempdir;
+    use tempfile::{TempDir, tempdir};
+
+    fn prepare_test_repo(job_name: &str) -> (TempDir, u32) {
+        let temp_root_dir = tempdir().unwrap();
+        let temp_root_dir_path = temp_root_dir.path().to_path_buf();
+        let _ = fs::create_dir_all(temp_root_dir_path.join(job_name));
+
+        let mut pointer = 0u32;
+        let mut count = 0u32;
+        loop {
+            pointer += rand::rng().random_range(1u32..=4);
+            let ci_package_file_name = temp_root_dir_path
+                .join(job_name)
+                .join(format!("{}-Hash.{}", pointer, pointer))
+                .join("file.md");
+
+            let _ = fs::create_dir_all(ci_package_file_name.parent().unwrap());
+            let mut file = File::create(ci_package_file_name).unwrap();
+            writeln!(file, "CONTENT of Hash#{}", pointer).unwrap();
+
+            count += 1;
+            if count > 10 {
+                break;
+            }
+        }
+
+        (temp_root_dir, pointer)
+    }
 
     #[test]
     fn test_assemble_build_target_repo() {
@@ -167,50 +192,19 @@ mod tests {
 
     #[test]
     fn test_get_latest() {
-        let temp_root_dir = tempdir().unwrap();
-        let temp_root_dir_path = temp_root_dir.path().to_path_buf();
         let job_name = "JobName_TEST";
-        let mut max_ci = 0;
-        let mut latest: u32 = 1;
+
+        let (temp_root_dir_path, max_ci) = prepare_test_repo(job_name);
 
         let r = RepoDecoration::new(
-            temp_root_dir_path.to_str().unwrap(),
+            temp_root_dir_path.path().to_str().unwrap(),
             "{ID}-Hash.{*}",
             "\\file.md",
             job_name,
         );
 
-        let _ = panic::catch_unwind(AssertUnwindSafe(|| {
-            let mut unique_numbers = HashSet::new();
-            let max_create_count = 10;
-            for _ in 0..max_create_count {
-                let mut rand: u32;
-                loop {
-                    rand = rand::rng().random_range(1u32..=1000);
-                    if unique_numbers.contains(&rand) {
-                        continue;
-                    } else {
-                        unique_numbers.insert(rand);
-                        break;
-                    }
-                }
+        let latest = r.get_sorted_ci_list()[0];
 
-                let ci_package_file_name = temp_root_dir_path
-                    .join(job_name)
-                    .join(format!("{}-Hash.{}", rand, rand))
-                    .join("file.md");
-
-                fs::create_dir_all(ci_package_file_name.parent().unwrap()).unwrap();
-                let mut file = File::create(ci_package_file_name).unwrap();
-                writeln!(file, "CONTENT of Hash#{}", rand).unwrap();
-
-                max_ci = max_ci.max(rand);
-            }
-
-            latest = r.get_sorted_ci_list()[0];
-        }));
-
-        fs::remove_dir_all(temp_root_dir_path).unwrap();
         assert_eq!(latest, max_ci);
     }
 }
