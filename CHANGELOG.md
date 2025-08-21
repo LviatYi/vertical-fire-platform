@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### 🚀 Added
+
+- 并行查询用户最新的 Run Task 信息，极大加快了查询速度。
+- 添加 `JenkinsRpcService` 为未来的同一管理 RPC 调用服务进行铺垫。
+
 ## [1.6.4] - 2025-08-18
 
 此次更新旨在利用正则表达式优化参数传递体验！
