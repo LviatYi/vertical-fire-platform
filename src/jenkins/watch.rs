@@ -3,15 +3,15 @@ use crate::constant::log::*;
 use crate::interact::input_ci_for_watch;
 use crate::jenkins::jenkins_model::reasoned_run_status::ReasonedRunStatus;
 use crate::jenkins::jenkins_model::run_status::RunStatus;
-use crate::jenkins::query::{
-    VfpJenkinsClient, query_run_info, query_run_log, query_user_latest_info,
-};
+use crate::jenkins::query::{query_run_info, query_run_log, VfpJenkinsClient};
 use crate::jenkins::util::get_jenkins_workflow_run_url;
-use crate::pretty_log::{ThemeColor, clean_one_line, colored_println};
+use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
+use crate::service::jenkins_rpc_service::JenkinsRpcService;
 use crate::vfp_error::VfpError;
 use chrono::Local;
 use formatx::formatx;
 use jenkins_sdk::JenkinsError;
+use std::sync::Arc;
 
 async fn get_reasoned_run_status(
     client: &VfpJenkinsClient,
@@ -53,6 +53,7 @@ pub async fn watch(
 ) -> Result<u32, VfpError> {
     let build_number;
     let db = app_state.get_db();
+    let arc_client = Arc::new(client);
 
     if let Some(ci) = ci {
         build_number = ci;
@@ -62,13 +63,17 @@ pub async fn watch(
             .as_ref()
             .ok_or(VfpError::MissingParam(PARAM_USERNAME.to_string()))?;
 
-        let latest_info =
-            query_user_latest_info(&client, job_name, username.as_str(), None).await?;
+        let latest_info = JenkinsRpcService::query_user_latest_info(
+            arc_client.clone(),
+            job_name,
+            username.as_str(),
+        )
+        .await?;
 
         if let Some(in_progress) = latest_info.in_progress {
             build_number = in_progress.number;
         } else if let Some(failed) = latest_info.failed {
-            let log = query_run_log(&client, job_name, failed.number).await?;
+            let log = query_run_log(arc_client.as_ref(), job_name, failed.number).await?;
 
             return Err(VfpError::RunTaskBuildFailed {
                 build_number: failed.number,
@@ -128,7 +133,7 @@ pub async fn watch(
     let mut clean_able = false;
     loop {
         let get_reasoned_run_status =
-            get_reasoned_run_status(&client, job_name, build_number).await?;
+            get_reasoned_run_status(arc_client.as_ref(), job_name, build_number).await?;
 
         if clean_able {
             clean_one_line(&mut app_state.get_stdout());

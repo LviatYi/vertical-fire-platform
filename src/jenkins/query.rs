@@ -129,6 +129,7 @@ pub async fn query_run_info(
 ///
 /// This struct holds the latest workflow information for a user.
 /// It contains the latest successful workflow run, the latest in-progress workflow run, and the latest failed workflow run.
+#[derive(Debug)]
 pub struct UserLatestWorkflowInfo {
     /// user latest successful workflow run
     pub latest_success: Option<WorkflowRun>,
@@ -138,48 +139,6 @@ pub struct UserLatestWorkflowInfo {
 
     /// user latest failed workflow run
     pub failed: Option<WorkflowRun>,
-}
-
-pub async fn query_user_latest_info(
-    client: &VfpJenkinsClient,
-    job_name: &str,
-    user_id: &str,
-    count: Option<u32>,
-) -> Result<UserLatestWorkflowInfo, JenkinsError> {
-    let builds = query_builds_in_job(client, job_name, count).await?;
-
-    let mut ret = UserLatestWorkflowInfo {
-        latest_success: None,
-        in_progress: None,
-        failed: None,
-    };
-
-    for b in builds.builds {
-        if let Ok(run_info) = query_run_info(client, job_name, b.number).await {
-            if run_info.is_mine(user_id) {
-                match run_info.result {
-                    RunStatus::Success => {
-                        if ret.latest_success.is_none() {
-                            ret.latest_success = Some(run_info);
-                        }
-                        break;
-                    }
-                    RunStatus::Failure => {
-                        if ret.failed.is_none() {
-                            ret.failed = Some(run_info);
-                        }
-                    }
-                    RunStatus::Processing => {
-                        if ret.in_progress.is_none() {
-                            ret.in_progress = Some(run_info);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(ret)
 }
 
 pub async fn query_run_log(

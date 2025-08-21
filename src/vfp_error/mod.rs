@@ -1,7 +1,7 @@
-use crate::LoginMethod;
 use crate::constant::log::*;
 use crate::constant::util::get_hidden_sensitive_string;
-use crate::pretty_log::{ThemeColor, colored_println};
+use crate::pretty_log::{colored_println, ThemeColor};
+use crate::LoginMethod;
 use formatx::formatx;
 use inquire::InquireError;
 use jenkins_sdk::JenkinsError;
@@ -22,6 +22,7 @@ pub enum VfpError {
         e: JenkinsError,
     },
     JenkinsClientInvalid,
+    JenkinsTimeout,
     MissingParam(String),
     EmptyRepo,
     RunTaskBuildFailed {
@@ -100,6 +101,7 @@ impl Display for VfpError {
                     .add(msg.as_str())
             }
             VfpError::JenkinsClientInvalid => ERR_JENKINS_CLIENT_INVALID.to_string(),
+            VfpError::JenkinsTimeout => ERR_JENKINS_TIMEOUT.to_string(),
             VfpError::MissingParam(param) => formatx!(ERR_NEED_PARAM, param).unwrap_or_default(),
             VfpError::EmptyRepo => ERR_EMPTY_REPO.to_string(),
             VfpError::RunTaskBuildFailed {

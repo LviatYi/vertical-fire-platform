@@ -5,8 +5,8 @@ use crate::default_config;
 use crate::extract::repo_decoration::OrderedCiList;
 use crate::jenkins::jenkins_model::run_status::RunStatus;
 use crate::jenkins::jenkins_model::shelves::Shelves;
-use crate::jenkins::query::query_user_latest_info;
 use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
+use crate::service::jenkins_rpc_service::JenkinsRpcService;
 use dirs::home_dir;
 use formatx::formatx;
 use inquire::error::InquireResult;
@@ -14,6 +14,7 @@ use inquire::validator::{ErrorMessage, Validation};
 use inquire::{InquireError, Password, PasswordDisplayMode, Select, Text};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 //region parse directly
 /// # parse without input
@@ -488,11 +489,10 @@ pub async fn input_ci_for_extract(
         let db = app_state.get_db();
         match client {
             Ok(client) => {
-                let user_latest_info_result = query_user_latest_info(
-                    &client,
+                let user_latest_info_result = JenkinsRpcService::query_user_latest_info(
+                    Arc::new(client),
                     job_name,
-                    &(db.get_jenkins_username().clone().unwrap()),
-                    None,
+                    db.get_jenkins_username().clone().unwrap().as_str(),
                 )
                 .await;
 

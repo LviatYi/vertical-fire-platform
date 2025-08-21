@@ -26,6 +26,7 @@ pub const ERR_NEED_A_JENKINS_API_TOKEN: &str = "Need your jenkins api token.";
 pub const ERR_NEED_A_JENKINS_PWD: &str = "Need your jenkins password.";
 pub const ERR_JENKINS_CLIENT_INVALID: &str =
     "Cannot connect to jenkins. Maybe you should check your password or api token.";
+pub const ERR_JENKINS_TIMEOUT: &str = "Jenkins timeout. Please check your network connection or jenkins server status.";
 pub const ERR_JENKINS_CLIENT_INVALID_SIMPLE: &str = "Cannot connect to jenkins.";
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID: &str =
     "Url: {}.\nUsername: {}\nApi-Token: {}\nMaybe you should check your api token.";

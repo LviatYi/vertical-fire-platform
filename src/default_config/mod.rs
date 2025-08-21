@@ -7,6 +7,8 @@ pub const WATCH_INTERVAL: u64 = 10;
 pub const WATCH_QUERY_BUILDS_COUNT: u32 = 10;
 pub const OLDEST_SUPPORT_UPDATE_VERSION: &str = "1.5.0";
 pub const MAX_JOB_RELATIVE_DATA_COUNT: usize = 8;
+pub const USER_QUERY_JENKINS_BUILD_COUNT: usize = 50;
+pub const JENKINS_QUERY_CONCURRENCY_COUNT: usize = 20;
 
 pub const RECOMMEND_JOB_NAMES: [&str; 0] = [
 ];

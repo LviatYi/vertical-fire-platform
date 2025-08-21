@@ -257,27 +257,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_query_user_latest_info() {
-        let my_user_id = USERNAME;
-        let client =
-            VfpJenkinsClient::ApiTokenClient(JenkinsAsyncClient::new(URL, my_user_id, API_TOKEN));
-        let job_name = JOB_NAME.to_string();
-
-        match query_user_latest_info(&client, &job_name, my_user_id, Some(200)).await {
-            Ok(user_latest_workflow_info) => {
-                if let Some(run) = user_latest_workflow_info.latest_success {
-                    println!("Found my latest build: {:#?}", run);
-                } else {
-                    println!("No builds found for user: {}", my_user_id);
-                }
-            }
-            Err(e) => {
-                println!("Error: {:#?}", e);
-            }
-        };
-    }
-
-    #[tokio::test]
     async fn test_query_run_log() {
         let my_user_id = USERNAME;
         let client =
