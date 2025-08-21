@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.6.5] - 2025-08-21
+
 ### 🚀 Added
 
 - 并行查询用户最新的 Run Task 信息，极大加快了查询速度。
@@ -301,7 +303,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.4...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.5...HEAD
+
+[1.6.5]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.4...v1.6.5
 
 [1.6.4]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.3...v1.6.4
 
