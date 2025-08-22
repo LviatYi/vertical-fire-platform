@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### ⚙️ Changed
+
+- 优化 CL 输入错误时的提示。
+
+### 🐛 Fixed
+
+- 修复了 `query_user_latest_info` 中错误的 `processing` 与 `failed` 记录。该问题曾导致 `fp watch` 及其关联命令异常。
+
 ## [1.6.5] - 2025-08-21
 
 ### 🚀 Added

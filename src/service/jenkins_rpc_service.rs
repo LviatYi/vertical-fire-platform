@@ -138,8 +138,8 @@ impl JenkinsRpcService {
 
         Ok(UserLatestWorkflowInfo {
             latest_success: latest_success_idx.and_then(|idx| results[idx].take()),
-            in_progress: latest_failed_idx.and_then(|idx| results[idx].take()),
-            failed: latest_in_progress_idx.and_then(|idx| results[idx].take()),
+            in_progress: latest_in_progress_idx.and_then(|idx| results[idx].take()),
+            failed: latest_failed_idx.and_then(|idx| results[idx].take()),
         })
     }
 }
