@@ -24,7 +24,7 @@ pub enum VfpError {
     JenkinsClientInvalid,
     JenkinsTimeout,
     MissingParam(String),
-    EmptyRepo,
+    CIInvalid,
     RunTaskBuildFailed {
         build_number: u32,
         job_name: String,
@@ -103,7 +103,7 @@ impl Display for VfpError {
             VfpError::JenkinsClientInvalid => ERR_JENKINS_CLIENT_INVALID.to_string(),
             VfpError::JenkinsTimeout => ERR_JENKINS_TIMEOUT.to_string(),
             VfpError::MissingParam(param) => formatx!(ERR_NEED_PARAM, param).unwrap_or_default(),
-            VfpError::EmptyRepo => ERR_EMPTY_REPO.to_string(),
+            VfpError::CIInvalid => ERR_CL_INPUT_INVALID.to_string(),
             VfpError::RunTaskBuildFailed {
                 build_number,
                 job_name,

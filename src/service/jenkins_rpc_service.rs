@@ -25,7 +25,7 @@ impl JenkinsRpcService {
         )
         .await?;
 
-        let mut tasks_set = tokio::task::JoinSet::new();
+        let mut tasks_set = JoinSet::new();
         let mut results: Vec<Option<WorkflowRun>> = std::iter::repeat_with(|| None)
             .take(default_config::USER_QUERY_JENKINS_BUILD_COUNT)
             .collect();

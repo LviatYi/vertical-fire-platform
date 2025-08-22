@@ -1,6 +1,6 @@
 pub const ERR_INPUT_INVALID: &str = "Invalid input.";
 pub const ERR_INPUT_INVALID_SHOULD_NOT_BE_EMPTY: &str = "Invalid input. Should not be empty.";
-pub const ERR_EMPTY_REPO: &str = "There is no any package in the repo.";
+pub const ERR_CL_INPUT_INVALID: &str = "Need a valid ci. Maybe there is no any package in the repo.";
 pub const ERR_NO_SPECIFIED_PACKAGE: &str = "No package found.";
 pub const ERR_NEED_A_NUMBER: &str = "Need a number.";
 pub const ERR_NEED_PARAM: &str = "Need {}.";

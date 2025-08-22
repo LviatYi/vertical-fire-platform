@@ -59,7 +59,7 @@ pub async fn cli_do_extract(
     );
     let used_inner_version = input_ci_for_extract(app_state, job_name.as_str(), ci)
         .await
-        .ok_or(VfpError::EmptyRepo)?;
+        .ok_or(VfpError::CIInvalid)?;
 
     let db = app_state.get_db();
     let used_player_count = input_directly_with_default(
