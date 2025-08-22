@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.6.6] - 2025-08-22
+
 ### ⚙️ Changed
 
 - 优化 CL 输入错误时的提示。
@@ -311,7 +313,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.5...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.6...HEAD
+
+[1.6.6]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.5...v1.6.6
 
 [1.6.5]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.4...v1.6.5
 
