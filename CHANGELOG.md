@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.6.7] - 2025-08-25
+
 ### 🐛 Fixed
 
 - 在 `query_user_latest_info` 中引入更明确的语义。该问题曾导致 `fp watch` 及其关联命令异常。
@@ -317,7 +319,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.6...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.7...HEAD
+
+[1.6.7]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.6...v1.6.7
 
 [1.6.6]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.5...v1.6.6
 
