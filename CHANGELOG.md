@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### 🐛 Fixed
+
+- 在 `query_user_latest_info` 中引入更明确的语义。该问题曾导致 `fp watch` 及其关联命令异常。
+
 ## [1.6.6] - 2025-08-22
 
 ### ⚙️ Changed

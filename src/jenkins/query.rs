@@ -3,7 +3,6 @@ use crate::jenkins::jenkins_endpoint::job_info::JobInfo;
 use crate::jenkins::jenkins_endpoint::ping::{Ping, PingResult};
 use crate::jenkins::jenkins_endpoint::run_info::RunInfo;
 use crate::jenkins::jenkins_endpoint::run_log::RunLog;
-use crate::jenkins::jenkins_model::run_status::RunStatus;
 use crate::jenkins::jenkins_model::workflow_builds::WorkflowBuilds;
 use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
 use crate::jenkins::pwd_jenkins_async_client::PwdJenkinsAsyncClient;

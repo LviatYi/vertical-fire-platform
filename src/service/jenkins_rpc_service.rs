@@ -31,7 +31,7 @@ impl JenkinsRpcService {
             .collect();
 
         let mut next_query_idx = 0;
-        let mut oldest_query_in_queue_success_idx = 0;
+        let mut oldest_query_in_queue_success_idx = None;
 
         fn fill_task_set_window(
             client: &Arc<VfpJenkinsClient>,
@@ -90,14 +90,19 @@ impl JenkinsRpcService {
             };
 
             results[query_idx] = Some(run_info);
-            if query_idx == oldest_query_in_queue_success_idx + 1 {
-                for (curr_handle_idx, run_info) in results
-                    .iter()
-                    .enumerate()
-                    .skip(oldest_query_in_queue_success_idx + 1)
-                {
+
+            if query_idx
+                == oldest_query_in_queue_success_idx
+                    .unwrap_or(usize::MAX)
+                    .wrapping_add(1)
+            {
+                for (curr_handle_idx, run_info) in results.iter().enumerate().skip(
+                    oldest_query_in_queue_success_idx
+                        .map(|offset| offset + 1)
+                        .unwrap_or_default(),
+                ) {
                     if let Some(run_info) = run_info {
-                        oldest_query_in_queue_success_idx = curr_handle_idx;
+                        oldest_query_in_queue_success_idx = Some(curr_handle_idx);
 
                         if run_info.is_mine(user_id) {
                             match run_info.result {
