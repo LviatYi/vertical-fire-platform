@@ -1,11 +1,11 @@
 use crate::app_state::AppState;
 use crate::constant::log::*;
-use crate::pretty_log::{ThemeColor, colored_println};
-use crate::vfp_error::VfpError;
+use crate::pretty_log::{colored_println, ThemeColor};
+use crate::vfp_error::VfpFrontError;
 use crate::{default_config, update};
 use formatx::formatx;
-use self_update::Status;
 use self_update::update::UpdateStatus;
+use self_update::Status;
 use semver::Version;
 
 /// # self update
@@ -51,10 +51,10 @@ pub fn self_update(
 /// # fetch latest version
 ///
 /// Fetch the latest version from GitHub and compare it with the current version.
-pub fn fetch_latest_version() -> Result<UpdateStatus, VfpError> {
+pub fn fetch_latest_version() -> Result<UpdateStatus, VfpFrontError> {
     let curr_version_str = env!("CARGO_PKG_VERSION");
     let curr_version = Version::parse(curr_version_str)
-        .map_err(|_| VfpError::VersionParseFailed(curr_version_str.to_string()))?;
+        .map_err(|_| VfpFrontError::VersionParseFailed(curr_version_str.to_string()))?;
 
     let releases = self_update::backends::github::ReleaseList::configure()
         .repo_owner("LviatYi")
@@ -65,7 +65,7 @@ pub fn fetch_latest_version() -> Result<UpdateStatus, VfpError> {
 
     if let Some(remote_latest) = releases.first() {
         let remote_version = Version::parse(&remote_latest.version)
-            .map_err(|_| VfpError::VersionParseFailed(remote_latest.version.clone()))?;
+            .map_err(|_| VfpFrontError::VersionParseFailed(remote_latest.version.clone()))?;
 
         if remote_version.ge(&curr_version) {
             return Ok(UpdateStatus::Updated(releases.first().unwrap().to_owned()));

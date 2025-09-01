@@ -2,7 +2,7 @@ use crate::jenkins::jenkins_endpoint::job_config::JobConfig;
 use crate::jenkins::jenkins_model::job_config::{FlowDefinition, ParameterDefinition};
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::VfpJenkinsClient;
-use crate::vfp_error::VfpError;
+use crate::vfp_error::VfpFrontError;
 use jenkins_sdk::{JenkinsError, TriggerBuild};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -210,7 +210,7 @@ impl From<FlowDefinition> for VfpJobBuildParam {
 pub async fn query_job_config(
     client: &VfpJenkinsClient,
     job_name: &str,
-) -> Result<FlowDefinition, VfpError> {
+) -> Result<FlowDefinition, VfpFrontError> {
     let content = jenkins_sdk::AsyncRawQuery::raw_query(
         &JobConfig {
             job_name: job_name.to_string(),
@@ -221,7 +221,7 @@ pub async fn query_job_config(
 
     match quick_xml::de::from_str::<FlowDefinition>(&content) {
         Ok(result) => Ok(result),
-        Err(e) => Err(VfpError::JobConfigParseError {
+        Err(e) => Err(VfpFrontError::JobConfigParseError {
             e: e.to_string(),
             content,
         }),

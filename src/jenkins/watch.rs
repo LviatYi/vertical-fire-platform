@@ -7,7 +7,7 @@ use crate::jenkins::query::{query_run_info, query_run_log, VfpJenkinsClient};
 use crate::jenkins::util::get_jenkins_workflow_run_url;
 use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
 use crate::service::jenkins_rpc_service::JenkinsRpcService;
-use crate::vfp_error::VfpError;
+use crate::vfp_error::VfpFrontError;
 use chrono::Local;
 use formatx::formatx;
 use jenkins_sdk::JenkinsError;
@@ -50,7 +50,7 @@ pub async fn watch(
     client: VfpJenkinsClient,
     job_name: &str,
     ci: Option<u32>,
-) -> Result<u32, VfpError> {
+) -> Result<u32, VfpFrontError> {
     let build_number;
     let db = app_state.get_db();
     let arc_client = Arc::new(client);
@@ -61,7 +61,7 @@ pub async fn watch(
         let username = db
             .get_jenkins_username()
             .as_ref()
-            .ok_or(VfpError::MissingParam(PARAM_USERNAME.to_string()))?;
+            .ok_or(VfpFrontError::MissingParam(PARAM_USERNAME.to_string()))?;
 
         let latest_info = JenkinsRpcService::query_user_latest_info(
             arc_client.clone(),
@@ -75,7 +75,7 @@ pub async fn watch(
         } else if let Some(failed) = latest_info.failed {
             let log = query_run_log(arc_client.as_ref(), job_name, failed.number).await?;
 
-            return Err(VfpError::RunTaskBuildFailed {
+            return Err(VfpFrontError::RunTaskBuildFailed {
                 build_number: failed.number,
                 job_name: job_name.to_string(),
                 run_url: get_jenkins_workflow_run_url(
@@ -100,7 +100,7 @@ pub async fn watch(
             if let Some(ci) = ci {
                 build_number = ci;
             } else {
-                return Err(VfpError::Custom(ERR_NO_VALID_RUN_TASK.to_string()));
+                return Err(VfpFrontError::Custom(ERR_NO_VALID_RUN_TASK.to_string()));
             }
         }
     }
@@ -159,7 +159,7 @@ pub async fn watch(
             }
             ReasonedRunStatus::Failure(log) => {
                 let db = app_state.get_db();
-                return Err(VfpError::RunTaskBuildFailed {
+                return Err(VfpFrontError::RunTaskBuildFailed {
                     build_number,
                     job_name: job_name.to_string(),
                     run_url: get_jenkins_workflow_run_url(

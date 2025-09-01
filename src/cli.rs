@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
 use crate::constant::log::*;
+use crate::db::db_data_proxy::DbDataProxy;
 use crate::extract::extract_operation_info::{
     ExtractOperationInfo, OperationStatus, OperationStepType,
 };
@@ -10,16 +11,17 @@ use crate::interact::{
     input_target_path, parse_without_input_with_default,
 };
 use crate::jenkins::query::{
-    try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
-    VfpJenkinsClient,
+    VfpJenkinsClient, try_get_jenkins_async_client_by_api_token,
+    try_get_jenkins_async_client_by_pwd,
 };
 use crate::jenkins::watch::watch;
-use crate::pretty_log::{colored_println, toast, ThemeColor};
-use crate::vfp_error::VfpError;
+use crate::pretty_log::{ThemeColor, colored_println, toast};
+use crate::vfp_error::VfpFrontError;
 use crate::{default_config, pretty_log};
 use crossterm::execute;
 use crossterm::style::Color;
 use formatx::formatx;
+use inquire::InquireError;
 
 /// # cli do extract
 ///
@@ -32,11 +34,10 @@ pub async fn cli_do_extract(
     ci: Option<u32>,
     extract_params: ExtractParams,
     ignore_count_input: bool,
-) -> Result<(), VfpError> {
+) -> Result<(), VfpFrontError> {
     let job_name = {
         let db = app_state.get_mut_db();
-        let result = input_job_name(job_name_param, db)
-            .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
+        let result = input_job_name_with_err_handling(job_name_param, db)?;
         db.insert_job_name(result.as_str());
         result
     };
@@ -59,7 +60,7 @@ pub async fn cli_do_extract(
     );
     let used_inner_version = input_ci_for_extract(app_state, job_name.as_str(), ci)
         .await
-        .ok_or(VfpError::CIInvalid)?;
+        .ok_or(VfpFrontError::CIInvalid)?;
 
     let db = app_state.get_db();
     let used_player_count = input_directly_with_default(
@@ -78,7 +79,7 @@ pub async fn cli_do_extract(
         HINT_EXTRACT_TO,
         Some(ERR_INVALID_PATH),
     )
-    .map_err(|_| VfpError::MissingParam(PARAM_DEST.to_string()))?;
+    .map_err(|_| VfpFrontError::MissingParam(PARAM_DEST.to_string()))?;
 
     {
         let db = app_state.get_mut_db();
@@ -264,7 +265,7 @@ pub async fn cli_do_login(
     username: Option<impl AsRef<str>>,
     api_token: Option<impl AsRef<str>>,
     pwd: Option<impl AsRef<str>>,
-) -> Result<VfpJenkinsClient, VfpError> {
+) -> Result<VfpJenkinsClient, VfpFrontError> {
     let db = app_state.get_mut_db();
     db.set_jenkins_url(Some(input_directly_with_default(
         url.map(|v| v.as_ref().to_string()),
@@ -352,7 +353,7 @@ pub async fn cli_do_login(
                 crate::LoginMethod::Pwd => db.get_jenkins_pwd().clone().unwrap(),
             };
 
-            Err(VfpError::JenkinsLoginError {
+            Err(VfpFrontError::JenkinsLoginError {
                 method: login_method,
                 url: db.get_jenkins_url().clone().unwrap(),
                 username: db.get_jenkins_username().clone().unwrap(),
@@ -372,18 +373,15 @@ pub async fn cli_do_watch(
     app_state: &mut AppState,
     job_name: Option<String>,
     ci: Option<u32>,
-) -> Result<(Option<String>, Option<u32>), VfpError> {
+) -> Result<(Option<String>, Option<u32>), VfpFrontError> {
     let db = app_state.get_db();
     let client = db
         .try_get_jenkins_async_client(&mut app_state.get_stdout(), true)
         .await
-        .map_err(|_| VfpError::JenkinsClientInvalid)?;
+        .map_err(|_| VfpFrontError::JenkinsClientInvalid)?;
 
     let db = app_state.get_mut_db();
-    let used_job_name = Some(
-        input_job_name(job_name, db)
-            .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?,
-    );
+    let used_job_name = Some(input_job_name_with_err_handling(job_name, db)?);
 
     let result = watch(app_state, client, &used_job_name.clone().unwrap(), ci).await;
 
@@ -409,7 +407,10 @@ pub async fn cli_do_watch(
     Ok((used_job_name, success_build_number))
 }
 
-pub async fn cli_try_first_login(app_state: &mut AppState, silence: bool) -> Result<(), VfpError> {
+pub async fn cli_try_first_login(
+    app_state: &mut AppState,
+    silence: bool,
+) -> Result<(), VfpFrontError> {
     let db = app_state.get_db();
     if db.user_never_login() {
         match cli_do_login(
@@ -437,4 +438,14 @@ pub async fn cli_try_first_login(app_state: &mut AppState, silence: bool) -> Res
     } else {
         Ok(())
     }
+}
+
+pub fn input_job_name_with_err_handling(
+    param_val: Option<String>,
+    db: &DbDataProxy,
+) -> Result<String, VfpFrontError> {
+    input_job_name(param_val, db).map_err(|e| match e {
+        InquireError::OperationCanceled | InquireError::OperationInterrupted => e.into(),
+        _ => VfpFrontError::MissingParam(PARAM_JOB_NAME.to_string()),
+    })
 }

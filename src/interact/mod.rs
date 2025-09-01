@@ -806,7 +806,7 @@ pub fn input_job_name(param_val: Option<String>, db: &DbDataProxy) -> InquireRes
     }
 }
 
-pub fn input_cl(param_val: Option<u32>, db_val: &Option<u32>) -> Option<u32> {
+pub fn input_cl(param_val: Option<u32>, db_val: &Option<u32>) -> InquireResult<Option<u32>> {
     let options: Vec<SelectionCustomizableOptionVal<u32>> = if let Some(last_used) = *db_val {
         vec![
             SelectionCustomizableOptionVal::None,
@@ -830,9 +830,9 @@ pub fn input_cl(param_val: Option<u32>, db_val: &Option<u32>) -> Option<u32> {
         options,
         HINT_SELECT_CL,
         None::<u32>,
-    )
-    .and_then(|v| match v {
-        SelectionCustomizableOptionVal::Custom => {
+    ) {
+        Ok(SelectionCustomizableOptionVal::DataContain(d)) => Ok(Some(d.get_data())),
+        Ok(SelectionCustomizableOptionVal::Custom) => {
             let input = Text::from(HINT_INPUT_CUSTOM)
                 .with_validator(|input: &str| {
                     if input.parse::<u32>().is_ok() {
@@ -845,18 +845,17 @@ pub fn input_cl(param_val: Option<u32>, db_val: &Option<u32>) -> Option<u32> {
                 })
                 .prompt();
 
-            input.map(|v| v.parse::<u32>().unwrap().into())
+            input.map(|v| v.parse::<u32>().ok())
         }
-        other => Ok(other),
-    }) {
-        Ok(SelectionCustomizableOptionVal::DataContain(d)) => Some(d.get_data()),
-        Ok(SelectionCustomizableOptionVal::Custom) => None,
-        Ok(SelectionCustomizableOptionVal::None) => None,
-        Err(_) => None,
+        Ok(SelectionCustomizableOptionVal::None) => Ok(None),
+        Err(e) => Err(e),
     }
 }
 
-pub fn input_sl(param_val: Option<Shelves>, db_val: &Option<Shelves>) -> Option<Shelves> {
+pub fn input_sl(
+    param_val: Option<Shelves>,
+    db_val: &Option<Shelves>,
+) -> InquireResult<Option<Shelves>> {
     let options: Vec<SelectionCustomizableOptionVal<Shelves>> =
         if let Some(last_used) = db_val.clone() {
             vec![
@@ -881,9 +880,9 @@ pub fn input_sl(param_val: Option<Shelves>, db_val: &Option<Shelves>) -> Option<
         options,
         HINT_SELECT_SL,
         None::<Shelves>,
-    )
-    .and_then(|v| match v {
-        SelectionCustomizableOptionVal::Custom => {
+    ) {
+        Ok(SelectionCustomizableOptionVal::DataContain(d)) => Ok(Some(d.get_data())),
+        Ok(SelectionCustomizableOptionVal::Custom) => {
             let input = Text::from(HINT_INPUT_CUSTOM)
                 .with_validator(|input: &str| {
                     if input.parse::<Shelves>().is_ok() {
@@ -896,13 +895,9 @@ pub fn input_sl(param_val: Option<Shelves>, db_val: &Option<Shelves>) -> Option<
                 })
                 .prompt();
 
-            input.map(|v| v.parse::<Shelves>().unwrap().into())
+            input.map(|v| v.parse::<Shelves>().ok())
         }
-        other => Ok(other),
-    }) {
-        Ok(SelectionCustomizableOptionVal::DataContain(d)) => Some(d.get_data()),
-        Ok(SelectionCustomizableOptionVal::Custom) => None,
-        Ok(SelectionCustomizableOptionVal::None) => None,
-        Err(_) => None,
+        Ok(SelectionCustomizableOptionVal::None) => Ok(None),
+        Err(e) => Err(e),
     }
 }

@@ -5,7 +5,7 @@ use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
 use crate::jenkins::query::{
     query_builds_in_job, query_run_info, UserLatestWorkflowInfo, VfpJenkinsClient,
 };
-use crate::vfp_error::VfpError;
+use crate::vfp_error::VfpFrontError;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::task::JoinSet;
@@ -17,7 +17,7 @@ impl JenkinsRpcService {
         client: Arc<VfpJenkinsClient>,
         job_name: &str,
         user_id: &str,
-    ) -> Result<UserLatestWorkflowInfo, VfpError> {
+    ) -> Result<UserLatestWorkflowInfo, VfpFrontError> {
         let builds = query_builds_in_job(
             client.as_ref(),
             job_name,
@@ -35,7 +35,7 @@ impl JenkinsRpcService {
 
         fn fill_task_set_window(
             client: &Arc<VfpJenkinsClient>,
-            tasks_set: &mut JoinSet<(usize, Result<WorkflowRun, VfpError>)>,
+            tasks_set: &mut JoinSet<(usize, Result<WorkflowRun, VfpFrontError>)>,
             next_query_idx: &mut usize,
             builds: &[WorkflowBuild],
             job_name: &str,
@@ -55,8 +55,8 @@ impl JenkinsRpcService {
                     )
                     .await
                     {
-                        Ok(resp) => (joined_idx, resp.map_err(VfpError::from)),
-                        Err(_) => (joined_idx, Err(VfpError::JenkinsTimeout)),
+                        Ok(resp) => (joined_idx, resp.map_err(VfpFrontError::from)),
+                        Err(_) => (joined_idx, Err(VfpFrontError::JenkinsTimeout)),
                     };
                 });
             }

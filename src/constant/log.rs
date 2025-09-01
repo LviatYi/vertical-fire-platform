@@ -1,3 +1,4 @@
+pub const ERR_USER_FORCE_QUIT: &str = "User force quit.";
 pub const ERR_INPUT_INVALID: &str = "Invalid input.";
 pub const ERR_INPUT_INVALID_SHOULD_NOT_BE_EMPTY: &str = "Invalid input. Should not be empty.";
 pub const ERR_CL_INPUT_INVALID: &str = "Need a valid ci. Maybe there is no any package in the repo.";

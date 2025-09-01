@@ -10,7 +10,8 @@ use std::io::Write;
 use std::ops::Add;
 
 #[derive(Debug)]
-pub enum VfpError {
+pub enum VfpFrontError {
+    Quit,
     Custom(String),
     InquireError(InquireError),
     JenkinsLoginError {
@@ -40,30 +41,35 @@ pub enum VfpError {
     OpenDbFailed(String),
 }
 
-impl From<InquireError> for VfpError {
+impl From<InquireError> for VfpFrontError {
     fn from(value: InquireError) -> Self {
-        VfpError::InquireError(value)
+        match value {
+            InquireError::OperationCanceled => VfpFrontError::Quit,
+            InquireError::OperationInterrupted => VfpFrontError::Quit,
+            _ => VfpFrontError::InquireError(value),
+        }
     }
 }
 
-impl From<JenkinsError> for VfpError {
+impl From<JenkinsError> for VfpFrontError {
     fn from(_: JenkinsError) -> Self {
-        VfpError::JenkinsClientInvalid
+        VfpFrontError::JenkinsClientInvalid
     }
 }
 
-impl From<self_update::errors::Error> for VfpError {
+impl From<self_update::errors::Error> for VfpFrontError {
     fn from(value: self_update::errors::Error) -> Self {
-        VfpError::SelfUpdateError(value)
+        VfpFrontError::SelfUpdateError(value)
     }
 }
 
-impl Display for VfpError {
+impl Display for VfpFrontError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
-            VfpError::Custom(msg) => msg.clone(),
-            VfpError::InquireError(err) => err.to_string(),
-            VfpError::JenkinsLoginError {
+            VfpFrontError::Quit => ERR_USER_FORCE_QUIT.to_string(),
+            VfpFrontError::Custom(msg) => msg.clone(),
+            VfpFrontError::InquireError(err) => err.to_string(),
+            VfpFrontError::JenkinsLoginError {
                 method,
                 url,
                 username,
@@ -100,32 +106,39 @@ impl Display for VfpError {
                     .to_string()
                     .add(msg.as_str())
             }
-            VfpError::JenkinsClientInvalid => ERR_JENKINS_CLIENT_INVALID.to_string(),
-            VfpError::JenkinsTimeout => ERR_JENKINS_TIMEOUT.to_string(),
-            VfpError::MissingParam(param) => formatx!(ERR_NEED_PARAM, param).unwrap_or_default(),
-            VfpError::CIInvalid => ERR_CL_INPUT_INVALID.to_string(),
-            VfpError::RunTaskBuildFailed {
+            VfpFrontError::JenkinsClientInvalid => ERR_JENKINS_CLIENT_INVALID.to_string(),
+            VfpFrontError::JenkinsTimeout => ERR_JENKINS_TIMEOUT.to_string(),
+            VfpFrontError::MissingParam(param) => {
+                formatx!(ERR_NEED_PARAM, param).unwrap_or_default()
+            }
+            VfpFrontError::CIInvalid => ERR_CL_INPUT_INVALID.to_string(),
+            VfpFrontError::RunTaskBuildFailed {
                 build_number,
                 job_name,
                 ..
             } => formatx!(WATCHING_RUN_TASK_FAILURE, build_number, job_name).unwrap_or_default(),
-            VfpError::VersionParseFailed(ver) => {
+            VfpFrontError::VersionParseFailed(ver) => {
                 formatx!(ERR_VERSION_PARSE_FAILED, ver).unwrap_or_default()
             }
-            VfpError::SelfUpdateError(e) => e.to_string(),
-            VfpError::JobConfigParseError { e, .. } => {
+            VfpFrontError::SelfUpdateError(e) => e.to_string(),
+            VfpFrontError::JobConfigParseError { e, .. } => {
                 formatx!(ERR_QUERY_JOB_CONFIG, e).unwrap_or_default()
             }
-            VfpError::OpenDbFailed(path) => formatx!(ERR_OPEN_FILE_FAILED,path).unwrap_or_default(),
+            VfpFrontError::OpenDbFailed(path) => {
+                formatx!(ERR_OPEN_FILE_FAILED, path).unwrap_or_default()
+            }
         };
         write!(f, "{}", str)
     }
 }
 
-impl VfpError {
+impl VfpFrontError {
     pub fn colored_println<W: Write>(&self, stdout: &mut W) {
         match self {
-            VfpError::JobConfigParseError { content, .. } => {
+            VfpFrontError::Quit => {
+                colored_println(stdout, ThemeColor::Second, self.to_string().as_str());
+            }
+            VfpFrontError::JobConfigParseError { content, .. } => {
                 colored_println(stdout, ThemeColor::Error, self.to_string().as_str());
                 colored_println(
                     stdout,
@@ -135,7 +148,7 @@ impl VfpError {
                         .as_str(),
                 );
             }
-            VfpError::RunTaskBuildFailed { log, run_url, .. } => {
+            VfpFrontError::RunTaskBuildFailed { log, run_url, .. } => {
                 colored_println(stdout, ThemeColor::Error, self.to_string().as_str());
                 colored_println(stdout, ThemeColor::Main, log.as_str());
                 colored_println(

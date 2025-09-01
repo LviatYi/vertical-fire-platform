@@ -8,24 +8,24 @@ mod interact;
 mod jenkins;
 mod pretty_log;
 mod run;
+mod service;
 mod update;
 mod vfp_error;
-mod service;
 
 use crate::app_state::AppState;
-use crate::cli::{cli_do_login, cli_try_first_login};
+use crate::cli::{cli_do_login, cli_try_first_login, input_job_name_with_err_handling};
 use crate::constant::log::*;
 use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
-use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
+use crate::jenkins::build::{VfpJobBuildParam, query_job_config, request_build};
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::jenkins_url_factor::JenkinsUrlFactor;
-use crate::jenkins::query::{query_builds_in_job, query_run_info, VfpJenkinsClient};
+use crate::jenkins::query::{VfpJenkinsClient, query_builds_in_job, query_run_info};
 use crate::jenkins::util::get_jenkins_workflow_run_url;
-use crate::pretty_log::{colored_println, ThemeColor};
-use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
+use crate::pretty_log::{ThemeColor, colored_println};
+use crate::run::{RunStatus, kill_by_pid, run_instance, set_server};
 use crate::update::{do_self_update_with_log, fetch_and_try_auto_update};
-use crate::vfp_error::VfpError;
+use crate::vfp_error::VfpFrontError;
 use clap::{Parser, Subcommand};
 use formatx::formatx;
 use rand::Rng;
@@ -270,7 +270,7 @@ async fn main() {
     }
 }
 
-async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), VfpError> {
+async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), VfpFrontError> {
     match command {
         Commands::Extract {
             mut job_name,
@@ -303,8 +303,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             // fp run
             let db = app_state.get_db();
 
-            let job_name = input_job_name(job_name, db)
-                .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
+            let job_name = input_job_name_with_err_handling(job_name, db)?;
 
             let dest = input_target_path(
                 dest,
@@ -314,7 +313,9 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
                 Some(ERR_INVALID_PATH),
             )
             .map_err(|_| {
-                VfpError::MissingParam(formatx!(ERR_NEED_PARAM, PARAM_DEST).unwrap_or_default())
+                VfpFrontError::MissingParam(
+                    formatx!(ERR_NEED_PARAM, PARAM_DEST).unwrap_or_default(),
+                )
             })?;
 
             let single = index.is_some();
@@ -418,7 +419,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
         } => {
             // fp build
             if params.len() % 2 != 0 {
-                return Err(VfpError::Custom(ERR_NEED_EVEN_PARAM.to_string()));
+                return Err(VfpFrontError::Custom(ERR_NEED_EVEN_PARAM.to_string()));
             }
 
             cli_try_first_login(app_state, false).await?;
@@ -427,10 +428,10 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             let mut client = db
                 .try_get_jenkins_async_client(&mut app_state.get_stdout(), true)
                 .await
-                .map_err(|_| VfpError::JenkinsClientInvalid)?;
+                .map_err(|_| VfpFrontError::JenkinsClientInvalid)?;
             if let VfpJenkinsClient::PwdClient(ref mut client) = client {
                 client.attach_crumb().await.map_err(|e| {
-                    VfpError::Custom(
+                    VfpFrontError::Custom(
                         formatx!(ERR_JENKINS_CLIENT_GET_CRUMB_FAILED, e.to_string())
                             .unwrap_or_default(),
                     )
@@ -438,8 +439,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             }
 
             let db = app_state.get_mut_db();
-            let job_name = input_job_name(job_name, db)
-                .map_err(|_| VfpError::MissingParam(PARAM_JOB_NAME.to_string()))?;
+            let job_name = input_job_name_with_err_handling(job_name, db)?;
 
             db.insert_job_name(job_name.as_str());
 
@@ -518,7 +518,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             build_params.set_change_list(input_cl(
                 cl,
                 &db_latest_build_param.and_then(|build_param| build_param.get_change_list()),
-            ));
+            )?);
 
             let sl = sl
                 .filter(|str| !str.is_empty())
@@ -526,7 +526,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             build_params.set_shelve_changes(input_sl(
                 sl,
                 &db_latest_build_param.and_then(|build_param| build_param.get_shelve_changes()),
-            ));
+            )?);
 
             param_pairs.into_iter().for_each(|(k, v)| {
                 build_params.params.insert(k, v);
@@ -551,7 +551,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             request_build(&client, &job_name, &build_params)
                 .await
                 .map_err(|e| {
-                    VfpError::Custom(
+                    VfpFrontError::Custom(
                         formatx!(ERR_REQUEST_BUILD_FAILED, e.to_string()).unwrap_or_default(),
                     )
                 })?;
@@ -630,28 +630,41 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             if let (true, Some(build_number)) = (need_query_used_cl, success_build_number) {
                 let mut trial_count = 2;
                 loop {
-                    if let Ok(workflow_run) = query_run_info(&client, &job_name, build_number).await
-                    {
-                        if let Some(changelist) = workflow_run.get_change_list_in_build_meta_data()
-                        {
-                            let db = app_state.get_mut_db();
-                            let params = db.get_mut_jenkins_build_param(job_name.as_str()).unwrap();
-                            params.set_change_list(Some(changelist));
-                            colored_println(
-                                &mut app_state.get_stdout(),
-                                ThemeColor::Second,
-                                &formatx!(AUTO_FETCH_LATEST_USED_CL, changelist)
-                                    .unwrap_or_default(),
-                            );
-                            app_state.commit(false);
-                            break;
-                        } else if trial_count == 0 {
-                            colored_println(
-                                &mut app_state.get_stdout(),
-                                ThemeColor::Warn,
-                                AUTO_FETCH_LATEST_USED_CL_FAILED,
-                            );
-                            break;
+                    match query_run_info(&client, &job_name, build_number).await {
+                        Ok(workflow_run) => {
+                            if let Some(changelist) =
+                                workflow_run.get_change_list_in_build_meta_data()
+                            {
+                                let db = app_state.get_mut_db();
+                                let params =
+                                    db.get_mut_jenkins_build_param(job_name.as_str()).unwrap();
+                                params.set_change_list(Some(changelist));
+                                colored_println(
+                                    &mut app_state.get_stdout(),
+                                    ThemeColor::Second,
+                                    &formatx!(AUTO_FETCH_LATEST_USED_CL, changelist)
+                                        .unwrap_or_default(),
+                                );
+                                app_state.commit(false);
+                                break;
+                            } else if trial_count == 0 {
+                                colored_println(
+                                    &mut app_state.get_stdout(),
+                                    ThemeColor::Warn,
+                                    AUTO_FETCH_LATEST_USED_CL_FAILED,
+                                );
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            #[cfg(debug_assertions)]
+                            {
+                                colored_println(
+                                    &mut app_state.get_stdout(),
+                                    ThemeColor::Error,
+                                    &format!("Query build info failed because: {}", e),
+                                );
+                            }
                         }
                     }
 
@@ -662,7 +675,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
                     );
 
                     trial_count -= 1;
-                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    tokio::time::sleep(Duration::from_secs_f32(0.5)).await;
                 }
             }
 
@@ -921,6 +934,19 @@ mod tests {
         let mut out_file = fs::File::create(out_path)?;
         io::copy(&mut reader, &mut out_file)?;
         Ok(())
+    }
+
+    #[test]
+    fn llab() {
+        fn filter_even(x: &&i32) -> bool {
+            *x % 2 == 0
+        }
+
+        let iters = [1, 2, 3, 4, 5].iter().filter(filter_even);
+
+        let vec = iters.collect::<Vec<&i32>>();
+
+        println!("{:?}", vec);
     }
 
     #[test]
