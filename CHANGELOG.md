@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### 🐛 Fixed
+
+- 将 self update 置入 block 运行时。
+
+### ✅ Test
+
+- 移除或忽略了一些不必要的测试。
+
 ## [1.6.8] - 2025-09-04
 
 ### ⚙️ Changed
