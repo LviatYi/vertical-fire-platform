@@ -264,7 +264,11 @@ async fn main() {
             err.colored_println(&mut app_state.get_stdout());
         }
 
-        fetch_and_try_auto_update(&mut app_state);
+        let update_handle = tokio::task::spawn_blocking(move || {
+            fetch_and_try_auto_update(&mut app_state);
+        });
+
+        let _ = update_handle.await;
 
         show_finished(Some(command_name.as_str()));
     }
