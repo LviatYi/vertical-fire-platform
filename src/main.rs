@@ -915,6 +915,7 @@ mod tests {
     use std::{fs, io};
 
     #[test]
+    #[ignore]
     fn lab() -> io::Result<()> {
         let mut reader = fs::File::open("C:\\Workspace\\self-tools\\bin\\temp\\fp.exe")?;
         let into_dir = PathBuf::from("C:\\Workspace\\self-tools\\bin\\temp");
@@ -937,6 +938,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn llab() {
         fn filter_even(x: &&i32) -> bool {
             *x % 2 == 0

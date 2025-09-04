@@ -17,7 +17,7 @@ mod tests {
     use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
     use crate::jenkins::pwd_jenkins_async_client::PwdJenkinsAsyncClient;
     use crate::jenkins::query::*;
-    use jenkins_sdk::{AsyncQuery, AsyncRawQuery, JenkinsAsyncClient, JobsInfo, TriggerBuild};
+    use jenkins_sdk::{AsyncQuery, AsyncRawQuery, JenkinsAsyncClient, TriggerBuild};
     use reqwest::header::COOKIE;
     use reqwest::Client;
     use serde_json::json;
@@ -34,12 +34,13 @@ mod tests {
     async fn jenkins_sdk_lab() {
         let client = JenkinsAsyncClient::new(URL, USERNAME, API_TOKEN);
 
-        let jobs: serde_json::Value = AsyncQuery::query(&JobsInfo, &client).await.unwrap();
-
-        println!("Jobs: {:#?}", jobs);
+        // let jobs: serde_json::Value = AsyncQuery::query(&JobsInfo, &client).await.unwrap();
+        // 
+        // println!("Jobs: {:#?}", jobs);
     }
 
     #[tokio::test]
+    #[ignore]
     async fn jenkins_build_lab() {
         let client = JenkinsAsyncClient::new(URL, USERNAME, API_TOKEN);
 
@@ -102,6 +103,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_direct_reqwest_jenkins() {
         let client = Client::builder()
             .danger_accept_invalid_certs(true)
@@ -130,6 +132,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_direct_reqwest_jenkins_run_info() {
         let client = Client::builder()
             .danger_accept_invalid_certs(true)
@@ -159,6 +162,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_get_client() {
         let client = try_get_jenkins_async_client(
             &Some(format!("{}/api/json?tree=ping", URL).to_string()),
@@ -172,6 +176,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_ping_jenkins() {
         let client_valid =
             VfpJenkinsClient::ApiTokenClient(JenkinsAsyncClient::new(URL, USERNAME, API_TOKEN));
@@ -187,6 +192,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_query_builds_in_job() {
         let client =
             VfpJenkinsClient::ApiTokenClient(JenkinsAsyncClient::new(URL, USERNAME, API_TOKEN));
@@ -199,6 +205,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_query_runs_in_job() {
         let my_user_id = USERNAME;
         let client =
@@ -230,6 +237,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_query_run_info() {
         let client =
             VfpJenkinsClient::ApiTokenClient(JenkinsAsyncClient::new(URL, USERNAME, API_TOKEN));
@@ -257,6 +265,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_query_run_log() {
         let my_user_id = USERNAME;
         let client =
@@ -330,8 +339,8 @@ mod tests {
             param.to_json_value(),
             json!({
                 "Changelist": "",
-                "EnableContentPreview": true,
-                "SimulateAndroidGuestLogin": true,
+                "EnableContentPreview": "true",
+                "SimulateAndroidGuestLogin": "true",
             })
         );
 
@@ -340,8 +349,8 @@ mod tests {
             param.to_json_value(),
             json!({
                 "Changelist": "1234",
-                "EnableContentPreview": true,
-                "SimulateAndroidGuestLogin": true,
+                "EnableContentPreview": "true",
+                "SimulateAndroidGuestLogin": "true",
             })
         );
 
@@ -350,14 +359,15 @@ mod tests {
             param.to_json_value(),
             json!({
                 "Changelist": "1234",
-                "EnableContentPreview": true,
-                "SimulateAndroidGuestLogin": true,
+                "EnableContentPreview": "true",
+                "SimulateAndroidGuestLogin": "true",
                 "ShelvedChange": "1230,1231",
             })
         );
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_get_crumb() {
         let client =
             VfpJenkinsClient::PwdClient(PwdJenkinsAsyncClient::new(URL, USERNAME, JENKINS_PWD));

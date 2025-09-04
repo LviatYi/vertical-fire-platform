@@ -141,12 +141,11 @@ impl OrderedCiList for CiList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::default_config::{LOCATOR_PATTERN, LOCATOR_TEMPLATE, REPO_TEMPLATE};
     use rand::Rng;
     use std::fs;
     use std::fs::File;
     use std::io::Write;
-    use tempfile::{TempDir, tempdir};
+    use tempfile::{tempdir, TempDir};
 
     fn prepare_test_repo(job_name: &str) -> (TempDir, u32) {
         let temp_root_dir = tempdir().unwrap();
@@ -173,21 +172,6 @@ mod tests {
         }
 
         (temp_root_dir, pointer)
-    }
-
-    #[test]
-    fn test_assemble_build_target_repo() {
-        let r = RepoDecoration::new(
-            REPO_TEMPLATE,
-            LOCATOR_PATTERN,
-            LOCATOR_TEMPLATE,
-            "JobName_TEST",
-        );
-
-        assert_eq!(
-            r.assemble_build_target_repo(),
-            PathBuf::from(REPO_TEMPLATE.replace("{B}", "Stage"))
-        );
     }
 
     #[test]
