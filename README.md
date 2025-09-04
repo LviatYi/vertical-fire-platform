@@ -19,7 +19,6 @@ by LviatYi
 
 更新计划 | Road Map:
 
-- [ ] 疑似因 token 过期而无法查询 build 完成后 run task 的 P4CL 参数。
 - [ ] 添加 `fp info`，以允许查询 Jenkins Build Task 的状态。
 - [ ] 某些环境中，可能不存在 wmic 命令，因而无法查询特定可执行文件的运行状态。因此需要额外的替代方案。
 - [ ] **持续** 优化代码结构。
