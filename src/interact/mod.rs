@@ -452,9 +452,9 @@ pub async fn input_ci_for_extract(
     app_state: &mut AppState,
     job_name: &str,
     param_val: Option<u32>,
-) -> Option<u32> {
-    if param_val.is_some() {
-        return param_val;
+) -> InquireResult<u32> {
+    if let Some(param_val) = param_val {
+        return Ok(param_val);
     }
 
     let db = app_state.get_mut_db();
@@ -610,12 +610,18 @@ pub async fn input_ci_for_extract(
 
     match selection {
         Ok(choice) => {
-            if choice.index == latest_mine_opt_index && latest_mine_ci.is_some() {
-                latest_mine_ci
-            } else if choice.index == latest_opt_index {
-                latest
-            } else if choice.index == last_used_index {
-                last_used
+            if choice.index == latest_mine_opt_index
+                && let Some(latest_mine_ci) = latest_mine_ci
+            {
+                Ok(latest_mine_ci)
+            } else if choice.index == latest_opt_index
+                && let Some(latest) = latest
+            {
+                Ok(latest)
+            } else if choice.index == last_used_index
+                && let Some(last_used) = last_used
+            {
+                Ok(last_used)
             } else {
                 let exist_ci_list_for_inquire =
                     db.get_repo_decoration().get_sorted_ci_list().clone();
@@ -638,10 +644,10 @@ pub async fn input_ci_for_extract(
                     })
                     .prompt();
 
-                input.ok().and_then(|str| str.parse::<u32>().ok())
+                input.map(|str| str.parse::<u32>().unwrap())
             }
         }
-        Err(_) => None,
+        Err(e) => Err(e),
     }
 }
 
@@ -652,9 +658,9 @@ pub async fn input_ci_for_watch(
     app_state: &mut AppState,
     job_name: &str,
     param_val: Option<u32>,
-) -> Option<u32> {
-    if param_val.is_some() {
-        return param_val;
+) -> InquireResult<u32> {
+    if let Some(param_val) = param_val {
+        return Ok(param_val);
     }
 
     let db = app_state.get_mut_db();
@@ -738,12 +744,18 @@ pub async fn input_ci_for_watch(
 
     match selection {
         Ok(choice) => {
-            if choice.index == latest_global_in_progress_index {
-                latest_global_in_progress
-            } else if choice.index == latest_global_success_index {
-                latest_global_success
-            } else if choice.index == last_used_index {
-                last_used
+            if choice.index == latest_global_in_progress_index
+                && let Some(latest_global_in_progress) = latest_global_in_progress
+            {
+                Ok(latest_global_in_progress)
+            } else if choice.index == latest_global_success_index
+                && let Some(latest_global_success) = latest_global_success
+            {
+                Ok(latest_global_success)
+            } else if choice.index == last_used_index
+                && let Some(last_used) = last_used
+            {
+                Ok(last_used)
             } else {
                 let input = Text::from(HINT_INPUT_CUSTOM)
                     .with_validator(move |v: &str| {
@@ -757,10 +769,10 @@ pub async fn input_ci_for_watch(
                     })
                     .prompt();
 
-                input.ok().and_then(|str| str.parse::<u32>().ok())
+                input.map(|str| str.parse::<u32>().unwrap())
             }
         }
-        Err(_) => None,
+        Err(e) => Err(e),
     }
 }
 

@@ -1,7 +1,6 @@
 pub const ERR_USER_FORCE_QUIT: &str = "User force quit.";
 pub const ERR_INPUT_INVALID: &str = "Invalid input.";
 pub const ERR_INPUT_INVALID_SHOULD_NOT_BE_EMPTY: &str = "Invalid input. Should not be empty.";
-pub const ERR_CL_INPUT_INVALID: &str = "Need a valid ci. Maybe there is no any package in the repo.";
 pub const ERR_NO_SPECIFIED_PACKAGE: &str = "No package found.";
 pub const ERR_NEED_A_NUMBER: &str = "Need a number.";
 pub const ERR_NEED_PARAM: &str = "Need {}.";
@@ -34,8 +33,6 @@ pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_API_TOKEN_INVALID: &str =
 pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID: &str =
     "Url: {}.\nUsername: {}\nPassword: {}\nMaybe you should check your password.";
 pub const ERR_JENKINS_CLIENT_GET_CRUMB_FAILED: &str = "Failed to get crumb. {}";
-pub const ERR_NO_VALID_RUN_TASK: &str =
-    "There is no valid run task (in progress, failure or success).";
 pub const ERR_TOAST_SHOW_FAILED: &str = "Failed to show toast notification.";
 pub const ERR_NEED_EVEN_PARAM: &str = "You must provide sufficient parameters.";
 pub const ERR_QUERY_JOB_CONFIG: &str = "Failed to query job config. {}";

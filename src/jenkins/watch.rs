@@ -95,13 +95,7 @@ pub async fn watch(
                 &format!("{} ({})", NO_IN_PROGRESS_RUN_TASK_OF_USER, username),
             );
 
-            let ci = input_ci_for_watch(app_state, job_name, None).await;
-
-            if let Some(ci) = ci {
-                build_number = ci;
-            } else {
-                return Err(VfpFrontError::Custom(ERR_NO_VALID_RUN_TASK.to_string()));
-            }
+            build_number = input_ci_for_watch(app_state, job_name, None).await?;
         }
     }
 

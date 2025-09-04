@@ -25,7 +25,6 @@ pub enum VfpFrontError {
     JenkinsClientInvalid,
     JenkinsTimeout,
     MissingParam(String),
-    CIInvalid,
     RunTaskBuildFailed {
         build_number: u32,
         job_name: String,
@@ -111,7 +110,6 @@ impl Display for VfpFrontError {
             VfpFrontError::MissingParam(param) => {
                 formatx!(ERR_NEED_PARAM, param).unwrap_or_default()
             }
-            VfpFrontError::CIInvalid => ERR_CL_INPUT_INVALID.to_string(),
             VfpFrontError::RunTaskBuildFailed {
                 build_number,
                 job_name,
