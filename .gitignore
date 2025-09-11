@@ -97,6 +97,7 @@ atlassian-ide-plugin.xml
 
 # Git Toolbox
 .idea/git_toolbox_blame.xml
+.idea/git_toolbox_prj.xml
 
 # Crashlytics plugin (for Android Studio and IntelliJ)
 com_crashlytics_export_strings.xml
