@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.6.9] - 2025-09-11
+
 ### ⚙️ Changed
 
 - 优化 `fp update` 的交互反馈。
@@ -339,7 +341,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.8...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.9...HEAD
+
+[1.6.9]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.8...v1.6.9
 
 [1.6.8]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.7...v1.6.8
 

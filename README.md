@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.6.8  
+v1.6.9  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -37,7 +37,7 @@ by LviatYi
 
 ## Install ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
 
-手动下载并解压：[最新版本](https://github.com/LviatYi/vertical-fire-platform/releases/download/v1.6.8/vfp-v1.6.8-x86_64-pc-windows-msvc.zip)
+手动下载并解压：[最新版本](https://github.com/LviatYi/vertical-fire-platform/releases/download/v1.6.9/vfp-v1.6.9-x86_64-pc-windows-msvc.zip)
 
 解压 fp.exe 到任意目录即可。可在该目录下运行 cmd，通过命令行运行。
 
