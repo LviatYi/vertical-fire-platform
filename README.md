@@ -210,6 +210,9 @@ fp update
 - **--never-check** 禁用更新检查与所有更新提示。将在下次尝试更新时重新启用。
 - **-v, --version <VERSION>** 指定更新版本。默认为最新版本。
 
+直接运行 `fp update` 将检查更新并安装最新版本，运行 `fp update -v x.y.z` 将检查更新并安装指定版本。
+添加任何其他参数都视为配置更改，不会执行更新。
+
 ---
 
 [JetbrainsMonoNerdFont]: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.0.2/JetBrainsMono.zip@fallbackFont

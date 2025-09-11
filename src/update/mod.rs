@@ -1,11 +1,11 @@
 use crate::app_state::AppState;
 use crate::constant::log::*;
-use crate::pretty_log::{colored_println, ThemeColor};
+use crate::pretty_log::{ThemeColor, colored_println};
 use crate::vfp_error::VfpFrontError;
 use crate::{default_config, update};
 use formatx::formatx;
-use self_update::update::UpdateStatus;
 use self_update::Status;
+use self_update::update::UpdateStatus;
 use semver::Version;
 
 /// # self update
@@ -135,7 +135,14 @@ pub fn do_self_update_with_log(app_state: &mut AppState, specified_version: Opti
                 colored_println(
                     &mut app_state.get_stdout(),
                     ThemeColor::Success,
-                    formatx!(UPGRADE_TO_VERSION_SUCCESS, v)
+                    formatx!(UPGRADE_TO_VERSION_SUCCESS, &v)
+                        .unwrap_or_default()
+                        .as_str(),
+                );
+                colored_println(
+                    &mut app_state.get_stdout(),
+                    ThemeColor::Success,
+                    formatx!(HINT_WHATS_NEW, default_config::RELEASE_URL.to_string() + &v)
                         .unwrap_or_default()
                         .as_str(),
                 );

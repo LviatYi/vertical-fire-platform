@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### ⚙️ Changed
+
+- 优化 `fp update` 的交互反馈。
+
 ### 🐛 Fixed
 
 - 将 self update 置入 block 运行时。

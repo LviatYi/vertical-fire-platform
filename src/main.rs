@@ -192,17 +192,24 @@ enum Commands {
         #[command(flatten)]
         extract_params: ExtractParams,
     },
-    /// Upgrade to the latest version.
+    /// Set update options or upgrade to a new version.
+    /// Upgrade to the latest version directly using `fp update`
+    /// If you make any configuration, no update action will occur.
+    /// If an upgrade is carried out, version checking will be automatically enabled (never_check will be cleared).
     Update {
+        /// enable automatic update.
         #[arg(long, conflicts_with("no_auto_update"), conflicts_with("never_check"))]
         auto_update: bool,
 
+        /// disable automatic update.
         #[arg(long, conflicts_with("auto_update"))]
         no_auto_update: bool,
 
+        /// never check for new version.
         #[arg(long, conflicts_with("auto_update"))]
         never_check: bool,
 
+        /// specify a version to upgrade to.
         #[arg(short, long)]
         version: Option<String>,
     },
@@ -842,6 +849,16 @@ fn show_upgradable_hit<W: Write>(stdout: &mut W, latest_version: &str) {
         formatx!(HINT_UPGRADABLE, latest_version, env!("CARGO_PKG_VERSION"))
             .unwrap_or_default()
             .as_str(),
+    );
+    colored_println(
+        stdout,
+        ThemeColor::Success,
+        formatx!(
+            HINT_WHATS_NEW,
+            default_config::RELEASE_URL.to_string() + latest_version
+        )
+        .unwrap_or_default()
+        .as_str(),
     );
 
     colored_println(stdout, ThemeColor::Second, HINT_UPGRADE_OPERATION);

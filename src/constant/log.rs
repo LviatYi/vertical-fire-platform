@@ -70,6 +70,7 @@ pub const HINT_JENKINS_API_TOKEN_DOC: &str =
 pub const HINT_SELECT_CL: &str = "use change list: ";
 pub const HINT_SELECT_SL: &str = "use shelved changes: ";
 pub const HINT_UPGRADABLE: &str = "There is a new version available. Latest: {}. Current: {}";
+pub const HINT_WHATS_NEW: &str = "What's new: {}";
 pub const HINT_UPGRADE_OPERATION: &str = "Use `fp update` to upgrade to the latest version.";
 pub const HINT_AUTO_UPGRADE_OPERATION: &str =
     "Use `fp update --auto-update` to enable auto update.";
