@@ -88,6 +88,10 @@ atlassian-ide-plugin.xml
 # SonarLint plugin
 .idea/sonarlint/
 
+# Copilot plugin
+
+.idea/copilot*
+
 # Markdown configuration
 .idea/markdown.xml
 
