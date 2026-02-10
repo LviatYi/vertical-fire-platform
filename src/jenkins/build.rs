@@ -221,10 +221,16 @@ pub async fn query_job_config(
 
     match quick_xml::de::from_str::<FlowDefinition>(&content) {
         Ok(result) => Ok(result),
-        Err(e) => Err(VfpFrontError::JobConfigParseError {
-            e: e.to_string(),
-            content,
-        }),
+        Err(e) => {
+            if content.contains("missing the Job/Configure permission") {
+                return Err(VfpFrontError::JobConfigMissingPermission);
+            }
+
+            Err(VfpFrontError::JobConfigParseError {
+                e: e.to_string(),
+                content,
+            })
+        }
     }
 }
 

@@ -35,6 +35,7 @@ pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID: &str =
 pub const ERR_JENKINS_CLIENT_GET_CRUMB_FAILED: &str = "Failed to get crumb. {}";
 pub const ERR_TOAST_SHOW_FAILED: &str = "Failed to show toast notification.";
 pub const ERR_NEED_EVEN_PARAM: &str = "You must provide sufficient parameters.";
+pub const ERR_QUERY_JOB_CONFIG_MISSING_PERMISSION: &str = "Failed to query job config. Missing permission.";
 pub const ERR_QUERY_JOB_CONFIG: &str = "Failed to query job config. {}";
 pub const ERR_REQUEST_BUILD_FAILED: &str = "Failed to request a build task. {}";
 pub const ERR_VERSION_PARSE_FAILED: &str = "Failed to parse version. {}";

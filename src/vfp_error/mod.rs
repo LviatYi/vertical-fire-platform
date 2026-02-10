@@ -1,7 +1,7 @@
+use crate::LoginMethod;
 use crate::constant::log::*;
 use crate::constant::util::get_hidden_sensitive_string;
-use crate::pretty_log::{colored_println, ThemeColor};
-use crate::LoginMethod;
+use crate::pretty_log::{ThemeColor, colored_println};
 use formatx::formatx;
 use inquire::InquireError;
 use jenkins_sdk::JenkinsError;
@@ -33,6 +33,7 @@ pub enum VfpFrontError {
     },
     VersionParseFailed(String),
     SelfUpdateError(self_update::errors::Error),
+    JobConfigMissingPermission,
     JobConfigParseError {
         e: String,
         content: String,
@@ -119,6 +120,9 @@ impl Display for VfpFrontError {
                 formatx!(ERR_VERSION_PARSE_FAILED, ver).unwrap_or_default()
             }
             VfpFrontError::SelfUpdateError(e) => e.to_string(),
+            VfpFrontError::JobConfigMissingPermission => {
+                ERR_QUERY_JOB_CONFIG_MISSING_PERMISSION.to_string()
+            }
             VfpFrontError::JobConfigParseError { e, .. } => {
                 formatx!(ERR_QUERY_JOB_CONFIG, e).unwrap_or_default()
             }
