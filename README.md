@@ -19,6 +19,7 @@ by LviatYi
 
 更新计划 | Road Map:
 
+- [ ] 从 json api 加载构建参数，降低从 config.xml 获取配置的优先级。
 - [ ] 添加 `fp info`，以允许查询 Jenkins Build Task 的状态。
 - [ ] 某些环境中，可能不存在 wmic 命令，因而无法查询特定可执行文件的运行状态。因此需要额外的替代方案。
 - [ ] **持续** 优化代码结构。
