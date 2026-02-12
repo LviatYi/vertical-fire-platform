@@ -1,10 +1,10 @@
 /// Endpoint for get config.xml about Jenkins job.
-pub struct JobConfig {
+pub struct JobConfigXML {
     /// Name of the Jenkins job.
     pub job_name: String,
 }
 
-impl jenkins_sdk::Endpoint for JobConfig {
+impl jenkins_sdk::Endpoint for JobConfigXML {
     /// HTTP method used (GET).
     fn method(&self) -> &str {
         "GET"

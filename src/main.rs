@@ -17,7 +17,9 @@ use crate::cli::{cli_do_login, cli_try_first_login, input_job_name_with_err_hand
 use crate::constant::log::*;
 use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
-use crate::jenkins::build::{query_job_config, request_build, VfpJobBuildParam};
+use crate::jenkins::build::{
+    query_job_config_json, query_job_config_xml, request_build,
+};
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::jenkins_url_factor::JenkinsUrlFactor;
 use crate::jenkins::query::{query_builds_in_job, query_run_info, VfpJenkinsClient};
@@ -466,20 +468,49 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
                 })
                 .collect();
 
-            let mut config_from_default: bool = false;
             let config_params_result =
-                query_job_config(&client, &job_name).await.inspect_err(|_| {
-                    config_from_default = true;
-                });
+                query_job_config_json(&client, &job_name)
+                    .await
+                    .inspect_err(|e| {
+                        #[cfg(debug_assertions)]
+                        {
+                            colored_println(
+                                &mut app_state.get_stdout(),
+                                ThemeColor::Warn,
+                                &e.to_string(),
+                            );
+                        }
+                    });
+
+            let config_params_result = if config_params_result.is_ok() {
+                config_params_result
+            } else {
+                let config_param_from_xml = query_job_config_xml(&client, &job_name)
+                    .await
+                    .inspect_err(|e| {
+                        #[cfg(debug_assertions)]
+                        {
+                            colored_println(
+                                &mut app_state.get_stdout(),
+                                ThemeColor::Warn,
+                                &e.to_string(),
+                            );
+                        }
+                    });
+
+                if config_param_from_xml.is_ok() {
+                    config_param_from_xml
+                } else {
+                    config_params_result
+                }
+            };
 
             if let Err(ref e) = config_params_result {
                 e.colored_println(&mut app_state.get_stdout());
             }
 
             let db = app_state.get_db();
-            let build_params_template = config_params_result
-                .map(VfpJobBuildParam::from)
-                .unwrap_or_default();
+            let build_params_template = config_params_result.unwrap_or_default();
 
             let mut build_params = build_params_template.clone();
 

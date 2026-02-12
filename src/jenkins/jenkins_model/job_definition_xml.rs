@@ -1,18 +1,65 @@
+use crate::jenkins::build::{ToVfpJobBuildParam, VfpJobBuildParam};
 use serde::Deserialize;
+use serde_json::Value;
+use std::collections::HashMap;
 use std::fmt::Display;
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub struct FlowDefinition {
+pub struct JobDefinitionXml {
     properties: FlowDefinitionProperties,
 }
 
-impl FlowDefinition {
-    pub fn get_parameters(&self) -> &Vec<ParameterDefinition> {
-        &self
-            .properties
+impl JobDefinitionXml {
+    pub fn get_parameters(&self) -> Vec<&ParameterDefinition> {
+        self.properties
             .parameters_definition_property
             .wrapper
             .parameters
+            .iter()
+            .collect()
+    }
+}
+
+impl ToVfpJobBuildParam for JobDefinitionXml {
+    fn to_vfp_job_build_param(&self) -> VfpJobBuildParam {
+        let params: HashMap<String, Value> = self
+            .get_parameters()
+            .iter()
+            .map(|param| {
+                let necessary = param.is_necessary();
+                match param {
+                    ParameterDefinition::String {
+                        name,
+                        default_value,
+                        ..
+                    } => (
+                        name.clone(),
+                        Value::String(default_value.clone().unwrap_or_default()),
+                    ),
+                    ParameterDefinition::Bool {
+                        name,
+                        default_value,
+                        ..
+                    } => (name.clone(), Value::Bool(*default_value)),
+                    ParameterDefinition::Choice { name, choices, .. } => {
+                        let default_choice = if necessary {
+                            choices
+                                .get_all_choices()
+                                .into_iter()
+                                .find(|item| !item.is_empty())
+                        } else {
+                            choices.get_all_choices().into_iter().next()
+                        };
+                        (
+                            name.clone(),
+                            Value::String(default_choice.unwrap_or_default()),
+                        )
+                    }
+                }
+            })
+            .collect();
+
+        VfpJobBuildParam::new_with_override_recommend_param(params)
     }
 }
 
@@ -188,7 +235,7 @@ impl Display for XmlRichTextElem {
 #[cfg(test)]
 #[allow(dead_code)]
 mod tests {
-    use crate::jenkins::jenkins_model::job_config::*;
+    use crate::jenkins::jenkins_model::job_definition_xml::*;
     use serde::Deserialize;
 
     #[test]
@@ -269,7 +316,7 @@ mod tests {
 </flow-definition>
 "#;
 
-        match quick_xml::de::from_str::<FlowDefinition>(content) {
+        match quick_xml::de::from_str::<JobDefinitionXml>(content) {
             Ok(result) => {
                 assert_eq!(
                     result
@@ -355,7 +402,7 @@ mod tests {
 </flow-definition>
 "#;
 
-        match quick_xml::de::from_str::<FlowDefinition>(content) {
+        match quick_xml::de::from_str::<JobDefinitionXml>(content) {
             Ok(result) => {
                 assert_eq!(
                     result
@@ -422,7 +469,7 @@ mod tests {
 </flow-definition>
 "#;
 
-        match quick_xml::de::from_str::<FlowDefinition>(content) {
+        match quick_xml::de::from_str::<JobDefinitionXml>(content) {
             Ok(result) => {
                 assert_eq!(
                     result
@@ -469,7 +516,7 @@ mod tests {
     </properties>
 </flow-definition>"##;
 
-        match quick_xml::de::from_str::<FlowDefinition>(content) {
+        match quick_xml::de::from_str::<JobDefinitionXml>(content) {
             Ok(result) => {
                 assert_eq!(
                     result
@@ -503,7 +550,7 @@ mod tests {
     </properties>
 </flow-definition>"##;
 
-        match quick_xml::de::from_str::<FlowDefinition>(content) {
+        match quick_xml::de::from_str::<JobDefinitionXml>(content) {
             Ok(result) => {
                 assert_eq!(
                     result

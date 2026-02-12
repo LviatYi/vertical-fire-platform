@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### 🚀 Added
+
+- 通过 json api 获取 Jenkins Job 的参数信息，以绕过 config.xml 接口的权限问题。
+
 ## [1.6.9] - 2025-09-11
 
 ### ⚙️ Changed
