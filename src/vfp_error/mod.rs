@@ -33,11 +33,13 @@ pub enum VfpFrontError {
     },
     VersionParseFailed(String),
     SelfUpdateError(self_update::errors::Error),
+    JobConfigMissingPermission,
     JobConfigParseError {
         e: String,
         content: String,
     },
     OpenDbFailed(String),
+    DistributeError(String),
 }
 
 impl From<InquireError> for VfpFrontError {
@@ -119,11 +121,17 @@ impl Display for VfpFrontError {
                 formatx!(ERR_VERSION_PARSE_FAILED, ver).unwrap_or_default()
             }
             VfpFrontError::SelfUpdateError(e) => e.to_string(),
+            VfpFrontError::JobConfigMissingPermission => {
+                ERR_QUERY_JOB_CONFIG_MISSING_PERMISSION.to_string()
+            }
             VfpFrontError::JobConfigParseError { e, .. } => {
                 formatx!(ERR_QUERY_JOB_CONFIG, e).unwrap_or_default()
             }
             VfpFrontError::OpenDbFailed(path) => {
                 formatx!(ERR_OPEN_FILE_FAILED, path).unwrap_or_default()
+            }
+            VfpFrontError::DistributeError(msg) => {
+                formatx!(ERR_DISTRIBUTE_FAILED, msg).unwrap_or_default()
             }
         };
         write!(f, "{}", str)

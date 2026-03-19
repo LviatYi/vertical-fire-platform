@@ -35,6 +35,7 @@ pub const ERR_JENKINS_CLIENT_INVALID_MAY_BE_PWD_INVALID: &str =
 pub const ERR_JENKINS_CLIENT_GET_CRUMB_FAILED: &str = "Failed to get crumb. {}";
 pub const ERR_TOAST_SHOW_FAILED: &str = "Failed to show toast notification.";
 pub const ERR_NEED_EVEN_PARAM: &str = "You must provide sufficient parameters.";
+pub const ERR_QUERY_JOB_CONFIG_MISSING_PERMISSION: &str = "Failed to query job config. Missing permission.";
 pub const ERR_QUERY_JOB_CONFIG: &str = "Failed to query job config. {}";
 pub const ERR_REQUEST_BUILD_FAILED: &str = "Failed to request a build task. {}";
 pub const ERR_VERSION_PARSE_FAILED: &str = "Failed to parse version. {}";
@@ -42,6 +43,14 @@ pub const ERR_VERSION_NOT_SUPPORT_UPDATE: &str =
     "This version does not support update. Please upgrade to a newer version great than {}.";
 pub const ERR_UPDATE_FAILED: &str = "Update failed. {}";
 pub const ERR_OPEN_FILE_FAILED: &str = "Failed to open file at {} .";
+pub const ERR_DISTRIBUTE_FAILED: &str = "Failed to distribute file. {}";
+pub const ERR_BLAST_PATH_NOT_FOUND: &str =
+    "Failed to get blast path by job name, you should use fp extract first.";
+pub const ERR_BLAST_PATH_NOT_FOUND_ANY_BLAST_PACKAGE: &str =
+    "Failed to locate blast package in path.";
+pub const ERR_SRC_PT_NOT_EXIST: &str = "Source pt path {} does not exist.";
+pub const ERR_COPY_FOR_DISTRIBUTE_FAILED: &str = "Failed to copy pt file to {}. The file might be in use.\n{}";
+pub const ERR_DEST_PATH_NOT_EXIST: &str = "Destination path `{}` does not exist or is not a directory. Skipping.";
 
 pub const HINT_JOB_NAME: &str = "use job:";
 pub const HINT_PLAYER_COUNT: &str = "use player count: ";
@@ -65,6 +74,9 @@ pub const HINT_INPUT_JENKINS_USERNAME: &str = "input your jenkins username(someb
 pub const HINT_INPUT_JENKINS_API_TOKEN: &str =
     "get your jenkins api token at {}/user/{}/configure\ncopy to here:";
 pub const HINT_INPUT_JENKINS_PWD: &str = "input your jenkins password: ";
+pub const HINT_INPUT_SRC_BLAST_INDEX: &str = "input the index of source blast(Start from 1{}{}):";
+pub const HINT_INPUT_SRC_BLAST_INDEX_LAST_EXTRACT_COUNT: &str = ", last extracted count {}";
+pub const HINT_INPUT_SRC_BLAST_INDEX_LAST_USED: &str = ", last used {}";
 pub const HINT_JENKINS_API_TOKEN_DOC: &str =
     "https://www.jenkins.io/doc/book/using/remote-access-api/";
 pub const HINT_SELECT_CL: &str = "use change list: ";
@@ -126,6 +138,8 @@ pub const CURRENT_VERSION_UP_TO_DATE: &str = "Current version is up to date.";
 pub const DISABLE_AUTO_UPDATE_BECAUSE_OF_UPDATE_FAILED: &str = "Auto-Update disabled.";
 pub const NEVER_CHECK_VERSION: &str = "Never check version.";
 pub const OPEN_DB_SUCCESS: &str = "Open memory file success.";
+pub const BLAST_COUNT_TOO_LOW_WHEN_DISTRIBUTE: &str = "Blast count must more than 1 when distribute.";
+pub const DISTRIBUTE_SUCCESS: &str = "Distribute success from {} to {}";
 
 pub const PARAM_JOB_NAME: &str = "job name";
 pub const PARAM_DEST: &str = "path as destination";

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.7.0] - 2026-03-19
+
+## [1.6.10] - 2026-02-12
+
+### 🚀 Added
+
+- 通过 json api 获取 Jenkins Job 的参数信息，以绕过 config.xml 接口的权限问题。
+
 ## [1.6.9] - 2025-09-11
 
 ### ⚙️ Changed
@@ -341,7 +349,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.9...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.0...HEAD
+
+[1.7.0]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.10...v1.7.0
+
+[1.6.10]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.9...v1.6.10
 
 [1.6.9]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.8...v1.6.9
 

@@ -2,7 +2,7 @@
 
 **垂直火力平台 (Vertical Fire Platform)** 是软化开发工作流的工具集合。
 
-v1.6.9  
+v1.7.0  
 by LviatYi
 
 阅读该文档时，推荐安装以下字体：
@@ -19,6 +19,7 @@ by LviatYi
 
 更新计划 | Road Map:
 
+- [ ] 从 json api 加载构建参数，降低从 config.xml 获取配置的优先级。
 - [ ] 添加 `fp info`，以允许查询 Jenkins Build Task 的状态。
 - [ ] 某些环境中，可能不存在 wmic 命令，因而无法查询特定可执行文件的运行状态。因此需要额外的替代方案。
 - [ ] **持续** 优化代码结构。
@@ -37,7 +38,7 @@ by LviatYi
 
 ## Install ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
 
-手动下载并解压：[最新版本](https://github.com/LviatYi/vertical-fire-platform/releases/download/v1.6.9/vfp-v1.6.9-x86_64-pc-windows-msvc.zip)
+手动下载并解压：[最新版本](https://github.com/LviatYi/vertical-fire-platform/releases/download/v1.7.0/vfp-v1.7.0-x86_64-pc-windows-msvc.zip)
 
 解压 fp.exe 到任意目录即可。可在该目录下运行 cmd，通过命令行运行。
 
@@ -192,6 +193,30 @@ fp watch
 - **--no-extract** 在所需的操作成功后，不要执行自动解压。
 
 此外，若执行 extract ，则可以额外使用 `fp extract` 的所有参数。
+
+---
+
+### Distr
+
+分发 Haxe 编译结果文件 (pt) 到同分支下的其他 blast 包。
+
+可以这样使用：
+
+```shell
+fp distr -j your_interested_job_name -s 1
+```
+
+也可以这样使用：
+
+```shell
+fp distr
+```
+
+- **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
+- **-s, --src-blast-index <SRC_BLAST_INDEX>** 作为分发源的 blast 索引（从 1 开始）。
+- **--no-run** 分发完成后，不自动执行 `fp run`。
+
+建议先完成一次 `fp extract`，确保存在可用的 blast 路径与实例目录。
 
 ---
 

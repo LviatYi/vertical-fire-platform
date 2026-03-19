@@ -49,6 +49,7 @@ impl VersionedData for FpDbV6 {
                     last_player_count: self.last_player_count,
                     blast_path: self.blast_path,
                     jenkins_build_params: self.jenkins_build_params,
+                    distr_src_index: None,
                 });
         }
 

@@ -26,6 +26,7 @@ fn inject_sensitive_data() -> Result<(), ()> {
     let check_exe_file_name = env::var("CHECK_EXE_FILE_NAME").unwrap_or_default();
     let jenkins_url = env::var("JENKINS_URL").unwrap_or_default();
     let query_token_github = env::var("QUERY_TOKEN_GITHUB").unwrap_or_default();
+    let pt_relative_path = env::var("PT_RELATIVE_PATH").unwrap_or_default();
 
     let recommend_job_names = recommend_job_names
         .split([',', ';'])
@@ -57,6 +58,7 @@ pub const REPO_TEMPLATE: &str = \"{}\";
 pub const LOCATOR_PATTERN: &str = \"{}\";
 pub const LOCATOR_TEMPLATE: &str = \"{}\";
 pub const MENDING_FILE_PATH: &str = \"{}\";
+pub const PT_RELATIVE_PATH: &str = \"{}\";
 
 pub const RELEASE_URL: &str = \"https://github.com/LviatYi/vertical-fire-platform/releases/tag/v\";
 
@@ -74,6 +76,7 @@ pub const QUERY_TOKEN_GITHUB: &str = \"{}\";
         locator_pattern,
         locator_template,
         mending_file_path,
+        pt_relative_path,
         package_file_stem,
         exe_file_name,
         check_exe_file_name,

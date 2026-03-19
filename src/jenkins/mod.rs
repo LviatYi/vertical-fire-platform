@@ -9,11 +9,11 @@ pub mod watch;
 
 #[cfg(test)]
 mod tests {
-    use crate::jenkins::build::VfpJobBuildParam;
+    use crate::jenkins::build::ToVfpJobBuildParam;
     use crate::jenkins::jenkins_endpoint::get_crumb::GetCrumb;
     use crate::jenkins::jenkins_endpoint::run_info::RunInfo;
     use crate::jenkins::jenkins_model::crumb::Crumb;
-    use crate::jenkins::jenkins_model::job_config::FlowDefinition;
+    use crate::jenkins::jenkins_model::job_definition_xml::JobDefinitionXml;
     use crate::jenkins::jenkins_model::workflow_run::WorkflowRun;
     use crate::jenkins::pwd_jenkins_async_client::PwdJenkinsAsyncClient;
     use crate::jenkins::query::*;
@@ -329,12 +329,12 @@ mod tests {
   <disabled>false</disabled>
 </flow-definition>
 "#;
-        let def = quick_xml::de::from_str::<FlowDefinition>(xml_content);
+        let def = quick_xml::de::from_str::<JobDefinitionXml>(xml_content);
 
         assert!(def.is_ok());
         let def = def.unwrap();
 
-        let mut param = VfpJobBuildParam::from(def);
+        let mut param = def.to_vfp_job_build_param();
         assert_eq!(
             param.to_json_value(),
             json!({

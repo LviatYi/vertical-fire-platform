@@ -1,5 +1,7 @@
-use crate::jenkins::jenkins_endpoint::job_config::JobConfig;
-use crate::jenkins::jenkins_model::job_config::{FlowDefinition, ParameterDefinition};
+use crate::jenkins::jenkins_endpoint::job_config_json::JobConfigJson;
+use crate::jenkins::jenkins_endpoint::job_config_xml::JobConfigXML;
+use crate::jenkins::jenkins_model::job_definition_json::JobDefinitionJson;
+use crate::jenkins::jenkins_model::job_definition_xml::JobDefinitionXml;
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::query::VfpJenkinsClient;
 use crate::vfp_error::VfpFrontError;
@@ -34,6 +36,15 @@ impl VfpJobBuildParam {
     pub const PARAM_NAME_ENABLE_CONTENT_PREVIEW: &'static str = "EnableContentPreview";
 
     pub const PARAM_NAME_SIMULATE_ANDROID_GUEST_LOGIN: &'static str = "SimulateAndroidGuestLogin";
+
+    pub fn new_with_override_recommend_param(params: impl Into<HashMap<String, Value>>) -> Self {
+        let mut param = Self {
+            params: params.into(),
+            from_default: false,
+        };
+        param.override_recommend_param();
+        param
+    }
 
     fn override_recommend_param(&mut self) -> &mut Self {
         self.set_enable_content_preview(true);
@@ -159,73 +170,54 @@ impl VfpJobBuildParam {
     //endregion ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
 }
 
-impl From<FlowDefinition> for VfpJobBuildParam {
-    fn from(value: FlowDefinition) -> Self {
-        let params = value
-            .get_parameters()
-            .iter()
-            .map(|param| {
-                let necessary = param.is_necessary();
-                match param {
-                    ParameterDefinition::String {
-                        name,
-                        default_value,
-                        ..
-                    } => (
-                        name.clone(),
-                        Value::String(default_value.clone().unwrap_or_default()),
-                    ),
-                    ParameterDefinition::Bool {
-                        name,
-                        default_value,
-                        ..
-                    } => (name.clone(), Value::Bool(*default_value)),
-                    ParameterDefinition::Choice { name, choices, .. } => {
-                        let default_choice = if necessary {
-                            choices
-                                .get_all_choices()
-                                .into_iter()
-                                .find(|item| !item.is_empty())
-                        } else {
-                            choices.get_all_choices().into_iter().next()
-                        };
-                        (
-                            name.clone(),
-                            Value::String(default_choice.unwrap_or_default()),
-                        )
-                    }
-                }
-            })
-            .collect();
-
-        let mut result = Self {
-            params,
-            from_default: false,
-        };
-        result.override_recommend_param();
-        result
-    }
+pub trait ToVfpJobBuildParam {
+    fn to_vfp_job_build_param(&self) -> VfpJobBuildParam;
 }
 
-pub async fn query_job_config(
+pub async fn query_job_config_xml(
     client: &VfpJenkinsClient,
     job_name: &str,
-) -> Result<FlowDefinition, VfpFrontError> {
+) -> Result<VfpJobBuildParam, VfpFrontError> {
     let content = jenkins_sdk::AsyncRawQuery::raw_query(
-        &JobConfig {
+        &JobConfigXML {
             job_name: job_name.to_string(),
         },
         client,
     )
     .await?;
 
-    match quick_xml::de::from_str::<FlowDefinition>(&content) {
-        Ok(result) => Ok(result),
-        Err(e) => Err(VfpFrontError::JobConfigParseError {
+    quick_xml::de::from_str::<JobDefinitionXml>(&content)
+        .map(|result| result.to_vfp_job_build_param())
+        .map_err(|e| {
+            if content.contains("missing the Job/Configure permission") {
+                VfpFrontError::JobConfigMissingPermission
+            } else {
+                VfpFrontError::JobConfigParseError {
+                    e: e.to_string(),
+                    content,
+                }
+            }
+        })
+}
+
+pub async fn query_job_config_json(
+    client: &VfpJenkinsClient,
+    job_name: impl Into<String>,
+) -> Result<VfpJobBuildParam, VfpFrontError> {
+    let content = jenkins_sdk::AsyncRawQuery::raw_query(
+        &JobConfigJson {
+            job_name: job_name.into(),
+        },
+        client,
+    )
+    .await?;
+
+    serde_json::from_str::<JobDefinitionJson>(&content)
+        .map(|result| result.to_vfp_job_build_param())
+        .map_err(|e| VfpFrontError::JobConfigParseError {
             e: e.to_string(),
             content,
-        }),
-    }
+        })
 }
 
 pub async fn request_build(
