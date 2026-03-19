@@ -64,7 +64,7 @@ impl DbDataProxy {
     /// get the job name that is currently of interest.
     /// "interest" means the job that was last operated on(write).
     pub fn get_interest_job_name(&self) -> Option<&str> {
-        self.try_get_job_relative_data(None)
+        self.try_get_job_relative_data_with_priority_job(None)
             .map(|data| data.job_name.as_ref())
     }
 
@@ -77,7 +77,7 @@ impl DbDataProxy {
     }
 
     pub fn insert_job_name(&mut self, val: &str) -> &mut Self {
-        self.try_get_job_relative_data_mut(Some(val));
+        self.try_get_job_relative_data_mut(val);
         self
     }
 
@@ -163,8 +163,13 @@ impl DbDataProxy {
     }
 
     //region getter & setter
-    fn try_get_job_relative_data(&self, job_name: Option<&str>) -> Option<&JobRelativeData> {
-        if let Some(name) = job_name {
+    /// return the [JobRelativeData] from the db.
+    /// return the data of the job with the given name if the name is provided, otherwise return the data of the most recently used job.
+    fn try_get_job_relative_data_with_priority_job(
+        &self,
+        priority_job_name: Option<&str>,
+    ) -> Option<&JobRelativeData> {
+        if let Some(name) = priority_job_name {
             self.data
                 .job_relative_data_arr
                 .iter()
@@ -174,57 +179,53 @@ impl DbDataProxy {
         }
     }
 
-    fn try_get_job_relative_data_mut(
-        &mut self,
-        job_name: Option<&str>,
-    ) -> Option<&mut JobRelativeData> {
-        if let Some(name) = job_name {
-            let index = self
-                .data
-                .job_relative_data_arr
-                .iter()
-                .position(|data| data.job_name == name);
+    fn try_get_job_relative_data_mut(&mut self, job_name: &str) -> Option<&mut JobRelativeData> {
+        let index = self
+            .data
+            .job_relative_data_arr
+            .iter()
+            .position(|data| data.job_name == job_name);
 
-            if let Some(idx) = index {
-                bring_element_to_first(&mut self.data.job_relative_data_arr, idx);
-            } else {
-                self.data.job_relative_data_arr.insert(
-                    0,
-                    JobRelativeData {
-                        job_name: name.to_owned(),
-                        last_inner_version: None,
-                        last_player_count: None,
-                        blast_path: None,
-                        jenkins_build_params: None,
-                    },
-                );
+        if let Some(idx) = index {
+            bring_element_to_first(&mut self.data.job_relative_data_arr, idx);
+        } else {
+            self.data.job_relative_data_arr.insert(
+                0,
+                JobRelativeData {
+                    job_name: job_name.to_owned(),
+                    last_inner_version: None,
+                    last_player_count: None,
+                    blast_path: None,
+                    jenkins_build_params: None,
+                    distr_src_index: None,
+                },
+            );
 
-                self.keep_job_relative_data_count();
-            }
+            self.keep_job_relative_data_count();
         }
 
         self.data.job_relative_data_arr.first_mut()
     }
 
     pub fn get_last_inner_version(&self, job_name: &str) -> Option<u32> {
-        self.try_get_job_relative_data(Some(job_name))
+        self.try_get_job_relative_data_with_priority_job(Some(job_name))
             .and_then(|data| data.last_inner_version)
     }
 
     pub fn set_last_inner_version(&mut self, job_name: &str, val: Option<u32>) -> &mut Self {
-        if let Some(data) = self.try_get_job_relative_data_mut(Some(job_name)) {
+        if let Some(data) = self.try_get_job_relative_data_mut(job_name) {
             data.last_inner_version = val
         }
         self
     }
 
     pub fn get_last_player_count(&self, job_name: &str) -> Option<u32> {
-        self.try_get_job_relative_data(Some(job_name))
+        self.try_get_job_relative_data_with_priority_job(Some(job_name))
             .and_then(|data| data.last_player_count)
     }
 
     pub fn set_last_player_count(&mut self, job_name: &str, val: Option<u32>) -> &mut Self {
-        if let Some(data) = self.try_get_job_relative_data_mut(Some(job_name)) {
+        if let Some(data) = self.try_get_job_relative_data_mut(job_name) {
             data.last_player_count = val
         }
         self
@@ -258,12 +259,12 @@ impl DbDataProxy {
     }
 
     pub fn get_blast_path(&self, job_name: &str) -> Option<&PathBuf> {
-        self.try_get_job_relative_data(Some(job_name))
+        self.try_get_job_relative_data_with_priority_job(Some(job_name))
             .and_then(|data| data.blast_path.as_ref())
     }
 
     pub fn set_blast_path(&mut self, job_name: &str, val: Option<PathBuf>) -> &mut Self {
-        if let Some(data) = self.try_get_job_relative_data_mut(Some(job_name)) {
+        if let Some(data) = self.try_get_job_relative_data_mut(job_name) {
             data.blast_path = val
         }
         self
@@ -311,12 +312,12 @@ impl DbDataProxy {
     }
 
     pub fn get_jenkins_build_param(&self, job_name: &str) -> Option<&VfpJobBuildParam> {
-        self.try_get_job_relative_data(Some(job_name))
+        self.try_get_job_relative_data_with_priority_job(Some(job_name))
             .and_then(|data| data.jenkins_build_params.as_ref())
     }
 
     pub fn get_mut_jenkins_build_param(&mut self, job_name: &str) -> Option<&mut VfpJobBuildParam> {
-        self.try_get_job_relative_data_mut(Some(job_name))
+        self.try_get_job_relative_data_mut(job_name)
             .and_then(|data| data.jenkins_build_params.as_mut())
     }
 
@@ -325,10 +326,22 @@ impl DbDataProxy {
         job_name: &str,
         val: Option<VfpJobBuildParam>,
     ) -> &mut Self {
-        if let Some(data) = self.try_get_job_relative_data_mut(Some(job_name)) {
+        if let Some(data) = self.try_get_job_relative_data_mut(job_name) {
             data.jenkins_build_params = val;
         }
 
+        self
+    }
+
+    pub fn get_distr_src_index(&self, job_name: &str) -> Option<u32> {
+        self.try_get_job_relative_data_with_priority_job(Some(job_name))
+            .and_then(|data| data.distr_src_index)
+    }
+    
+    pub fn set_distr_src_index(&mut self,job_name: &str, val: Option<u32>) -> &mut Self {
+        self.try_get_job_relative_data_mut(job_name)
+            .map(|data| data.distr_src_index = val);
+        
         self
     }
 

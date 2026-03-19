@@ -196,6 +196,30 @@ fp watch
 
 ---
 
+### Distr
+
+分发 Haxe 编译结果文件 (pt) 到同分支下的其他 blast 包。
+
+可以这样使用：
+
+```shell
+fp distr -j your_interested_job_name -s 1
+```
+
+也可以这样使用：
+
+```shell
+fp distr
+```
+
+- **-j, --job-name <JOB_NAME>** 你感兴趣的 Jenkins job name。
+- **-s, --src-blast-index <SRC_BLAST_INDEX>** 作为分发源的 blast 索引（从 1 开始）。
+- **--no-run** 分发完成后，不自动执行 `fp run`。
+
+建议先完成一次 `fp extract`，确保存在可用的 blast 路径与实例目录。
+
+---
+
 ### Update
 
 进行自我更新，或配置自动更新可用性。

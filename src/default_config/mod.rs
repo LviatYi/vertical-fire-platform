@@ -17,6 +17,7 @@ pub const REPO_TEMPLATE: &str = "";
 pub const LOCATOR_PATTERN: &str = "";
 pub const LOCATOR_TEMPLATE: &str = "";
 pub const MENDING_FILE_PATH: &str = "";
+pub const PT_RELATIVE_PATH: &str = "";
 
 pub const RELEASE_URL: &str = "https://github.com/LviatYi/vertical-fire-platform/releases/tag/v";
 

@@ -3,6 +3,7 @@ mod cli;
 mod constant;
 mod db;
 mod default_config;
+pub mod distribute;
 mod extract;
 mod interact;
 mod jenkins;
@@ -13,19 +14,17 @@ mod update;
 mod vfp_error;
 
 use crate::app_state::AppState;
-use crate::cli::{cli_do_login, cli_try_first_login, input_job_name_with_err_handling};
+use crate::cli::{cli_do_login, cli_do_run, cli_try_first_login, input_job_name_with_err_handling};
 use crate::constant::log::*;
 use crate::extract::extract_params::ExtractParams;
 use crate::interact::*;
-use crate::jenkins::build::{
-    query_job_config_json, query_job_config_xml, request_build,
-};
+use crate::jenkins::build::{query_job_config_json, query_job_config_xml, request_build};
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::jenkins::jenkins_url_factor::JenkinsUrlFactor;
 use crate::jenkins::query::{query_builds_in_job, query_run_info, VfpJenkinsClient};
 use crate::jenkins::util::get_jenkins_workflow_run_url;
 use crate::pretty_log::{colored_println, ThemeColor};
-use crate::run::{kill_by_pid, run_instance, set_server, RunStatus};
+use crate::run::{kill_by_pid, run_instance, RunStatus};
 use crate::update::{do_self_update_with_log, fetch_and_try_auto_update};
 use crate::vfp_error::VfpFrontError;
 use clap::{Parser, Subcommand};
@@ -194,6 +193,23 @@ enum Commands {
         #[command(flatten)]
         extract_params: ExtractParams,
     },
+    /// Distribute the haxe compiled file(pt) to all blast packages in the same branch.
+    Distr {
+        /// job name.
+        #[arg(short, long)]
+        job_name: Option<String>,
+
+        /// source blast index.
+        ///
+        /// blast package index for distribution.
+        /// start from 1.
+        #[arg(short = 's', long)]
+        src_blast_index: Option<u32>,
+
+        /// do not run blast after distribution.
+        #[arg(long)]
+        no_run: bool,
+    },
     /// Set update options or upgrade to a new version.
     /// Upgrade to the latest version directly using `fp update`
     /// If you make any configuration, no update action will occur.
@@ -313,99 +329,18 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
             force,
             server,
         } => {
-            // fp run
-            let db = app_state.get_db();
-
-            let job_name = input_job_name_with_err_handling(job_name, db)?;
-
-            let dest = input_target_path(
+            cli_do_run(
+                app_state,
+                job_name,
                 dest,
-                db.get_blast_path(job_name.as_str()),
-                job_name.as_str(),
-                HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH,
-                Some(ERR_INVALID_PATH),
-            )
-            .map_err(|_| {
-                VfpFrontError::MissingParam(
-                    formatx!(ERR_NEED_PARAM, PARAM_DEST).unwrap_or_default(),
-                )
-            })?;
-
-            let single = index.is_some();
-
-            let count_or_index = index.or(count).unwrap_or_else(|| {
-                input_directly_with_default(
-                    None,
-                    None,
-                    false,
-                    default_config::RUN_COUNT,
-                    false,
-                    HINT_RUN_COUNT,
-                    Some(ERR_NEED_A_NUMBER),
-                )
-            });
-
-            let package_file_name = parse_without_input_with_default(
+                count,
+                index,
                 package_file_stem,
-                None,
-                default_config::PACKAGE_FILE_STEM,
-            );
-            let exe_file_name = parse_without_input_with_default(
                 exe_file_name,
-                None,
-                default_config::EXE_FILE_NAME,
-            );
-            let check_exe_file_name = parse_without_input_with_default(
                 check_exe_file_name,
-                None,
-                default_config::CHECK_EXE_FILE_NAME,
-            );
-
-            if single {
-                if let Some(server) = server
-                    && let Err(e) = set_server(
-                        &dest,
-                        &package_file_name,
-                        count_or_index,
-                        default_config::MENDING_FILE_PATH,
-                        &server,
-                    )
-                {
-                    colored_println(&mut app_state.get_stdout(), ThemeColor::Error, e.as_str());
-                }
-
-                run_instance_with_log(
-                    &dest,
-                    &package_file_name,
-                    &exe_file_name,
-                    &check_exe_file_name,
-                    count_or_index,
-                    force,
-                );
-            } else {
-                for i in 1..count_or_index + 1 {
-                    if let Some(server) = server.clone()
-                        && let Err(e) = set_server(
-                            &dest,
-                            &package_file_name,
-                            i,
-                            default_config::MENDING_FILE_PATH,
-                            &server,
-                        )
-                    {
-                        colored_println(&mut app_state.get_stdout(), ThemeColor::Error, e.as_str());
-                    }
-
-                    run_instance_with_log(
-                        &dest,
-                        &package_file_name,
-                        &exe_file_name,
-                        &check_exe_file_name,
-                        i,
-                        force,
-                    );
-                }
-            }
+                force,
+                server,
+            )?;
         }
         Commands::Login {
             url,
@@ -759,6 +694,65 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
 
                 cli::cli_do_extract(app_state, job_name, ci, extract_params, true).await?;
             }
+        }
+        Commands::Distr {
+            job_name,
+            src_blast_index,
+            no_run,
+        } => {
+            // fp distr
+            let db = app_state.get_db();
+
+            let job_name = input_job_name_with_err_handling(job_name, db)?;
+            let last_player_count = db.get_last_player_count(job_name.as_str());
+
+            if let Some(count) = last_player_count && count <= 1 {
+                colored_println(
+                    &mut app_state.get_stdout(),
+                    ThemeColor::Warn,
+                    BLAST_COUNT_TOO_LOW_WHEN_DISTRIBUTE,
+                );
+            }
+
+            let hint = formatx!(
+                HINT_INPUT_SRC_BLAST_INDEX,
+                last_player_count
+                    .and_then(|c| formatx!(HINT_INPUT_SRC_BLAST_INDEX_LAST_EXTRACT_COUNT, c).ok())
+                    .unwrap_or_default(),
+                db.get_distr_src_index(job_name.as_str())
+                    .and_then(|i| formatx!(HINT_INPUT_SRC_BLAST_INDEX_LAST_USED, i).ok())
+                    .unwrap_or_default()
+            )
+                .unwrap_or_default();
+
+            let src_blast_index = input_directly_with_default(
+                src_blast_index,
+                db.get_distr_src_index(&job_name).as_ref(),
+                false,
+                1u32,
+                false,
+                hint.as_ref(),
+                Some(ERR_NEED_A_NUMBER),
+            );
+
+            cli::cli_do_distribute(app_state, job_name.as_str(), src_blast_index).await?;
+
+            if no_run {
+                return Ok(());
+            }
+
+            cli_do_run(
+                app_state,
+                Some(job_name.clone()),
+                None,
+                last_player_count,
+                None,
+                None,
+                None,
+                None,
+                true,
+                None,
+            )?;
         }
         Commands::Update {
             auto_update,

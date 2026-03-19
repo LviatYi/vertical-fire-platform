@@ -1,7 +1,7 @@
-use crate::LoginMethod;
 use crate::constant::log::*;
 use crate::constant::util::get_hidden_sensitive_string;
-use crate::pretty_log::{ThemeColor, colored_println};
+use crate::pretty_log::{colored_println, ThemeColor};
+use crate::LoginMethod;
 use formatx::formatx;
 use inquire::InquireError;
 use jenkins_sdk::JenkinsError;
@@ -39,6 +39,7 @@ pub enum VfpFrontError {
         content: String,
     },
     OpenDbFailed(String),
+    DistributeError(String),
 }
 
 impl From<InquireError> for VfpFrontError {
@@ -128,6 +129,9 @@ impl Display for VfpFrontError {
             }
             VfpFrontError::OpenDbFailed(path) => {
                 formatx!(ERR_OPEN_FILE_FAILED, path).unwrap_or_default()
+            }
+            VfpFrontError::DistributeError(msg) => {
+                formatx!(ERR_DISTRIBUTE_FAILED, msg).unwrap_or_default()
             }
         };
         write!(f, "{}", str)

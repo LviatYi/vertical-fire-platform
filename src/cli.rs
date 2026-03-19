@@ -1,6 +1,7 @@
 use crate::app_state::AppState;
 use crate::constant::log::*;
 use crate::db::db_data_proxy::DbDataProxy;
+use crate::distribute::{distribute_pt, infer_blast_root_dir_name};
 use crate::extract::extract_operation_info::{
     ExtractOperationInfo, OperationStatus, OperationStepType,
 };
@@ -11,17 +12,19 @@ use crate::interact::{
     input_target_path, parse_without_input_with_default,
 };
 use crate::jenkins::query::{
-    VfpJenkinsClient, try_get_jenkins_async_client_by_api_token,
-    try_get_jenkins_async_client_by_pwd,
+    try_get_jenkins_async_client_by_api_token, try_get_jenkins_async_client_by_pwd,
+    VfpJenkinsClient,
 };
 use crate::jenkins::watch::watch;
-use crate::pretty_log::{ThemeColor, colored_println, toast};
+use crate::pretty_log::{colored_println, toast, ThemeColor};
+use crate::run::set_server;
 use crate::vfp_error::VfpFrontError;
-use crate::{default_config, pretty_log};
+use crate::{default_config, pretty_log, run_instance_with_log};
 use crossterm::execute;
 use crossterm::style::Color;
 use formatx::formatx;
 use inquire::InquireError;
+use std::path::PathBuf;
 
 /// # cli do extract
 ///
@@ -436,6 +439,174 @@ pub async fn cli_try_first_login(
     } else {
         Ok(())
     }
+}
+
+pub async fn cli_do_distribute(
+    app_state: &mut AppState,
+    job_name: &str,
+    src_distr_index: u32,
+) -> Result<(), VfpFrontError> {
+    let db = app_state.get_db();
+
+    let blast_path = db
+        .get_blast_path(job_name)
+        .ok_or(VfpFrontError::DistributeError(
+            ERR_BLAST_PATH_NOT_FOUND.to_string(),
+        ))?;
+
+    let (prefix, dirs) = infer_blast_root_dir_name(blast_path.as_path()).ok_or(
+        VfpFrontError::DistributeError(ERR_BLAST_PATH_NOT_FOUND_ANY_BLAST_PACKAGE.to_string()),
+    )?;
+
+    let src_pt_path = blast_path
+        .join(format!("{}{}", prefix, src_distr_index))
+        .join(default_config::PT_RELATIVE_PATH.trim_start_matches(['/', '\\']));
+
+    let limit = db.get_last_player_count(job_name);
+    let src_dir_name = format!("{}{}", prefix, src_distr_index);
+    let mut filtered_dirs = dirs
+        .into_iter()
+        .filter(|dir| dir != &src_dir_name)
+        .collect::<Vec<_>>();
+
+    let selected_dirs = if let Some(limit) = limit {
+        let take_count = limit.max(1).saturating_sub(1) as usize;
+
+        filtered_dirs.sort_by(|a, b| {
+            let parse_suffix = |dir: &str| {
+                dir.strip_prefix(prefix.as_str())
+                   .and_then(|suffix| suffix.parse::<u32>().ok())
+            };
+
+            match (parse_suffix(a), parse_suffix(b)) {
+                (Some(av), Some(bv)) => av.cmp(&bv).then_with(|| a.cmp(b)),
+                (Some(_), None) => std::cmp::Ordering::Less,
+                (None, Some(_)) => std::cmp::Ordering::Greater,
+                (None, None) => a.cmp(b),
+            }
+        });
+
+        filtered_dirs.into_iter().take(take_count).collect::<Vec<_>>()
+    } else {
+        filtered_dirs
+    };
+
+    let dest_pt_paths = selected_dirs
+        .into_iter()
+        .map(|path| {
+            blast_path
+                .join(path)
+                .join(default_config::PT_RELATIVE_PATH.trim_start_matches(['/', '\\']))
+        })
+        .collect::<Vec<_>>();
+
+    distribute_pt(app_state, src_pt_path, dest_pt_paths)?;
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn cli_do_run(
+    app_state: &mut AppState,
+    job_name: Option<String>,
+    dest: Option<PathBuf>,
+    count: Option<u32>,
+    index: Option<u32>,
+    package_file_stem: Option<String>,
+    exe_file_name: Option<String>,
+    check_exe_file_name: Option<String>,
+    force: bool,
+    server: Option<String>,
+) -> Result<(), VfpFrontError> {
+    let db = app_state.get_db();
+
+    let job_name = input_job_name_with_err_handling(job_name, db)?;
+
+    let dest = input_target_path(
+        dest,
+        db.get_blast_path(job_name.as_str()),
+        job_name.as_str(),
+        HINT_SET_PACKAGE_NEED_EXTRACT_HOME_PATH,
+        Some(ERR_INVALID_PATH),
+    )
+        .map_err(|_| {
+            VfpFrontError::MissingParam(formatx!(ERR_NEED_PARAM, PARAM_DEST).unwrap_or_default())
+        })?;
+
+    let single = index.is_some();
+
+    let count_or_index = index.or(count).unwrap_or_else(|| {
+        input_directly_with_default(
+            None,
+            None,
+            false,
+            default_config::RUN_COUNT,
+            false,
+            HINT_RUN_COUNT,
+            Some(ERR_NEED_A_NUMBER),
+        )
+    });
+
+    let package_file_name = parse_without_input_with_default(
+        package_file_stem,
+        None,
+        default_config::PACKAGE_FILE_STEM,
+    );
+    let exe_file_name =
+        parse_without_input_with_default(exe_file_name, None, default_config::EXE_FILE_NAME);
+    let check_exe_file_name = parse_without_input_with_default(
+        check_exe_file_name,
+        None,
+        default_config::CHECK_EXE_FILE_NAME,
+    );
+
+    if single {
+        if let Some(server) = server
+            && let Err(e) = set_server(
+            &dest,
+            &package_file_name,
+            count_or_index,
+            default_config::MENDING_FILE_PATH,
+            &server,
+        )
+        {
+            colored_println(&mut app_state.get_stdout(), ThemeColor::Error, e.as_str());
+        }
+
+        run_instance_with_log(
+            &dest,
+            &package_file_name,
+            &exe_file_name,
+            &check_exe_file_name,
+            count_or_index,
+            force,
+        );
+    } else {
+        for i in 1..count_or_index + 1 {
+            if let Some(server) = server.clone()
+                && let Err(e) = set_server(
+                &dest,
+                &package_file_name,
+                i,
+                default_config::MENDING_FILE_PATH,
+                &server,
+            )
+            {
+                colored_println(&mut app_state.get_stdout(), ThemeColor::Error, e.as_str());
+            }
+
+            run_instance_with_log(
+                &dest,
+                &package_file_name,
+                &exe_file_name,
+                &check_exe_file_name,
+                i,
+                force,
+            );
+        }
+    }
+
+    Ok(())
 }
 
 pub fn input_job_name_with_err_handling(

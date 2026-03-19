@@ -35,6 +35,8 @@ pub(crate) struct JobRelativeData {
     pub blast_path: Option<PathBuf>,
 
     pub jenkins_build_params: Option<VfpJobBuildParam>,
+
+    pub distr_src_index: Option<u32>,
 }
 
 impl VersionedData for FpDbV7 {
@@ -55,6 +57,7 @@ mod tests {
                 && self.last_player_count == other.last_player_count
                 && self.blast_path == other.blast_path
                 && self.jenkins_build_params == other.jenkins_build_params
+                && self.distr_src_index == other.distr_src_index
         }
     }
 
