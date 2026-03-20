@@ -24,7 +24,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
 
           $cargoToml = Get-Content -Path Cargo.toml -Raw
-          $packageName = [regex]::Match($cargoToml, '(?m)^name\s*=\s*"([^"]+)"$').Groups[1].Value
+          $packageSection = [regex]::Match($cargoToml, '(?ms)^\[package\]\s*(.*?)(?:^\[|\z)').Groups[1].Value
+          $packageName = [regex]::Match($packageSection, '(?m)^\s*name\s*=\s*"([^"]+)"\s*(?:#.*)?$').Groups[1].Value
           if ([string]::IsNullOrWhiteSpace($packageName)) {
             throw "Failed to read package.name from Cargo.toml"
           }
