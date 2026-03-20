@@ -7,94 +7,116 @@ on:
     tags:
       - v*
 
+permissions:
+  contents: write
+
 jobs:
   build_and_release:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
-      - uses: actions/checkout@v2
-
-      - uses: SebRollen/toml-action@v1.2.0
-        id: get_cargo_package_name
-        with:
-          file: 'Cargo.toml'
-          field: 'package.name'
-
-      - uses: SebRollen/toml-action@v1.2.0
-        id: get_cargo_package_version
-        with:
-          file: 'Cargo.toml'
-          field: 'package.version'
+      - uses: actions/checkout@v5
 
       - name: Set filenames as Env variable
+        shell: pwsh
         run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          $cargoToml = Get-Content -Path Cargo.toml -Raw
+          $packageSection = [regex]::Match($cargoToml, '(?ms)^\[package\]\s*(.*?)(?:^\[|\z)').Groups[1].Value
+          $packageName = [regex]::Match($packageSection, '(?m)^\s*name\s*=\s*"([^"]+)"\s*(?:#.*)?$').Groups[1].Value
+          if ([string]::IsNullOrWhiteSpace($packageName)) {
+            throw "Failed to read package.name from Cargo.toml"
+          }
+
           $target = "x86_64-pc-windows-msvc"
-          echo "TARGET=$target" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "SRC_FILENAME=${{ steps.get_cargo_package_name.outputs.value }}-${{ github.ref_name }}-source.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "RLS_FILENAME=fp.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "RLS_ZIP_NAME=vfp-${{ github.ref_name }}-$target.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Add-Content -Path $env:GITHUB_ENV -Value "TARGET=$target"
+          Add-Content -Path $env:GITHUB_ENV -Value "PACKAGE_NAME=$packageName"
+          Add-Content -Path $env:GITHUB_ENV -Value "SRC_FILENAME=$packageName-${{ github.ref_name }}-source.zip"
+          Add-Content -Path $env:GITHUB_ENV -Value "RLS_FILENAME=fp.exe"
+          Add-Content -Path $env:GITHUB_ENV -Value "RLS_ZIP_NAME=vfp-${{ github.ref_name }}-$target.zip"
 
       - name: Print Env variable
+        shell: pwsh
         run: |
-          echo "TARGET: ${{env.TARGET}}"
-          echo "SRC_FILENAME: ${{env.SRC_FILENAME}}"
-          echo "RLS_FILENAME: ${{env.RLS_FILENAME}}"
-          echo "RLS_ZIP_NAME: ${{env.RLS_ZIP_NAME}}"
+          Write-Host "PACKAGE_NAME: ${{ env.PACKAGE_NAME }}"
+          Write-Host "TARGET: ${{ env.TARGET }}"
+          Write-Host "SRC_FILENAME: ${{ env.SRC_FILENAME }}"
+          Write-Host "RLS_FILENAME: ${{ env.RLS_FILENAME }}"
+          Write-Host "RLS_ZIP_NAME: ${{ env.RLS_ZIP_NAME }}"
 
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          target: ${{env.TARGET}}
-          default: true
+          targets: ${{ env.TARGET }}
 
       - name: Build
+        shell: pwsh
         env:
-          CHECK_EXE_FILE_NAME: ${{ secrets.CHECK_EXE_FILE_NAME}}
-          EXE_FILE_NAME: ${{ secrets.EXE_FILE_NAME}}
-          JENKINS_URL: ${{ secrets.JENKINS_URL}}
-          LOCATOR_PATTERN: ${{ secrets.LOCATOR_PATTERN}}
-          LOCATOR_TEMPLATE: ${{ secrets.LOCATOR_TEMPLATE}}
-          MENDING_FILE_PATH: ${{ secrets.MENDING_FILE_PATH}}
-          PACKAGE_FILE_STEM: ${{ secrets.PACKAGE_FILE_STEM}}
-          RECOMMEND_JOB_NAMES: ${{ secrets.RECOMMEND_JOB_NAMES}}
-          REPO_TEMPLATE: ${{ secrets.REPO_TEMPLATE}}
-          QUERY_TOKEN_GITHUB: ${{ secrets.QUERY_TOKEN_GITHUB}}
-        run: cargo build --release --target ${{env.TARGET}}
+          CHECK_EXE_FILE_NAME: ${{ secrets.CHECK_EXE_FILE_NAME }}
+          EXE_FILE_NAME: ${{ secrets.EXE_FILE_NAME }}
+          JENKINS_URL: ${{ secrets.JENKINS_URL }}
+          LOCATOR_PATTERN: ${{ secrets.LOCATOR_PATTERN }}
+          LOCATOR_TEMPLATE: ${{ secrets.LOCATOR_TEMPLATE }}
+          MENDING_FILE_PATH: ${{ secrets.MENDING_FILE_PATH }}
+          PACKAGE_FILE_STEM: ${{ secrets.PACKAGE_FILE_STEM }}
+          RECOMMEND_JOB_NAMES: ${{ secrets.RECOMMEND_JOB_NAMES }}
+          REPO_TEMPLATE: ${{ secrets.REPO_TEMPLATE }}
+          QUERY_TOKEN_GITHUB: ${{ secrets.QUERY_TOKEN_GITHUB }}
+          PT_RELATIVE_PATH: ${{ secrets.PT_RELATIVE_PATH }}
+        run: cargo build --release --target ${{ env.TARGET }}
 
       - name: Watch
-        run: ls ./target/${{env.TARGET}}/release
+        shell: pwsh
+        run: Get-ChildItem ./target/${{ env.TARGET }}/release
 
       - name: Package into zip
+        shell: pwsh
         run: |
-          mkdir release-dir
-          copy ./target/${{env.TARGET}}/release/fp.exe release-dir\
-          Compress-Archive -Path release-dir\* -DestinationPath ${{env.RLS_ZIP_NAME}}
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          New-Item -ItemType Directory -Path release-dir -Force | Out-Null
+          Copy-Item -Path ./target/${{ env.TARGET }}/release/fp.exe -Destination release-dir\ -Force
+          if (-not (Test-Path .\fp-config.toml)) {
+            throw "Missing file: fp-config.toml"
+          }
+          Copy-Item -Path .\fp-config.toml -Destination release-dir\ -Force
+          Compress-Archive -Path release-dir\* -DestinationPath ${{ env.RLS_ZIP_NAME }}
 
       - name: Archive source code
-        run: git archive -o ${{env.SRC_FILENAME}} HEAD
+        shell: pwsh
+        run: git archive -o ${{ env.SRC_FILENAME }} HEAD
 
       - name: Upload release binary as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: windows-release
-          path: ./target/${{env.TARGET}}/release/fp.exe
+          path: ./target/${{ env.TARGET }}/release/fp.exe
+          if-no-files-found: error
 
       - name: Upload source code as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: source-code
-          path: ${{env.SRC_FILENAME}}
+          path: ${{ env.SRC_FILENAME }}
+          if-no-files-found: error
 
       - name: Extract Release Notes
         id: extract_release_notes
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
           $version = "${{ github.ref_name }}".Substring(1)
           $changelog = Get-Content -Path CHANGELOG.md -Raw
           $startIndex = $changelog.IndexOf("## [$version]")
           if ($startIndex -eq -1) {
-            echo "Could not find changelog entry for version $version"
+            Write-Host "Could not find changelog entry for version $version"
             exit 1
           }
           $changelog = $changelog.Substring($startIndex)
@@ -102,38 +124,19 @@ jobs:
           if ($nextHeaderIndex -ne -1) {
             $changelog = $changelog.Substring(0, $nextHeaderIndex)
           }
-          $release_body = ($changelog -split '\r?\n' | Select-Object -Skip 1) -join "`n"
-          $release_body | Out-File -FilePath "releasenotes.md"
-          echo "path=releasenotes.md" >> $env:GITHUB_OUTPUT
+          $releaseBody = ($changelog -split '\r?\n' | Select-Object -Skip 1) -join "`n"
+          $releaseBody | Out-File -FilePath releasenotes.md -Encoding utf8
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "path=releasenotes.md"
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ steps.get_cargo_package_name.outputs.value }} ${{ github.ref_name }}
-          body_path: ${{ steps.extract_release_notes.outputs.path }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Binary
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{env.RLS_ZIP_NAME}}
-          asset_name: ${{env.RLS_ZIP_NAME}}
-          asset_content_type: application/zip
-
-      - name: Upload Source Code
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{env.SRC_FILENAME}}
-          asset_name: ${{env.SRC_FILENAME}}
-          asset_content_type: application/zip
+        run: >
+          gh release create "${{ github.ref_name }}"
+          "${{ env.RLS_ZIP_NAME }}"
+          "${{ env.SRC_FILENAME }}"
+          --verify-tag
+          --title "Release ${{ env.PACKAGE_NAME }} ${{ github.ref_name }}"
+          --notes-file "${{ steps.extract_release_notes.outputs.path }}"

@@ -1,0 +1,35 @@
+# Runtime config for fp.
+# Copy this file to `resource/runtime-config.toml` and uncomment the keys you want to override.
+
+# 推荐的 Jenkins 任务名列表。
+# recommend_job_names = ["FCM.EAMC.FCM-Dev.Client.Blast.Opt"]
+
+# 包仓库模板。
+# repo_template = "\\\\server\\share\\builds\\eamc-fcmobile{ID}-CL.{*}\\pc64-vc-opt\\pc.zip"
+
+# 主定位器匹配模式。
+# locator_pattern = "{ID}"
+
+# 次定位器模板。
+# locator_template = "{repo}/{ci}"
+
+# 运行前补丁文件相对路径。
+# mending_file_path = "FIFAMobile/assets/Data/patch.viv"
+
+# 分发时使用的 pt 文件相对路径。
+# pt_relative_path = "FIFAMobile/assets/user.ini"
+
+# 包文件名主干。
+# package_file_stem = "pc"
+
+# 运行的可执行文件名。
+# exe_file_name = "FIFAMobile.exe"
+
+# 用于检测进程是否已存在的可执行文件名。
+# check_exe_file_name = "FIFAMobile.exe"
+
+# Jenkins 根地址。
+# jenkins_url = "https://your.jenkins.example.com"
+
+# GitHub 查询与自更新使用的 token。
+# query_token_github = "ghp_your_token"

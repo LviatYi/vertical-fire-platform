@@ -19,6 +19,7 @@ use semver::Version;
 pub fn self_update(
     specified_version: Option<&str>,
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    let runtime_config = default_config::runtime();
     let mut builder = self_update::backends::github::Update::configure();
     builder
         .repo_owner("LviatYi")
@@ -28,7 +29,7 @@ pub fn self_update(
         .current_version(env!("CARGO_PKG_VERSION"))
         .show_output(false)
         .no_confirm(true)
-        .auth_token(default_config::QUERY_TOKEN_GITHUB);
+        .auth_token(runtime_config.query_token_github.as_str());
 
     if let Some(specified_version) = specified_version {
         let specified_version_tag = if !specified_version.starts_with("v") {
@@ -52,6 +53,7 @@ pub fn self_update(
 ///
 /// Fetch the latest version from GitHub and compare it with the current version.
 pub fn fetch_latest_version() -> Result<UpdateStatus, VfpFrontError> {
+    let runtime_config = default_config::runtime();
     let curr_version_str = env!("CARGO_PKG_VERSION");
     let curr_version = Version::parse(curr_version_str)
         .map_err(|_| VfpFrontError::VersionParseFailed(curr_version_str.to_string()))?;
@@ -59,7 +61,7 @@ pub fn fetch_latest_version() -> Result<UpdateStatus, VfpFrontError> {
     let releases = self_update::backends::github::ReleaseList::configure()
         .repo_owner("LviatYi")
         .repo_name(env!("CARGO_PKG_NAME"))
-        .auth_token(default_config::QUERY_TOKEN_GITHUB)
+        .auth_token(runtime_config.query_token_github.as_str())
         .build()?
         .fetch()?;
 

@@ -123,20 +123,21 @@ impl DbDataProxy {
     pub fn get_repo_decoration(&self) -> &RepoDecoration {
         self.cached_repo_decoration.get_or_init(|| {
             let default = "";
+            let runtime_config = crate::default_config::runtime();
 
             RepoDecoration::new(
                 self.get_extract_repo()
                     .as_ref()
                     .map(|s| s.as_ref())
-                    .unwrap_or(crate::default_config::REPO_TEMPLATE),
+                    .unwrap_or(runtime_config.repo_template.as_str()),
                 self.get_extract_locator_pattern()
                     .as_ref()
                     .map(|s| s.as_ref())
-                    .unwrap_or(crate::default_config::LOCATOR_PATTERN),
+                    .unwrap_or(runtime_config.locator_pattern.as_str()),
                 self.get_extract_s_locator_template()
                     .as_ref()
                     .map(|s| s.as_ref())
-                    .unwrap_or(crate::default_config::LOCATOR_TEMPLATE),
+                    .unwrap_or(runtime_config.locator_template.as_str()),
                 self.get_interest_job_name().unwrap_or(default),
             )
         })
