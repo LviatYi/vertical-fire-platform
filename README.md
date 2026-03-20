@@ -19,7 +19,6 @@ by LviatYi
 
 更新计划 | Road Map:
 
-- [ ] 从 json api 加载构建参数，降低从 config.xml 获取配置的优先级。
 - [ ] 添加 `fp info`，以允许查询 Jenkins Build Task 的状态。
 - [ ] 某些环境中，可能不存在 wmic 命令，因而无法查询特定可执行文件的运行状态。因此需要额外的替代方案。
 - [ ] **持续** 优化代码结构。
@@ -55,6 +54,29 @@ setx path "%path%;PATH_TO_FP_ROOT_DIR"
 ```
 
 当然，你需要自己替换 `PATH_TO_FP_ROOT_DIR`。它应该是一个路径，下面包含 fp.exe.
+
+## Runtime Config
+
+`fp` 支持在程序目录下放置运行时配置文件，用于覆盖内置默认配置。
+
+配置文件位置：
+
+`fp.exe` 所在目录下的 `fp-config.toml`
+
+例如：
+
+```text
+fp/
+├─ fp.exe
+└─ fp-config.toml
+```
+
+优先级如下：
+
+1. `fp-config.toml`
+2. 程序内置默认值
+
+发行包会附带示例文件 `fp-config.toml`，包含可用键说明。
 
 ## Commands ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠐⠒⠒⠒⠒⠚⠛⣿⡟⠄⠄⢠⠄⠄⠄⡄⠄⠄⣠⡶⠶⣶⠶⠶⠂⣠⣶⣶⠂⠄⣸⡿⠄⠄⢀⣿⠇⠄⣰⡿⣠⡾⠋⠄⣼⡟⠄⣠⡾⠋⣾⠏⠄⢰⣿⠁⠄⠄⣾⡏⠄⠠⠿⠿⠋⠠⠶⠶⠿⠶⠾⠋⠄⠽⠟⠄⠄⠄⠃⠄⠄⣼⣿⣤⡤⠤⠤⠤⠤⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
 

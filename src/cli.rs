@@ -38,6 +38,8 @@ pub async fn cli_do_extract(
     extract_params: ExtractParams,
     ignore_count_input: bool,
 ) -> Result<(), VfpFrontError> {
+    let runtime_config = default_config::runtime();
+
     let job_name = {
         let db = app_state.get_mut_db();
         let result = input_job_name_with_err_handling(job_name_param, db)?;
@@ -49,17 +51,17 @@ pub async fn cli_do_extract(
     let used_extract_repo = parse_without_input_with_default(
         extract_params.build_target_repo_template,
         db.get_extract_repo().as_ref(),
-        default_config::REPO_TEMPLATE,
+        runtime_config.repo_template.as_str(),
     );
     let used_extract_locator_pattern = parse_without_input_with_default(
         extract_params.main_locator_pattern,
         db.get_extract_locator_pattern().as_ref(),
-        default_config::LOCATOR_PATTERN,
+        runtime_config.locator_pattern.as_str(),
     );
     let used_extract_s_locator_template = parse_without_input_with_default(
         extract_params.secondary_locator_template,
         db.get_extract_s_locator_template().as_ref(),
-        default_config::LOCATOR_TEMPLATE,
+        runtime_config.locator_template.as_str(),
     );
     let used_inner_version = input_ci_for_extract(app_state, job_name.as_str(), ci).await?;
 
@@ -118,7 +120,7 @@ pub async fn cli_do_extract(
                     .as_path()
                     .join(format!("{}{}", file_name, i));
                 let path_t = path.clone();
-                let mend_file_path_t = default_config::MENDING_FILE_PATH;
+                let mend_file_path_t = runtime_config.mending_file_path.as_str();
                 let handle = std::thread::spawn(move || {
                     let clean_res = clean_dir(&dest_with_origin_name);
                     match clean_res {
@@ -267,12 +269,13 @@ pub async fn cli_do_login(
     api_token: Option<impl AsRef<str>>,
     pwd: Option<impl AsRef<str>>,
 ) -> Result<VfpJenkinsClient, VfpFrontError> {
+    let runtime_config = default_config::runtime();
     let db = app_state.get_mut_db();
     db.set_jenkins_url(Some(input_directly_with_default(
         url.map(|v| v.as_ref().to_string()),
         db.get_jenkins_url().as_ref().filter(|v| !v.is_empty()),
         simplified,
-        default_config::JENKINS_URL.to_string(),
+        runtime_config.jenkins_url.clone(),
         true,
         HINT_INPUT_JENKINS_URL,
         Some(ERR_NEED_A_JENKINS_URL),
@@ -446,6 +449,7 @@ pub async fn cli_do_distribute(
     job_name: &str,
     src_distr_index: u32,
 ) -> Result<(), VfpFrontError> {
+    let runtime_config = default_config::runtime();
     let db = app_state.get_db();
 
     let blast_path = db
@@ -460,7 +464,11 @@ pub async fn cli_do_distribute(
 
     let src_pt_path = blast_path
         .join(format!("{}{}", prefix, src_distr_index))
-        .join(default_config::PT_RELATIVE_PATH.trim_start_matches(['/', '\\']));
+        .join(
+            runtime_config
+                .pt_relative_path
+                .trim_start_matches(['/', '\\']),
+        );
 
     let limit = db.get_last_player_count(job_name);
     let src_dir_name = format!("{}{}", prefix, src_distr_index);
@@ -496,7 +504,11 @@ pub async fn cli_do_distribute(
         .map(|path| {
             blast_path
                 .join(path)
-                .join(default_config::PT_RELATIVE_PATH.trim_start_matches(['/', '\\']))
+                .join(
+                    runtime_config
+                        .pt_relative_path
+                        .trim_start_matches(['/', '\\']),
+                )
         })
         .collect::<Vec<_>>();
 
@@ -518,6 +530,7 @@ pub fn cli_do_run(
     force: bool,
     server: Option<String>,
 ) -> Result<(), VfpFrontError> {
+    let runtime_config = default_config::runtime();
     let db = app_state.get_db();
 
     let job_name = input_job_name_with_err_handling(job_name, db)?;
@@ -550,14 +563,14 @@ pub fn cli_do_run(
     let package_file_name = parse_without_input_with_default(
         package_file_stem,
         None,
-        default_config::PACKAGE_FILE_STEM,
+        runtime_config.package_file_stem.as_str(),
     );
     let exe_file_name =
-        parse_without_input_with_default(exe_file_name, None, default_config::EXE_FILE_NAME);
+        parse_without_input_with_default(exe_file_name, None, runtime_config.exe_file_name.as_str());
     let check_exe_file_name = parse_without_input_with_default(
         check_exe_file_name,
         None,
-        default_config::CHECK_EXE_FILE_NAME,
+        runtime_config.check_exe_file_name.as_str(),
     );
 
     if single {
@@ -566,7 +579,7 @@ pub fn cli_do_run(
             &dest,
             &package_file_name,
             count_or_index,
-            default_config::MENDING_FILE_PATH,
+            runtime_config.mending_file_path.as_str(),
             &server,
         )
         {
@@ -588,7 +601,7 @@ pub fn cli_do_run(
                 &dest,
                 &package_file_name,
                 i,
-                default_config::MENDING_FILE_PATH,
+                runtime_config.mending_file_path.as_str(),
                 &server,
             )
             {

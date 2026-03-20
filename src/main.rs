@@ -808,32 +808,33 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
         #[cfg(debug_assertions)]
         Commands::Debug => {
             // fp debug
+            let runtime_config = default_config::runtime();
             println!("Debug info:");
 
             println!(
                 "RECOMMEND_JOB_NAMES: {:#?}",
-                default_config::RECOMMEND_JOB_NAMES
+                runtime_config.recommend_job_names
             );
-            println!("REPO_TEMPLATE: {:#?}", default_config::REPO_TEMPLATE);
-            println!("LOCATOR_PATTERN: {:#?}", default_config::LOCATOR_PATTERN);
-            println!("LOCATOR_TEMPLATE: {:#?}", default_config::LOCATOR_TEMPLATE);
+            println!("REPO_TEMPLATE: {:#?}", runtime_config.repo_template);
+            println!("LOCATOR_PATTERN: {:#?}", runtime_config.locator_pattern);
+            println!("LOCATOR_TEMPLATE: {:#?}", runtime_config.locator_template);
             println!(
                 "MENDING_FILE_PATH: {:#?}",
-                default_config::MENDING_FILE_PATH
+                runtime_config.mending_file_path
             );
             println!(
                 "PACKAGE_FILE_STEM: {:#?}",
-                default_config::PACKAGE_FILE_STEM
+                runtime_config.package_file_stem
             );
-            println!("EXE_FILE_NAME: {:#?}", default_config::EXE_FILE_NAME);
+            println!("EXE_FILE_NAME: {:#?}", runtime_config.exe_file_name);
             println!(
                 "CHECK_EXE_FILE_NAME: {:#?}",
-                default_config::CHECK_EXE_FILE_NAME
+                runtime_config.check_exe_file_name
             );
-            println!("JENKINS_URL: {:#?}", default_config::JENKINS_URL);
+            println!("JENKINS_URL: {:#?}", runtime_config.jenkins_url);
             println!(
                 "QUERY_TOKEN_GITHUB: {:#?}",
-                default_config::QUERY_TOKEN_GITHUB
+                runtime_config.query_token_github
             );
         }
     }

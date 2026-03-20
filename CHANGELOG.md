@@ -9,9 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### 🚀 Added
+
+- 添加本地配置文件支持，现在可以在可执行文件根目录放置一个 `fp-config.toml` 来覆盖默认配置。
+
 ## [1.7.1] - 2026-03-20
 
+### 🐛 Fixed
+
+- 修复了一个 CI 注入失败的问题。该问题导致 distr 命令无法定位到正确文件。
+
 ## [1.7.0] - 2026-03-19
+
+### 🚀 Added
+
+- 添加 fp distr 以快速分发编译结果至其他包。
 
 ## [1.6.10] - 2026-02-12
 

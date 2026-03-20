@@ -777,12 +777,15 @@ pub async fn input_ci_for_watch(
 }
 
 pub fn input_job_name(param_val: Option<String>, db: &DbDataProxy) -> InquireResult<String> {
+    let runtime_config = default_config::runtime();
     let mut optional_job_names: Vec<String> = db.get_all_job_names();
-    for recommend in default_config::RECOMMEND_JOB_NAMES.map(|v| v.into()) {
+    for recommend in &runtime_config.recommend_job_names {
         if !optional_job_names.contains(&recommend) {
-            optional_job_names.push(recommend);
+            optional_job_names.push(recommend.to_string());
         }
     }
+
+    let default_job_name = runtime_config.recommend_job_names.first().cloned();
 
     let options: Vec<SelectionCustomizableOptionVal<String>> = optional_job_names
         .into_iter()
@@ -806,10 +809,7 @@ pub fn input_job_name(param_val: Option<String>, db: &DbDataProxy) -> InquireRes
         false,
         options,
         HINT_JOB_NAME,
-        default_config::RECOMMEND_JOB_NAMES
-            .first()
-            .map(|v| v.to_string())
-            .as_ref(),
+        default_job_name.as_ref(),
     ) {
         Ok(SelectionCustomizableOptionVal::DataContain(d)) => Ok(d.get_data()),
         Ok(SelectionCustomizableOptionVal::Custom) => Text::from(HINT_INPUT_CUSTOM).prompt(),
