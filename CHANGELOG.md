@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.7.1] - 2026-03-20
+
 ## [1.7.0] - 2026-03-19
 
 ## [1.6.10] - 2026-02-12
@@ -349,7 +351,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.1...HEAD
+
+[1.7.1]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.0...v1.7.1
 
 [1.7.0]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.6.10...v1.7.0
 
