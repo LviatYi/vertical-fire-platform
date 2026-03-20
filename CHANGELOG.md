@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.7.2] - 2026-03-20
+
 ### 🚀 Added
 
 - 添加本地配置文件支持，现在可以在可执行文件根目录放置一个 `fp-config.toml` 来覆盖默认配置。
@@ -363,7 +365,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.1...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.2...HEAD
+
+[1.7.2]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.1...v1.7.2
 
 [1.7.1]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.0...v1.7.1
 
