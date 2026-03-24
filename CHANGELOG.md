@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### 🐛 Fixed
+
+- 修复了 `RepoDecoration` 在存储前被使用的问题。该问题导致新用户无法使用默认定位器参数。
+
 ## [1.7.2] - 2026-03-20
 
 ### 🚀 Added

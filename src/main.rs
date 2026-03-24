@@ -652,7 +652,7 @@ async fn main_cli(app_state: &mut AppState, command: Commands) -> Result<(), Vfp
                     );
 
                     trial_count -= 1;
-                    tokio::time::sleep(Duration::from_secs_f32(0.5)).await;
+                    tokio::time::sleep(Duration::from_secs_f32(1.0)).await;
                 }
             }
 
