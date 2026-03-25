@@ -12,7 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 
 - 修复了 `RepoDecoration` 在存储前被使用的问题。该问题导致新用户无法使用默认定位器参数。
+
+### ⚙️ Changed
+
 - 使用 RSA 加密算法加密数据。
+- 使用 `MainLocatorEntries` 优化数据匹配速度。
 
 ## [1.7.2] - 2026-03-20
 
