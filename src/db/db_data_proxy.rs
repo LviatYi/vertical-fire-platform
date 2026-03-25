@@ -1,14 +1,14 @@
 use crate::constant::log::{LOGIN_SUCCESS_BY_API_TOKEN, LOGIN_SUCCESS_BY_PWD};
 use crate::constant::util::bring_element_to_first;
 use crate::db::db_struct::db_status::DBStatus;
-use crate::db::db_struct::fp_db_v7::JobRelativeData;
+use crate::db::db_struct::job_relative_data::JobRelativeData;
 use crate::db::db_struct::version_only::VersionOnly;
 use crate::db::db_struct::{parse_content_with_upgrade, LatestVersionData};
 use crate::extract::repo_decoration::RepoDecoration;
 use crate::jenkins::build::VfpJobBuildParam;
 use crate::jenkins::query::{try_get_jenkins_async_client, VfpJenkinsClient};
 use crate::pretty_log::{colored_println, ThemeColor};
-use base64::Engine;
+use crate::security::{decrypt_jenkins_pwd, encrypt_jenkins_pwd};
 use jenkins_sdk::JenkinsError;
 use std::fs::File;
 use std::io::Write;
@@ -117,7 +117,7 @@ impl DbDataProxy {
 
     pub fn user_never_login(&self) -> bool {
         self.data.jenkins_username.is_none()
-            || (self.data.jenkins_api_token.is_none() && self.data.jenkins_pwd.is_none())
+            || (self.data.jenkins_api_token.is_none() && self.data.password_encrypt.is_none())
     }
 
     pub fn get_repo_decoration(&self) -> &RepoDecoration {
@@ -299,16 +299,14 @@ impl DbDataProxy {
     }
 
     pub fn get_jenkins_pwd(&self) -> Option<String> {
-        self.data.jenkins_pwd.clone().and_then(|v| {
-            base64::prelude::BASE64_STANDARD
-                .decode(v)
-                .ok()
-                .and_then(|v| String::from_utf8(v).ok())
-        })
+        self.data
+            .password_encrypt
+            .as_deref()
+            .and_then(decrypt_jenkins_pwd)
     }
 
     pub fn set_jenkins_pwd(&mut self, val: Option<String>) -> &mut Self {
-        self.data.jenkins_pwd = val.map(|v| base64::prelude::BASE64_STANDARD.encode(v));
+        self.data.password_encrypt = val.and_then(|v| encrypt_jenkins_pwd(v.as_str()).ok());
         self
     }
 
@@ -395,7 +393,7 @@ mod tests {
     fn test_get_file() {
         let mut file = tempfile::NamedTempFile::new().unwrap();
 
-        let content = r#"version = 7
+        let content = r#"version = 8
 never_check_version = false
 auto_update_enabled = false
 
@@ -432,5 +430,49 @@ blast_path = 'C:\\Users\\LviatYi\\Desktop\\Temp'
         let config = DbDataProxy::get_from_path(Path::new("Z:\\NOT_EXIST"));
 
         assert!(config.is_none());
+    }
+
+    #[test]
+    fn test_migrate_v7_legacy_pwd_to_v8_password_encrypt() {
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+
+        let content = r#"version = 7
+jenkins_username = "tester"
+jenkins_pwd = "bGVnYWN5LXBhc3N3b3Jk"
+never_check_version = false
+auto_update_enabled = false
+"#;
+
+        file.write_all(content.as_bytes()).unwrap();
+        file.flush().unwrap();
+
+        let config = DbDataProxy::get_from_path(file.path()).unwrap();
+
+        assert_eq!(config.get_jenkins_pwd(), Some("legacy-password".to_string()));
+
+        config.save(file.path()).unwrap();
+        let saved = std::fs::read_to_string(file.path()).unwrap();
+
+        assert!(saved.contains("version = 8"));
+        assert!(saved.contains("password_encrypt = "));
+        assert!(!saved.contains("jenkins_pwd = "));
+    }
+
+    #[test]
+    fn test_save_password_to_password_encrypt_field() {
+        let temp_file = tempfile::NamedTempFile::new().unwrap();
+
+        let mut db = DbDataProxy::default();
+        db.set_jenkins_pwd(Some("my-password".to_string()));
+        db.save(temp_file.path()).unwrap();
+
+        let content = std::fs::read_to_string(temp_file.path()).unwrap();
+
+        assert!(content.contains("password_encrypt = "));
+        assert!(!content.contains("jenkins_pwd = "));
+        assert_eq!(
+            db.get_jenkins_pwd(),
+            Some("my-password".to_string())
+        );
     }
 }

@@ -31,5 +31,13 @@
 # Jenkins 根地址。
 # jenkins_url = "https://your.jenkins.example.com"
 
+# Jenkins 密码加密用的 PKCS#8 PEM 私钥。
+# 也支持写入单行 base64；程序会优先尝试 base64 解码，再按 PEM 解析。
+# jenkins_pwd_rsa_private_key_pem = """
+# -----BEGIN PRIVATE KEY-----
+# ...
+# -----END PRIVATE KEY-----
+# """
+
 # GitHub 查询与自更新使用的 token。
 # query_token_github = "ghp_your_token"

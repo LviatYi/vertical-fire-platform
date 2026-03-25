@@ -161,7 +161,7 @@ mod tests {
 
         assert_eq!(
             content,
-            r#"version = 7
+            r#"version = 8
 never_check_version = false
 auto_update_enabled = false
 

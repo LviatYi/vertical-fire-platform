@@ -9,6 +9,7 @@ mod interact;
 mod jenkins;
 mod pretty_log;
 mod run;
+mod security;
 mod service;
 mod update;
 mod vfp_error;
