@@ -12,6 +12,32 @@ const REG_PLACEHOLDER_AUTO_DETECT: &str = "REGEX_AUTO_DETECT";
 const REG_STR_FACTOR_ID: &str = r"(\d+)";
 const REG_STR_AUTO_DETECT: &str = r".*";
 
+pub struct MainLocatorMatcher {
+    regex: Regex,
+}
+
+impl MainLocatorMatcher {
+    pub fn try_new(pattern: &str) -> Option<Self> {
+        let mut regex = String::from(pattern);
+        regex = regex
+            .replace(PTN_PLACEHOLDER_FACTOR_ID, REG_PLACEHOLDER_FACTOR_ID)
+            .replace(PTN_PLACEHOLDER_AUTO_DETECT, REG_PLACEHOLDER_AUTO_DETECT);
+        regex = regex::escape(&regex);
+        regex = regex
+            .replace(REG_PLACEHOLDER_FACTOR_ID, REG_STR_FACTOR_ID)
+            .replace(REG_PLACEHOLDER_AUTO_DETECT, REG_STR_AUTO_DETECT);
+        regex = format!("^{}$", regex);
+
+        Regex::new(regex.as_str()).ok().map(|regex| Self { regex })
+    }
+
+    pub fn extract_ci(&self, locator: &str) -> Option<u32> {
+        self.regex
+            .captures(locator)
+            .and_then(|caps| caps.get(1).and_then(|v| v.as_str().parse::<u32>().ok()))
+    }
+}
+
 pub fn remove_beginning_separator_in_relative_path(relative_path_str: &str) -> String {
     if relative_path_str.starts_with('\\') || relative_path_str.starts_with('/') {
         relative_path_str[1..].to_string()
@@ -35,19 +61,32 @@ pub fn remove_beginning_separator_in_relative_path(relative_path_str: &str) -> S
 ///
 /// returns: Vec<String, Global>
 pub fn get_sorted_main_locators(path: PathBuf, pattern: &str) -> Vec<String> {
-    let mut ci_package_names: Vec<String> = if let Ok(entries) = fs::read_dir(path) {
+    get_sorted_main_locator_entries(path, pattern)
+        .into_iter()
+        .map(|(locator, _)| locator)
+        .collect()
+}
+
+pub fn get_sorted_main_locator_entries(path: PathBuf, pattern: &str) -> Vec<(String, u32)> {
+    let Some(matcher) = MainLocatorMatcher::try_new(pattern) else {
+        return vec![];
+    };
+
+    let mut ci_package_entries: Vec<(String, u32)> = if let Ok(entries) = fs::read_dir(path) {
         entries
             .filter_map(|entry| match entry {
                 Ok(e) => {
-                    if e.path().is_dir() {
-                        e.path()
-                            .file_name()
-                            .and_then(|v| v.to_str())
-                            .map(|v| v.to_string())
-                            .filter(|v| extract_ci_by_main_locator(pattern, v).is_some())
-                    } else {
-                        None
+                    if !e.path().is_dir() {
+                        return None;
                     }
+
+                    let locator = e
+                        .path()
+                        .file_name()
+                        .and_then(|v| v.to_str())
+                        .map(|v| v.to_string())?;
+
+                    matcher.extract_ci(&locator).map(|ci| (locator, ci))
                 }
                 _err => None,
             })
@@ -56,14 +95,8 @@ pub fn get_sorted_main_locators(path: PathBuf, pattern: &str) -> Vec<String> {
         vec![]
     };
 
-    ci_package_names.sort_unstable_by(|a, b| {
-        let a = extract_ci_by_main_locator(pattern, a);
-        let b = extract_ci_by_main_locator(pattern, b);
-
-        a.cmp(&b).reverse()
-    });
-
-    ci_package_names
+    ci_package_entries.sort_unstable_by(|a, b| a.1.cmp(&b.1).reverse());
+    ci_package_entries
 }
 
 /// # Extract ci by locator
@@ -77,20 +110,7 @@ pub fn get_sorted_main_locators(path: PathBuf, pattern: &str) -> Vec<String> {
 ///
 /// returns: u32 like 312
 pub fn extract_ci_by_main_locator(pattern: &str, locator: &str) -> Option<u32> {
-    let mut regex = String::from(pattern);
-    regex = regex
-        .replace(PTN_PLACEHOLDER_FACTOR_ID, REG_PLACEHOLDER_FACTOR_ID)
-        .replace(PTN_PLACEHOLDER_AUTO_DETECT, REG_PLACEHOLDER_AUTO_DETECT);
-    regex = regex::escape(&regex);
-    regex = regex
-        .replace(REG_PLACEHOLDER_FACTOR_ID, REG_STR_FACTOR_ID)
-        .replace(REG_PLACEHOLDER_AUTO_DETECT, REG_STR_AUTO_DETECT);
-    regex = format!("^{}$", regex);
-
-    Regex::new(regex.as_str()).ok().and_then(|re| {
-        re.captures(locator)
-            .and_then(|caps| caps.get(1).and_then(|v| v.as_str().parse::<u32>().ok()))
-    })
+    MainLocatorMatcher::try_new(pattern).and_then(|matcher| matcher.extract_ci(locator))
 }
 
 pub fn clean_dir(dest: &Path) -> Result<Option<u128>, String> {

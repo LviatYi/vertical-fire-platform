@@ -8,6 +8,7 @@ pub const USER_QUERY_JENKINS_BUILD_COUNT: usize = 50;
 pub const JENKINS_QUERY_CONCURRENCY_COUNT: usize = 20;
 pub const RELEASE_URL: &str = "https://github.com/LviatYi/vertical-fire-platform/releases/tag/v";
 
+use base64::Engine;
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -36,6 +37,8 @@ const BUILD_DEFAULT_JENKINS_URL: &str =
     if let Some(v) = option_env!("JENKINS_URL") { v } else { "" };
 const BUILD_DEFAULT_QUERY_TOKEN_GITHUB: &str =
     if let Some(v) = option_env!("QUERY_TOKEN_GITHUB") { v } else { "" };
+const BUILD_DEFAULT_JENKINS_PWD_RSA_PRIVATE_KEY_PEM: &str =
+    if let Some(v) = option_env!("JENKINS_PWD_RSA_PRIVATE_KEY_PEM") { v } else { "" };
 
 #[derive(Debug, Default, Deserialize)]
 struct RuntimeConfigFile {
@@ -50,6 +53,7 @@ struct RuntimeConfigFile {
     check_exe_file_name: Option<String>,
     jenkins_url: Option<String>,
     query_token_github: Option<String>,
+    jenkins_pwd_rsa_private_key_pem: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -65,6 +69,7 @@ pub struct RuntimeConfig {
     pub check_exe_file_name: String,
     pub jenkins_url: String,
     pub query_token_github: String,
+    pub jenkins_pwd_rsa_private_key_pem: String,
 }
 
 static RUNTIME_CONFIG: LazyLock<RuntimeConfig> = LazyLock::new(load_runtime_config);
@@ -102,6 +107,10 @@ fn load_runtime_config() -> RuntimeConfig {
         query_token_github: resolve_string(
             file_config.query_token_github,
             BUILD_DEFAULT_QUERY_TOKEN_GITHUB,
+        ),
+        jenkins_pwd_rsa_private_key_pem: resolve_maybe_base64_pem(
+            file_config.jenkins_pwd_rsa_private_key_pem,
+            BUILD_DEFAULT_JENKINS_PWD_RSA_PRIVATE_KEY_PEM,
         ),
     }
 }
@@ -152,6 +161,29 @@ fn resolve_string(from_file: Option<String>, from_build: &str) -> String {
     from_build.trim().to_string()
 }
 
+fn resolve_maybe_base64_pem(from_file: Option<String>, from_build: &str) -> String {
+    decode_base64_pem_if_possible(resolve_string(from_file, from_build))
+}
+
+fn decode_base64_pem_if_possible(raw: String) -> String {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+
+    base64::prelude::BASE64_STANDARD
+        .decode(trimmed)
+        .ok()
+        .and_then(|bytes| String::from_utf8(bytes).ok())
+        .map(|decoded| decoded.trim().to_string())
+        .filter(|decoded| {
+            decoded.starts_with("-----BEGIN PRIVATE KEY-----")
+                || decoded.starts_with("-----BEGIN RSA PRIVATE KEY-----")
+                || decoded.starts_with("-----BEGIN ENCRYPTED PRIVATE KEY-----")
+        })
+        .unwrap_or_else(|| trimmed.to_string())
+}
+
 fn split_trimmed(value: &str) -> Vec<String> {
     value
         .split([',', ';'])
@@ -172,5 +204,14 @@ mod tests {
             runtime_config_path_from_root(root),
             PathBuf::from(r"C:\tools\fp\fp-config.toml")
         );
+    }
+
+    #[test]
+    fn test_decode_base64_pem_if_possible() {
+        let pem = "-----BEGIN PRIVATE KEY-----\nABC\n-----END PRIVATE KEY-----";
+        let encoded = base64::prelude::BASE64_STANDARD.encode(pem);
+
+        assert_eq!(decode_base64_pem_if_possible(encoded), pem);
+        assert_eq!(decode_base64_pem_if_possible(pem.to_string()), pem);
     }
 }

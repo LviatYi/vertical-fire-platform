@@ -1,4 +1,5 @@
 use crate::db::db_struct::fp_db_v7::FpDbV7;
+use crate::db::db_struct::job_relative_data::JobRelativeData;
 use crate::db::db_struct::versioned_data::{UpgradeValue, VersionedData};
 use crate::define_versioned_data_type;
 use crate::jenkins::build::VfpJobBuildParam;
@@ -43,7 +44,7 @@ impl VersionedData for FpDbV6 {
 
         if let Some(job_name) = self.interest_job_name {
             upg.job_relative_data_arr
-                .push(crate::db::db_struct::fp_db_v7::JobRelativeData {
+                .push(JobRelativeData {
                     job_name,
                     last_inner_version: self.last_inner_version,
                     last_player_count: self.last_player_count,

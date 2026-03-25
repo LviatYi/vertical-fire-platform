@@ -58,6 +58,7 @@ jobs:
           CHECK_EXE_FILE_NAME: ${{ secrets.CHECK_EXE_FILE_NAME }}
           EXE_FILE_NAME: ${{ secrets.EXE_FILE_NAME }}
           JENKINS_URL: ${{ secrets.JENKINS_URL }}
+          JENKINS_PWD_RSA_PRIVATE_KEY_PEM: ${{ secrets.JENKINS_PWD_RSA_PRIVATE_KEY_PEM }}
           LOCATOR_PATTERN: ${{ secrets.LOCATOR_PATTERN }}
           LOCATOR_TEMPLATE: ${{ secrets.LOCATOR_TEMPLATE }}
           MENDING_FILE_PATH: ${{ secrets.MENDING_FILE_PATH }}

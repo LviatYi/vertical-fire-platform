@@ -2,7 +2,7 @@ use crate::app_state::AppState;
 use crate::constant::log::*;
 use crate::db::db_data_proxy::DbDataProxy;
 use crate::default_config;
-use crate::extract::repo_decoration::OrderedCiList;
+use crate::extract::repo_decoration::{OrderedCiList, RepoDecoration};
 use crate::jenkins::jenkins_model::run_status::RunStatus;
 use crate::jenkins::jenkins_model::shelves::Shelves;
 use crate::pretty_log::{clean_one_line, colored_println, ThemeColor};
@@ -452,17 +452,22 @@ pub async fn input_ci_for_extract(
     app_state: &mut AppState,
     job_name: &str,
     param_val: Option<u32>,
+    build_target_repo_template: &str,
+    main_locator_pattern: &str,
+    secondary_locator_template: &str,
 ) -> InquireResult<u32> {
     if let Some(param_val) = param_val {
         return Ok(param_val);
     }
 
     let db = app_state.get_mut_db();
-    let latest = db
-        .get_repo_decoration()
-        .get_sorted_ci_list()
-        .first()
-        .copied();
+    let repo_decoration = RepoDecoration::new(
+        build_target_repo_template,
+        main_locator_pattern,
+        secondary_locator_template,
+        job_name,
+    );
+    let latest = repo_decoration.get_sorted_ci_list().first().copied();
     let last_used = db.get_last_inner_version(job_name);
 
     let mut options: Vec<String> = Vec::new();
@@ -588,8 +593,7 @@ pub async fn input_ci_for_extract(
     }
     //endregion
 
-    let db = app_state.get_db();
-    let exist_ci_list = db.get_repo_decoration().get_sorted_ci_list();
+    let exist_ci_list = repo_decoration.get_sorted_ci_list();
 
     //region last used ci
     if let Some(ref last_used) = last_used
@@ -623,8 +627,7 @@ pub async fn input_ci_for_extract(
             {
                 Ok(last_used)
             } else {
-                let exist_ci_list_for_inquire =
-                    db.get_repo_decoration().get_sorted_ci_list().clone();
+                let exist_ci_list_for_inquire = repo_decoration.get_sorted_ci_list().clone();
 
                 let input = Text::from(HINT_INPUT_CUSTOM)
                     .with_validator(move |v: &str| {

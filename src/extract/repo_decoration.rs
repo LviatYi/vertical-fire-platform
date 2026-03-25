@@ -1,11 +1,12 @@
 use crate::extract::extractor_util::{
-    extract_ci_by_main_locator, get_sorted_main_locators,
+    get_sorted_main_locator_entries,
     remove_beginning_separator_in_relative_path,
 };
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
 type CiList = Vec<u32>;
+type MainLocatorEntries = Vec<(String, u32)>;
 
 /// # RepoDecoration
 ///
@@ -66,7 +67,7 @@ pub struct RepoDecoration {
 
     job_name: String,
 
-    sorted_ci_package_names_cached: OnceLock<Vec<String>>,
+    sorted_ci_package_entries_cached: OnceLock<MainLocatorEntries>,
 
     sorted_ci_list_cached: OnceLock<CiList>,
 }
@@ -86,7 +87,7 @@ impl RepoDecoration {
             main_locator_pattern: main_locator_pattern.to_string(),
             secondary_locator_template: secondary_locator_template.to_string(),
             job_name: job_name.to_string(),
-            sorted_ci_package_names_cached: OnceLock::new(),
+            sorted_ci_package_entries_cached: OnceLock::new(),
             sorted_ci_list_cached: OnceLock::new(),
         }
     }
@@ -95,9 +96,9 @@ impl RepoDecoration {
         PathBuf::from(&self.build_target_repo_template).join(&self.job_name)
     }
 
-    fn get_cached_locator_list(&self) -> &Vec<String> {
-        self.sorted_ci_package_names_cached.get_or_init(|| {
-            get_sorted_main_locators(
+    fn get_cached_locator_entries(&self) -> &MainLocatorEntries {
+        self.sorted_ci_package_entries_cached.get_or_init(|| {
+            get_sorted_main_locator_entries(
                 self.assemble_build_target_repo(),
                 self.main_locator_pattern.as_str(),
             )
@@ -106,22 +107,20 @@ impl RepoDecoration {
 
     pub fn get_sorted_ci_list(&self) -> &CiList {
         self.sorted_ci_list_cached.get_or_init(|| {
-            self.get_cached_locator_list()
+            self.get_cached_locator_entries()
                 .iter()
-                .filter_map(|v| extract_ci_by_main_locator(self.main_locator_pattern.as_str(), v))
+                .map(|(_, ci)| *ci)
                 .collect()
         })
     }
 
     pub fn get_full_path_by_ci(&self, ci: u32) -> Option<PathBuf> {
-        self.get_cached_locator_list()
+        self.get_cached_locator_entries()
             .iter()
-            .find(|&item| {
-                extract_ci_by_main_locator(self.main_locator_pattern.as_str(), item) == Some(ci)
-            })
-            .map(|v| {
+            .find(|(_, item_ci)| *item_ci == ci)
+            .map(|(locator, _)| {
                 self.assemble_build_target_repo()
-                    .join(v)
+                    .join(locator)
                     .join(self.secondary_locator_template.as_str())
             })
     }

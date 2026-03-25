@@ -6,6 +6,7 @@ use crate::extract::extract_operation_info::{
     ExtractOperationInfo, OperationStatus, OperationStepType,
 };
 use crate::extract::extract_params::ExtractParams;
+use crate::extract::repo_decoration::RepoDecoration;
 use crate::extract::extractor_util::{clean_dir, extract_zip_file, mending_user_ini};
 use crate::interact::{
     input_ci_for_extract, input_directly_with_default, input_job_name, input_pwd,
@@ -63,7 +64,21 @@ pub async fn cli_do_extract(
         db.get_extract_s_locator_template().as_ref(),
         runtime_config.locator_template.as_str(),
     );
-    let used_inner_version = input_ci_for_extract(app_state, job_name.as_str(), ci).await?;
+    let repo_decoration = RepoDecoration::new(
+        used_extract_repo.as_str(),
+        used_extract_locator_pattern.as_str(),
+        used_extract_s_locator_template.as_str(),
+        job_name.as_str(),
+    );
+    let used_inner_version = input_ci_for_extract(
+        app_state,
+        job_name.as_str(),
+        ci,
+        used_extract_repo.as_str(),
+        used_extract_locator_pattern.as_str(),
+        used_extract_s_locator_template.as_str(),
+    )
+    .await?;
 
     let db = app_state.get_db();
     let used_player_count = input_directly_with_default(
@@ -96,11 +111,7 @@ pub async fn cli_do_extract(
 
     app_state.commit(false);
 
-    if let Some(path) = app_state
-        .get_db()
-        .get_repo_decoration()
-        .get_full_path_by_ci(used_inner_version)
-    {
+    if let Some(path) = repo_decoration.get_full_path_by_ci(used_inner_version) {
         if let Some(file_name) = path.file_stem().and_then(|v| v.to_str()) {
             let pty_logger = pretty_log::VfpPrettyLogger::apply_for(
                 &mut app_state.get_stdout(),
