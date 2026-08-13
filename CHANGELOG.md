@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [1.7.4] - 2026-08-13
+
 ### 🐛 Fixed
 
 - 修复了 github secret 中错误的 `\\` 转义。
@@ -380,7 +382,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-url -->
 
-[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.3...HEAD
+[Unreleased]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.4...HEAD
+
+[1.7.4]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.3...v1.7.4
 
 [1.7.3]: https://github.com/LviatYi/vertical-fire-platform/compare/v1.7.2...v1.7.3
 
